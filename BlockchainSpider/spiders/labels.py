@@ -1,3 +1,4 @@
+import logging
 import re
 from urllib.parse import urlsplit, urljoin, urlencode
 
@@ -17,6 +18,7 @@ class LabelsSpider(scrapy.Spider):
         self.driver_options.binary_location = '/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev'
 
         self.url_label_cloud = 'https://cn.etherscan.com/labelcloud'
+        self.page_size = 1000
 
     def start_requests(self):
         driver = webdriver.Chrome(options=self.driver_options)
@@ -29,15 +31,15 @@ class LabelsSpider(scrapy.Spider):
         driver.quit()
 
         print(raw_cookies)
-        auth_cookies = dict()
+        session_cookie = dict()
         for c in raw_cookies:
             if c.get('name') == 'ASP.NET_SessionId':
-                auth_cookies['ASP.NET_SessionId'] = c['value']
+                session_cookie['ASP.NET_SessionId'] = c['value']
                 break
         yield scrapy.Request(
             url=self.url_label_cloud,
             method='GET',
-            cookies=auth_cookies,
+            cookies=session_cookie,
             callback=self.parse_label_cloud,
         )
 
@@ -46,7 +48,7 @@ class LabelsSpider(scrapy.Spider):
             href = a.xpath('@href').get()
             size = a.xpath('text()').get()
             size = re.sub('<.*?>', '', size)
-            size = re.search(r'\d+', size).group() if re.search(r'\d+', size) else 99999999
+            size = re.search(r'\d+', size).group() if re.search(r'\d+', size) else self.page_size
 
             root_url = '%s://%s' % (urlsplit(response.url).scheme, urlsplit(response.url).netloc)
             yield scrapy.Request(
@@ -71,32 +73,52 @@ class LabelsSpider(scrapy.Spider):
         tab_anchors = response.xpath('//div[contains(@class,"card-header")]/ul/li/a')
         if len(tab_anchors) > 0:
             for tab in tab_anchors:
-                size = tab.xpath('text()').get()
-                size = re.search(r'\d+', size).group() if re.search(r'\d+', size) else 99999999
+                total = tab.xpath('text()').get()
+                total = int(re.search(r'\d+', total).group()) if re.search(r'\d+', total) else self.page_size
+                size = total if total < self.page_size else self.page_size
+                start = 0
+                subcatid = tab.attrib.get('val', 0)
 
+                while start < total:
+                    _url = '?'.join([
+                        base_url,
+                        urlencode({
+                            'subcatid': subcatid,
+                            'size': size,
+                            'start': start,
+                        })
+                    ])
+                    yield scrapy.Request(
+                        url=_url,
+                        method='GET',
+                        cookies=response.request.cookies,
+                        callback=self.parse_labels,
+                        dont_filter=True,
+                        cb_kwargs={'label': label}
+                    )
+                    start += size
+        else:
+            total = int(kwargs.get('size', self.page_size))
+            size = total if total < self.page_size else self.page_size
+            start = 0
+
+            while start < total:
                 _url = '?'.join([
                     base_url,
                     urlencode({
                         'size': size,
-                        'subcatid': tab.attrib.get('val', 0),
+                        'start': start,
                     })
                 ])
-
                 yield scrapy.Request(
                     url=_url,
                     method='GET',
                     cookies=response.request.cookies,
                     callback=self.parse_labels,
-                    cb_kwargs=dict(label=label)
+                    dont_filter=True,
+                    cb_kwargs={'label': label}
                 )
-        else:
-            yield scrapy.Request(
-                url='{}?size={}'.format(base_url, kwargs.get('size')),
-                method='GET',
-                cookies=response.request.cookies,
-                callback=self.parse_labels,
-                cb_kwargs=dict(label=label)
-            )
+                start += size
 
     def parse_labels(self, response, **kwargs):
         label = kwargs.get('label')
