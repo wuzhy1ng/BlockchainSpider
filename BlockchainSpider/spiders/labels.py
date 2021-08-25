@@ -44,7 +44,7 @@ class LabelsSpider(scrapy.Spider):
     def parse_label_cloud(self, response, **kwargs):
         for a in response.xpath('//div[contains(@class,"dropdown-menu")]//a'):
             href = a.xpath('@href').get()
-            size = a.extract_first()
+            size = a.xpath('text()').get()
             size = re.sub('<.*?>', '', size)
             size = re.search(r'\d+', size).group() if re.search(r'\d+', size) else 99999999
 
@@ -63,7 +63,7 @@ class LabelsSpider(scrapy.Spider):
             response.xpath('//h1/span/text()').get()
         ])
 
-        url = urljoin(
+        base_url = urljoin(
             base='%s://%s' % (urlsplit(response.url).scheme, urlsplit(response.url).netloc),
             url=urlsplit(response.url).path,
         )
@@ -74,8 +74,8 @@ class LabelsSpider(scrapy.Spider):
                 size = tab.xpath('text()').get()
                 size = re.search(r'\d+', size).group() if re.search(r'\d+', size) else 99999999
 
-                url = '?'.join([
-                    url,
+                _url = '?'.join([
+                    base_url,
                     urlencode({
                         'size': size,
                         'subcatid': tab.attrib.get('val', 0),
@@ -83,7 +83,7 @@ class LabelsSpider(scrapy.Spider):
                 ])
 
                 yield scrapy.Request(
-                    url=url,
+                    url=_url,
                     method='GET',
                     cookies=response.request.cookies,
                     callback=self.parse_labels,
@@ -91,7 +91,7 @@ class LabelsSpider(scrapy.Spider):
                 )
         else:
             yield scrapy.Request(
-                url='%s?size=%d' % (url, kwargs.get('size')),
+                url='{}?size={}'.format(base_url, kwargs.get('size')),
                 method='GET',
                 cookies=response.request.cookies,
                 callback=self.parse_labels,
