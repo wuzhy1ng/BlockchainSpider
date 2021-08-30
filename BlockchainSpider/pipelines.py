@@ -25,7 +25,7 @@ class LabelsPipeline:
             self.file = open(spider.out_filename, 'a')
 
         # write item
-        json.dump(item, self.file)
+        json.dump({**item}, self.file)
         self.file.write('\n')
         return item
 
