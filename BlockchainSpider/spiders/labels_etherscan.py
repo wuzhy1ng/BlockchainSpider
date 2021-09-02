@@ -1,7 +1,7 @@
-import csv
 import json
 import os
 import re
+import logging
 from urllib.parse import urlsplit, urljoin, urlencode
 
 import scrapy
@@ -17,26 +17,14 @@ class LabelsEtherscanSpider(scrapy.Spider):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.driver_options = webdriver.ChromeOptions()
-        self.driver_options.binary_location = '/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev'
+        # self.driver_options.binary_location = '/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev'
 
         self.url_label_cloud = 'https://cn.etherscan.com/labelcloud'
-        self.page_size = 1000
+        self.page_size = 100
 
         self.out_filename = kwargs.get('out', self.name)
 
     def start_requests(self):
-        # input filename and filter the url crawled
-        if os.path.exists(self.out_filename):
-            df = self.crawler.engine.slot.scheduler.df
-            with open(self.out_filename, 'r') as f:
-                while True:
-                    line = f.readline()
-                    if line == '':
-                        break
-                    item = json.loads(line)
-                    url = item['info'].get('url', '')
-                    df.request_seen(scrapy.Request(url=url))
-
         # open selenium to login in
         driver = webdriver.Chrome(options=self.driver_options)
         driver.get('https://cn.etherscan.com/login')
@@ -48,12 +36,28 @@ class LabelsEtherscanSpider(scrapy.Spider):
         driver.quit()
 
         # get cookies
-        print(raw_cookies)
         session_cookie = dict()
         for c in raw_cookies:
             if c.get('name') == 'ASP.NET_SessionId':
                 session_cookie['ASP.NET_SessionId'] = c['value']
                 break
+
+        # input filename and filter the url crawled
+        logging.info('filtering crawled url...')
+        if os.path.exists(self.out_filename):
+            df = self.crawler.engine.slot.scheduler.df
+            with open(self.out_filename, 'r') as f:
+                while True:
+                    line = f.readline()
+                    if line == '':
+                        break
+                    item = json.loads(line)
+                    url = item['info'].get('url', '')
+                    df.request_seen(scrapy.Request(
+                        url=url,
+                        method='GET',
+                        cookies=session_cookie,
+                    ))
 
         # generate request for label cloud
         yield scrapy.Request(
@@ -95,7 +99,7 @@ class LabelsEtherscanSpider(scrapy.Spider):
             for tab in tab_anchors:
                 total = tab.xpath('text()').get()
                 total = int(re.search(r'\d+', total).group()) if re.search(r'\d+', total) else self.page_size
-                size = total if total < self.page_size else self.page_size
+                # size = total if total < self.page_size else self.page_size
                 start = 0
                 subcatid = tab.attrib.get('val', 0)
 
@@ -104,7 +108,7 @@ class LabelsEtherscanSpider(scrapy.Spider):
                         base_url,
                         urlencode({
                             'subcatid': subcatid,
-                            'size': size,
+                            'size': self.page_size,
                             'start': start,
                         })
                     ])
@@ -116,17 +120,16 @@ class LabelsEtherscanSpider(scrapy.Spider):
                         dont_filter=True,
                         cb_kwargs={'label': label}
                     )
-                    start += size
+                    start += self.page_size
         else:
             total = int(kwargs.get('size', self.page_size))
-            size = total if total < self.page_size else self.page_size
             start = 0
 
             while start < total:
                 _url = '?'.join([
                     base_url,
                     urlencode({
-                        'size': size,
+                        'size': self.page_size,
                         'start': start,
                     })
                 ])
@@ -138,7 +141,7 @@ class LabelsEtherscanSpider(scrapy.Spider):
                     dont_filter=True,
                     cb_kwargs={'label': label}
                 )
-                start += size
+                start += self.page_size
 
     def parse_labels(self, response, **kwargs):
         label = kwargs.get('label')
