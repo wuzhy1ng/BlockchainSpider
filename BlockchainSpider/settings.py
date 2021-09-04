@@ -19,12 +19,12 @@ NEWSPIDER_MODULE = 'BlockchainSpider.spiders'
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 16
+CONCURRENT_REQUESTS = 8
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 3
+# DOWNLOAD_DELAY = 3
 # The download delay setting will honor only one of:
 # CONCURRENT_REQUESTS_PER_DOMAIN = 5
 # CONCURRENT_REQUESTS_PER_IP = 16
@@ -64,7 +64,7 @@ DEFAULT_REQUEST_HEADERS = {
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   'BlockchainSpider.pipelines.LabelsPipeline': 300,
+    'BlockchainSpider.pipelines.LabelsPipeline': 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -82,8 +82,34 @@ ITEM_PIPELINES = {
 
 # Enable and configure HTTP caching (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
-# HTTPCACHE_ENABLED = True
-# HTTPCACHE_EXPIRATION_SECS = 0
-# HTTPCACHE_DIR = 'httpcache'
-# HTTPCACHE_IGNORE_HTTP_CODES = []
-# HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+HTTPCACHE_ENABLED = True
+HTTPCACHE_EXPIRATION_SECS = 0
+HTTPCACHE_DIR = './cache'
+HTTPCACHE_IGNORE_HTTP_CODES = []
+HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+HTTPCACHE_GZIP = True
+
+# Log configure
+LOG_LEVEL = 'INFO'
+
+# Target original url configure
+TXS_ETH_ORIGINAL_URL = 'http://api-cn.etherscan.com/api'
+
+SCAN_APIKEYS = [
+    # 'SQK66V2BNCHM85JJDGBP7EV4VHVTW7ZKDJ',
+    # '4UX2YETIKG27YIP81XDI4SEII8DW538QU3',
+    'XFFYAR7DBFMZB29VTQ6GR51XF2DB887X58',
+
+    # 'J9996KUX8WNA5I86WY67ZMZK72SST1BIW8',
+    # 'YEZRSSP7JJW93WNZ8AIM4CFEIQ1XDI8CDW',
+    'PFPRS98QBSNWCWFG1QSBSNTDWSWD8TYT6Y',
+
+    # '4VCZMM3P2GD73WYEBC434YNTQC5R2K1EP5',
+    # '8Y7KSGX5BP6DMQT8ITJPFY6DCHQIUHST24',
+    '9V1P5HYR53Q41CK6DAJTAU2UJ7IB8F8WWE',
+
+    # 'JKE66VUUEHBF3A182C11PGMYSH44QC89IN',
+    'NN8E4G2ECEIZDFHWU3IN28MIQ7SUMEYPTF',
+
+    'YB9Y2UZKHM2V9PKIGBXYRNBATZ36T5GS8T',
+]

@@ -2,11 +2,75 @@
 #
 # See documentation in:
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+from urllib.parse import urlparse, parse_qs
 
 from scrapy import signals
 
 # useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
+from scrapy.downloadermiddlewares.httpcache import HttpCacheMiddleware
+from scrapy.exceptions import IgnoreRequest
+
+
+class TxsCacheMiddleware(HttpCacheMiddleware):
+    def process_request(self, request, spider):
+        if request.meta.get('dont_cache', False):
+            return None
+
+        # Skip uncacheable requests
+        if not self.policy.should_cache_request(request):
+            request.meta['_dont_cache'] = True  # flag as uncacheable
+            return None
+
+        # Look for cached response and check if expired
+        cachedresponse = self.storage.retrieve_response(spider, request)
+        if cachedresponse is None:
+            self.stats.inc_value('httpcache/miss', spider=spider)
+            if self.ignore_missing:
+                self.stats.inc_value('httpcache/ignore', spider=spider)
+                raise IgnoreRequest("Ignored request not in cache: %s" % request)
+            return None  # first time request
+
+        # Return cached response only if not expired
+        cachedresponse.flags.append('cached')
+        if self.policy.is_cached_response_fresh(cachedresponse, request):
+            self.stats.inc_value('httpcache/hit', spider=spider)
+            return cachedresponse
+
+        # Keep a reference to cached response to avoid a second cache lookup on
+        # process_response hook
+        request.meta['cached_response'] = cachedresponse
+
+        return None
+
+    def _is_equal_without_apikey(self, cachedresponse, request):
+        cached_url = urlparse(cachedresponse.url)
+        request_url = urlparse(request.url)
+
+        # check url is equal or not
+        cached_url = frozenset(
+            {
+                'schema': cached_url.scheme,
+                'netloc': cached_url.netloc,
+                'path': cached_url.path,
+                'query': frozenset(
+                    {k: frozenset(v) if k != 'apikey' else None for k, v in parse_qs(cached_url.query).items()}.items()
+                )
+            }.items()
+        )
+
+        request_url = frozenset(
+            {
+                'schema': request_url.scheme,
+                'netloc': request_url.netloc,
+                'path': request_url.path,
+                'query': frozenset(
+                    {k: frozenset(v) if k != 'apikey' else None for k, v in parse_qs(request_url.query).items()}.items()
+                )
+            }.items()
+        )
+
+        return hash(cached_url) == hash(request_url)
 
 
 class BlockchainspiderSpiderMiddleware:

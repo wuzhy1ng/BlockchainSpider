@@ -153,7 +153,7 @@ class LabelsEtherscanSpider(scrapy.Spider):
             for i, td in enumerate(row.xpath('./td').extract()):
                 info[info_headers[i]] = re.sub('<.*?>', '', td)
             yield LabelItem(
-                net='eth',
+                net='txs',
                 label=label,
                 info=info,
             )

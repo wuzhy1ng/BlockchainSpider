@@ -10,3 +10,8 @@ class LabelItem(scrapy.Item):
     net = scrapy.Field()
     label = scrapy.Field()
     info = scrapy.Field()
+
+
+class TxItem(scrapy.Item):
+    source = scrapy.Field()
+    tx = scrapy.Field()
