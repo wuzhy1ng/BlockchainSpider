@@ -92,9 +92,6 @@ HTTPCACHE_GZIP = True
 # Log configure
 LOG_LEVEL = 'INFO'
 
-# Target original url configure
-TXS_ETH_ORIGINAL_URL = 'http://api-cn.etherscan.com/api'
-
 SCAN_APIKEYS = [
     # 'SQK66V2BNCHM85JJDGBP7EV4VHVTW7ZKDJ',
     # '4UX2YETIKG27YIP81XDI4SEII8DW538QU3',

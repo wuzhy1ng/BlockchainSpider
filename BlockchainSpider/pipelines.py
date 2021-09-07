@@ -33,7 +33,7 @@ class LabelsPipeline:
         if self.file is not None:
             self.file.close()
 
+
 class TxsPipeline:
     def __init__(self):
         self.file_map = dict()
-

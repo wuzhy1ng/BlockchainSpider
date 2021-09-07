@@ -32,5 +32,5 @@ class BFS(PushPopModel):
             node, depth = self._queue.get()
             if node not in self._vis and depth <= self.depth:
                 self._vis.add(node)
-                return node, depth
-        return None, -1
+                return dict(node=node, depth=depth)
+        return None

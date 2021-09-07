@@ -25,5 +25,5 @@ class Poison(PushPopModel):
             node, depth = self._queue.get()
             if node not in self._vis:
                 self._vis.add(node)
-                return node, depth
-        return None, -1
+                return dict(node=node, depth=depth)
+        return None

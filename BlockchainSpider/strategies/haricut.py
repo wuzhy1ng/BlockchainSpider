@@ -33,4 +33,4 @@ class Haircut(PushPopModel):
                 return
             if node not in self._vis:
                 self._vis.add(node)
-                return node
+                return dict(node=node, weight=weight)

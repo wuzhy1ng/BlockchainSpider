@@ -1,26 +1,27 @@
 import csv
 import json
 import logging
+import time
 import urllib.parse
 
 import scrapy
 
 from BlockchainSpider.items import TxItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
-from BlockchainSpider.strategies import BFS
-from BlockchainSpider.tasks import AsyncTask
+from BlockchainSpider.strategies import Haircut
+from BlockchainSpider.tasks import SyncTask
 
 
-class TxsETHBFSSpider(TxsETHSpider):
-    name = 'txs.eth.bfs'
+class TxsETHHaircutSpider(TxsETHSpider):
+    name = 'txs.eth.haircut'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         # task map
         self.task_map = dict()
-        self.strategy = BFS
-        self.depth = int(kwargs.get('depth', 2))
+        self.strategy = Haircut
+        self.min_weight = float(kwargs.get('min_weight', 1e-3))
 
     def start_requests(self):
         # load source nodes
@@ -29,25 +30,32 @@ class TxsETHBFSSpider(TxsETHSpider):
             with open(self.filename, 'r') as f:
                 for row in csv.reader(f):
                     source_nodes.add(row[0])
-                    self.task_map[row[0]] = AsyncTask(
+                    self.task_map[row[0]] = SyncTask(
                         strategy_cls=self.strategy,
                         source=row[0],
-                        depth=self.depth,
+                        min_weight=self.min_weight,
                     )
         elif self.source is not None:
             source_nodes.add(self.source)
-            self.task_map[self.source] = AsyncTask(
+            self.task_map[self.source] = SyncTask(
                 strategy_cls=self.strategy,
                 source=self.source,
-                depth=self.depth,
+                min_weight=self.min_weight,
             )
 
         # generate requests
         for node in source_nodes:
-            yield from self.gen_txs_requests(node, **{
-                'source': node,
-                'depth': 1,
-            })
+            for txs_type in self.txs_types:
+                now = time.time()
+
+                yield self.txs_req_getter[txs_type](
+                    address=node,
+                    **{
+                        'source': node,
+                        'weight': 1.0,
+                        'wait_key': time.time()
+                    }
+                )
 
     def _parse_txs(self, response, **kwargs):
         # parse data from response
@@ -56,8 +64,8 @@ class TxsETHBFSSpider(TxsETHSpider):
             logging.warning("On parse: Get error status from:%s" % response.url)
             return
         logging.info(
-            'On parse: Extend {} from seed of {}, depth {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['depth']
+            'On parse: Extend {} from seed of {}, weight {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['weight']
             )
         )
 
@@ -70,7 +78,6 @@ class TxsETHBFSSpider(TxsETHSpider):
             self.task_map[kwargs['source']].push(
                 node=kwargs['address'],
                 edges=data['result'],
-                cur_depth=kwargs['depth'],
             )
 
             # next address request
@@ -80,7 +87,7 @@ class TxsETHBFSSpider(TxsETHSpider):
                     yield from self.gen_txs_requests(
                         source=kwargs['source'],
                         address=item['node'],
-                        depth=item['depth']
+                        weight=item['weight']
                     )
             # next page request
             else:
@@ -99,7 +106,7 @@ class TxsETHBFSSpider(TxsETHSpider):
                     cb_kwargs={
                         'source': kwargs['source'],
                         'address': kwargs['address'],
-                        'depth': kwargs['depth'],
+                        'weight': kwargs['weight'],
                     },
                     callback=self._parse_txs
                 )
@@ -111,7 +118,9 @@ class TxsETHBFSSpider(TxsETHSpider):
         yield from self._parse_txs(response, **kwargs)
 
     def parse_erc20_txs(self, response, **kwargs):
-        yield from self._parse_txs(response, **kwargs)
+        # TODO
+        pass
 
     def parse_erc721_txs(self, response, **kwargs):
-        yield from self._parse_txs(response, **kwargs)
+        # TODO
+        pass
