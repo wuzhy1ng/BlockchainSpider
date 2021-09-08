@@ -5,19 +5,22 @@ import time
 
 from BlockchainSpider.items import TxItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
-from BlockchainSpider.strategies import Haircut
+from BlockchainSpider.strategies import TTR
 from BlockchainSpider.tasks import SyncTask
 
 
-class TxsETHHaircutSpider(TxsETHSpider):
-    name = 'txs.eth.haircut'
+class TxsETHTTRSpider(TxsETHSpider):
+    name = 'txs.eth.ttr'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         # task map
         self.task_map = dict()
-        self.min_weight = float(kwargs.get('min_weight', 1e-3))
+        self.alpha = float(kwargs.get('alpha', 0.1))
+        self.beta = float(kwargs.get('beta', 0.6))
+        self.epsilon = float(kwargs.get('epsilon', 5e-5))
+        self.phi = float(kwargs.get('phi', 5e-5))
 
     def start_requests(self):
         # load source nodes
@@ -27,13 +30,13 @@ class TxsETHHaircutSpider(TxsETHSpider):
                 for row in csv.reader(f):
                     source_nodes.add(row[0])
                     self.task_map[row[0]] = SyncTask(
-                        strategy=Haircut(source=row[0], min_weight=self.min_weight),
+                        strategy=TTR(source=row[0], alpha=self.alpha, beta=self.beta, epsilon=self.epsilon),
                         source=row[0],
                     )
         elif self.source is not None:
             source_nodes.add(self.source)
             self.task_map[self.source] = SyncTask(
-                strategy=Haircut(source=self.source, min_weight=self.min_weight),
+                strategy=TTR(source=self.source, alpha=self.alpha, beta=self.beta, epsilon=self.epsilon),
                 source=self.source,
             )
 
@@ -46,18 +49,20 @@ class TxsETHHaircutSpider(TxsETHSpider):
                     address=node,
                     **{
                         'source': node,
-                        'weight': 1.0,
+                        'residual': 1.0,
                         'wait_key': now
                     }
                 )
 
     def _load_txs_from_response(self, response):
         data = json.loads(response.text)
-        return data.get('result') if isinstance(data.get('result'), list) else None
-
-    def _gen_tx_items(self, txs, **kwargs):
-        for tx in txs:
-            yield TxItem(source=kwargs, tx=tx)
+        txs = None
+        if isinstance(data.get('result'), list):
+            txs = data['result']
+            for i in range(len(txs)):
+                txs[i]['value'] = float(txs[i]['value'])
+                txs[i]['timeStamp'] = int(txs[i]['timeStamp'])
+        return txs
 
     def parse_external_txs(self, response, **kwargs):
         # parse data from response
@@ -66,20 +71,18 @@ class TxsETHHaircutSpider(TxsETHSpider):
             logging.warning("On parse: Get error status from: %s" % response.url)
             return
         logging.info(
-            'On parse: Extend {} from seed of {}, weight {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['weight']
+            'On parse: Extend {} from seed of {}, residual {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['residual']
             )
         )
 
-        # save tx
-        yield from self._gen_tx_items(txs, **kwargs)
-
-        # push data to task
-        self.task_map[kwargs['source']].push(
-            node=kwargs['address'],
-            edges=txs,
-            wait_key=kwargs['wait_key']
-        )
+        # push data to task and save tx
+        for tx in self.task_map[kwargs['source']].push(
+                node=kwargs['address'],
+                edges=txs,
+                wait_key=kwargs['wait_key']
+        ):
+            yield TxItem(source=kwargs['source'], tx=tx)
 
         # next address request
         if len(txs) < 10000:
@@ -94,7 +97,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
                     address=item['node'],
                     **{
                         'source': kwargs['source'],
-                        'weight': item['weight'],
+                        'residual': item['residual'],
                         'wait_key': now
                     }
                 )
@@ -107,7 +110,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
                 **{
                     'source': kwargs['source'],
                     'startblock': self.get_max_blk(txs),
-                    'weight': kwargs['weight'],
+                    'residual': kwargs['residual'],
                     'wait_key': now
                 }
             )
@@ -119,16 +122,13 @@ class TxsETHHaircutSpider(TxsETHSpider):
             logging.warning("On parse: Get error status from: %s" % response.url)
             return
         logging.info(
-            'On parse: Extend {} from seed of {}, weight {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['weight']
+            'On parse: Extend {} from seed of {}, residual {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['residual']
             )
         )
 
-        # save tx
-        yield from self._gen_tx_items(txs, **kwargs)
-
-        # push data to task
-        self.task_map[kwargs['source']].push(
+        # push data to task and save tx
+        yield from self.task_map[kwargs['source']].push(
             node=kwargs['address'],
             edges=txs,
             wait_key=kwargs['wait_key']
@@ -147,7 +147,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
                     address=item['node'],
                     **{
                         'source': kwargs['source'],
-                        'weight': item['weight'],
+                        'residual': item['residual'],
                         'wait_key': now
                     }
                 )
@@ -159,7 +159,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
                 address=kwargs['address'],
                 **{
                     'source': kwargs['source'],
-                    'weight': kwargs['weight'],
+                    'residual': kwargs['residual'],
                     'wait_key': now
                 }
             )

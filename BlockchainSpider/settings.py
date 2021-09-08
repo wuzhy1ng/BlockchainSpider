@@ -65,6 +65,7 @@ DOWNLOADER_MIDDLEWARES = {
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
     'BlockchainSpider.pipelines.LabelsPipeline': 300,
+    'BlockchainSpider.pipelines.TxsPipeline': 301,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

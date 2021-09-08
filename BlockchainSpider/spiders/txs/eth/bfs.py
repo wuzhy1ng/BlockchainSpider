@@ -19,7 +19,6 @@ class TxsETHBFSSpider(TxsETHSpider):
 
         # task map
         self.task_map = dict()
-        self.strategy = BFS
         self.depth = int(kwargs.get('depth', 2))
 
     def start_requests(self):
@@ -30,16 +29,14 @@ class TxsETHBFSSpider(TxsETHSpider):
                 for row in csv.reader(f):
                     source_nodes.add(row[0])
                     self.task_map[row[0]] = AsyncTask(
-                        strategy_cls=self.strategy,
+                        strategy=BFS(source=row[0], depth=self.depth),
                         source=row[0],
-                        depth=self.depth,
                     )
         elif self.source is not None:
             source_nodes.add(self.source)
             self.task_map[self.source] = AsyncTask(
-                strategy_cls=self.strategy,
+                strategy=BFS(source=self.source, depth=self.depth),
                 source=self.source,
-                depth=self.depth,
             )
 
         # generate requests

@@ -497,34 +497,4 @@ class TTRTime(TTR):
             nodes_r.sort(key=lambda x: x[1], reverse=True)
             for node, sum_r in nodes_r:
                 if sum_r > self.epsilon:
-                    print(node, sum_r)
-                    return node
-
-        return None
-
-    def generate(self, func_get_data_with_kwargs, **kwargs):
-        vis_hash = set()
-        address = self.source
-
-        while True:
-            txs = func_get_data_with_kwargs(address, **kwargs)
-
-            for tx in self.push(address, txs, ):
-                if tx['hash'] in vis_hash:
-                    continue
-                vis_hash.add(tx['hash'])
-                yield tx
-
-            address = self.pop()
-            if address is None:
-                break
-
-            # 获取ttr所需的时间范围
-            tss = list(self.r[address].keys())
-            if kwargs.get('out_before_ts'):
-                del kwargs['out_before_ts']
-            if kwargs.get('in_after_ts'):
-                del kwargs['in_after_ts']
-            if len(tss) > 0:
-                kwargs['out_after_ts'] = min(tss)
-                kwargs['in_before_ts'] = max(tss)
+                    return dict(node=node, residual=sum_r)

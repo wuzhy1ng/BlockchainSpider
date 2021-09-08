@@ -1,6 +1,6 @@
 class Task:
-    def __init__(self, strategy_cls, source, **kwargs):
-        self._strategy = strategy_cls(source, **kwargs)
+    def __init__(self, strategy, source, **kwargs):
+        self._strategy = strategy
         self.source = source
 
     def push(self, node, edges: list, **kwargs):

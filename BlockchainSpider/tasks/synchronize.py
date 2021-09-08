@@ -2,8 +2,8 @@ from ._meta import Task
 
 
 class SyncTask(Task):
-    def __init__(self, strategy_cls, source, **kwargs):
-        super().__init__(strategy_cls, source, **kwargs)
+    def __init__(self, strategy, source, **kwargs):
+        super().__init__(strategy, source, **kwargs)
         self._cache = dict()
 
     def wait(self, key):
@@ -16,8 +16,11 @@ class SyncTask(Task):
 
         self._cache[key] = edges
         if not self._is_locked():
-            self._strategy.push(node, edges, **kwargs)
+            edges = list()
+            for cache in self._cache.values():
+                edges.extend(cache)
             self._cache = dict()
+            yield from self._strategy.push(node, edges, **kwargs)
 
     def pop(self):
         if self._is_locked():

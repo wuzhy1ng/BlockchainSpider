@@ -41,5 +41,4 @@ class APPR(PushPopModel):
         while len(r_nodes) > 0:
             node, r = r_nodes.pop()
             if r > self.epsilon:
-                print(node, r)
-                return node
+                return dict(node=node, residual=r)

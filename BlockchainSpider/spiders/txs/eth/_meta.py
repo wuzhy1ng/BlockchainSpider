@@ -7,7 +7,7 @@ from BlockchainSpider.utils.url import URLBuilder
 
 class TxsETHSpider(scrapy.Spider):
     # Target original url configure
-    TXS_ETH_ORIGINAL_URL = 'http://api-cn.etherscan.com/api'
+    TXS_ETH_ORIGINAL_URL = 'https://api-cn.etherscan.com/api'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -19,6 +19,7 @@ class TxsETHSpider(scrapy.Spider):
 
         # output dir
         self.out_dir = kwargs.get('out', './data')
+        self.out_fields = kwargs.get('fields', 'hash,from,to,value,timeStamp,blockNumber').split(',')
 
         # apikey bucket
         self.apikey_bucket = StaticAPIKeyBucket(SCAN_APIKEYS)
@@ -26,10 +27,10 @@ class TxsETHSpider(scrapy.Spider):
         # tx types
         self.txs_types = kwargs.get('types', 'external').split(',')
         self.txs_req_getter = {
-            'external': self.parse_external_txs,
-            'internal': self.parse_internal_txs,
-            'erc20': self.parse_erc20_txs,
-            'erc721': self.parse_erc721_txs,
+            'external': self.get_external_txs_request,
+            'internal': self.get_internal_txs_request,
+            'erc20': self.get_erc20_txs_request,
+            'erc721': self.get_erc721_txs_request,
         }
         for txs_type in self.txs_types:
             assert txs_type in set(self.txs_req_getter.keys())
@@ -124,7 +125,7 @@ class TxsETHSpider(scrapy.Spider):
 
     def gen_txs_requests(self, address: str, **kwargs):
         for txs_type in self.txs_types:
-            self.txs_req_getter[txs_type](address, **kwargs)
+            yield self.txs_req_getter[txs_type](address, **kwargs)
 
     def parse_external_txs(self, response, **kwargs):
         raise NotImplementedError()

@@ -5,19 +5,21 @@ import time
 
 from BlockchainSpider.items import TxItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
-from BlockchainSpider.strategies import Haircut
+from BlockchainSpider.strategies import APPR
 from BlockchainSpider.tasks import SyncTask
 
 
-class TxsETHHaircutSpider(TxsETHSpider):
-    name = 'txs.eth.haircut'
+class TxsETHAPPRSpider(TxsETHSpider):
+    name = 'txs.eth.appr'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         # task map
         self.task_map = dict()
-        self.min_weight = float(kwargs.get('min_weight', 1e-3))
+        self.alpha = float(kwargs.get('alpha', 0.1))
+        self.epsilon = float(kwargs.get('epsilon', 5e-5))
+        self.phi = float(kwargs.get('phi', 5e-5))
 
     def start_requests(self):
         # load source nodes
@@ -27,13 +29,13 @@ class TxsETHHaircutSpider(TxsETHSpider):
                 for row in csv.reader(f):
                     source_nodes.add(row[0])
                     self.task_map[row[0]] = SyncTask(
-                        strategy=Haircut(source=row[0], min_weight=self.min_weight),
+                        strategy=APPR(source=row[0], alpha=self.alpha, epsilon=self.epsilon),
                         source=row[0],
                     )
         elif self.source is not None:
             source_nodes.add(self.source)
             self.task_map[self.source] = SyncTask(
-                strategy=Haircut(source=self.source, min_weight=self.min_weight),
+                strategy=APPR(source=self.source, alpha=self.alpha, epsilon=self.epsilon),
                 source=self.source,
             )
 
@@ -46,7 +48,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
                     address=node,
                     **{
                         'source': node,
-                        'weight': 1.0,
+                        'residual': 1.0,
                         'wait_key': now
                     }
                 )
@@ -66,8 +68,8 @@ class TxsETHHaircutSpider(TxsETHSpider):
             logging.warning("On parse: Get error status from: %s" % response.url)
             return
         logging.info(
-            'On parse: Extend {} from seed of {}, weight {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['weight']
+            'On parse: Extend {} from seed of {}, residual {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['residual']
             )
         )
 
@@ -94,7 +96,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
                     address=item['node'],
                     **{
                         'source': kwargs['source'],
-                        'weight': item['weight'],
+                        'residual': item['residual'],
                         'wait_key': now
                     }
                 )
@@ -107,7 +109,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
                 **{
                     'source': kwargs['source'],
                     'startblock': self.get_max_blk(txs),
-                    'weight': kwargs['weight'],
+                    'residual': kwargs['residual'],
                     'wait_key': now
                 }
             )
@@ -119,8 +121,8 @@ class TxsETHHaircutSpider(TxsETHSpider):
             logging.warning("On parse: Get error status from: %s" % response.url)
             return
         logging.info(
-            'On parse: Extend {} from seed of {}, weight {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['weight']
+            'On parse: Extend {} from seed of {}, residual {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['residual']
             )
         )
 
@@ -147,7 +149,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
                     address=item['node'],
                     **{
                         'source': kwargs['source'],
-                        'weight': item['weight'],
+                        'residual': item['residual'],
                         'wait_key': now
                     }
                 )
@@ -159,7 +161,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
                 address=kwargs['address'],
                 **{
                     'source': kwargs['source'],
-                    'weight': kwargs['weight'],
+                    'residual': kwargs['residual'],
                     'wait_key': now
                 }
             )
