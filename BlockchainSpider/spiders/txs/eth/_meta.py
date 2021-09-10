@@ -35,6 +35,10 @@ class TxsETHSpider(scrapy.Spider):
         for txs_type in self.txs_types:
             assert txs_type in set(self.txs_req_getter.keys())
 
+        # tx block range
+        self.start_blk = int(kwargs.get('start_blk', 0))
+        self.end_blk = int(kwargs.get('end_blk', 99999999))
+
     def get_max_blk(self, txs: list):
         rlt = 0
         for tx in txs:
@@ -50,7 +54,8 @@ class TxsETHSpider(scrapy.Spider):
                 'action': 'txlist',
                 'address': address,
                 'sort': 'asc',
-                'startblock': kwargs.get('startblock', 0),
+                'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
+                'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
                 'apikey': self.apikey_bucket.get()
             }),
             method='GET',
@@ -70,7 +75,8 @@ class TxsETHSpider(scrapy.Spider):
                 'action': 'txlistinternal',
                 'address': address,
                 'sort': 'asc',
-                'startblock': kwargs.get('startblock', 0),
+                'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
+                'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
                 'apikey': self.apikey_bucket.get()
             }),
             method='GET',
@@ -90,7 +96,8 @@ class TxsETHSpider(scrapy.Spider):
                 'action': 'tokentx',
                 'address': address,
                 'sort': 'asc',
-                'startblock': kwargs.get('startblock', 0),
+                'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
+                'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
                 'apikey': self.apikey_bucket.get()
             }),
             method='GET',
@@ -110,7 +117,8 @@ class TxsETHSpider(scrapy.Spider):
                 'action': 'tokennfttx',
                 'address': address,
                 'sort': 'asc',
-                'startblock': kwargs.get('startblock', 0),
+                'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
+                'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
                 'apikey': self.apikey_bucket.get()
             }),
             method='GET',

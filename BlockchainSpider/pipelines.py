@@ -9,7 +9,7 @@ import csv
 import json
 import os
 
-from BlockchainSpider.items import LabelItem, TxItem
+from BlockchainSpider.items import LabelItem, TxItem, PPRItem
 
 
 class LabelsPipeline:
@@ -58,5 +58,35 @@ class TxsPipeline:
         # write item
         row = [item['tx'].get(field, '') for field in spider.out_fields]
         csv.writer(self.file_map[item['source']]).writerow(row)
+
+        return item
+
+    def close_spider(self, spider):
+        # close all file
+        for f in self.file_map.values():
+            f.close()
+
+
+class PPRPipeline:
+    def __init__(self):
+        self.out_dir = None
+
+    def process_item(self, item, spider):
+        if not isinstance(item, PPRItem):
+            return item
+
+        # create output dir
+        if self.out_dir is None:
+            self.out_dir = os.path.join(spider.out_dir, 'ppr')
+            if not os.path.exists(self.out_dir):
+                os.makedirs(self.out_dir)
+
+        # write item
+        fn = os.path.join(self.out_dir, '%s.csv' % item['source'])
+        with open(fn, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['node', 'p'])
+            for k, v in item['ppr'].items():
+                writer.writerow([k, v])
 
         return item

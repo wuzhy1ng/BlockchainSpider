@@ -15,7 +15,7 @@ class SyncTask(Task):
         del kwargs['wait_key']
 
         self._cache[key] = edges
-        if not self._is_locked():
+        if not self.is_locked():
             edges = list()
             for cache in self._cache.values():
                 edges.extend(cache)
@@ -23,12 +23,12 @@ class SyncTask(Task):
             yield from self._strategy.push(node, edges, **kwargs)
 
     def pop(self):
-        if self._is_locked():
+        if self.is_locked():
             return None
         item = self._strategy.pop()
         return item
 
-    def _is_locked(self):
+    def is_locked(self):
         for k in self._cache.keys():
             if self._cache[k] is None:
                 return True

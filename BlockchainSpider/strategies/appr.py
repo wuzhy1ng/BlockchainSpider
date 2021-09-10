@@ -36,9 +36,16 @@ class APPR(PushPopModel):
             self.r[neighbour] = self.r.get(neighbour, 0) + inc
 
     def pop(self):
-        r_nodes = list(self.r.items())
-        r_nodes.sort(key=lambda x: x[1])
-        while len(r_nodes) > 0:
-            node, r = r_nodes.pop()
-            if r > self.epsilon:
-                return dict(node=node, residual=r)
+        node, r = None, self.epsilon
+        for _node, _r in self.r.items():
+            if _r > r:
+                node, r = _node, _r
+
+        return dict(node=node, residual=r) if node is not None else None
+
+        # r_nodes = list(self.r.items())
+        # r_nodes.sort(key=lambda x: x[1])
+        # while len(r_nodes) > 0:
+        #     node, r = r_nodes.pop()
+        #     if r > self.epsilon:
+        #         return dict(node=node, residual=r)

@@ -486,15 +486,25 @@ class TTRTime(TTR):
             j -= 1
 
     def pop(self):
-        nodes_r = list()
-        for node, chips in self.r.items():
+        node, r = None, self.epsilon
+        for _node, chips in self.r.items():
             sum_r = 0
-            for _, v in chips.items():
+            for v in chips.values():
                 sum_r += v
-            nodes_r.append((node, sum_r))
+            if sum_r > r:
+                node, r = _node, sum_r
 
-        if len(nodes_r) > 0:
-            nodes_r.sort(key=lambda x: x[1], reverse=True)
-            for node, sum_r in nodes_r:
-                if sum_r > self.epsilon:
-                    return dict(node=node, residual=sum_r)
+        return dict(node=node, residual=r) if node is not None else None
+
+        # nodes_r = list()
+        # for node, chips in self.r.items():
+        #     sum_r = 0
+        #     for _, v in chips.items():
+        #         sum_r += v
+        #     nodes_r.append((node, sum_r))
+        # 
+        # if len(nodes_r) > 0:
+        #     nodes_r.sort(key=lambda x: x[1], reverse=True)
+        #     for node, sum_r in nodes_r:
+        #         if sum_r > self.epsilon:
+        #             return dict(node=node, residual=sum_r)

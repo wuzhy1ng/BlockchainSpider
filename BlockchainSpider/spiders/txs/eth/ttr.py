@@ -3,7 +3,7 @@ import json
 import logging
 import time
 
-from BlockchainSpider.items import TxItem
+from BlockchainSpider.items import TxItem, PPRItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.strategies import TTR
 from BlockchainSpider.tasks import SyncTask
@@ -68,12 +68,16 @@ class TxsETHTTRSpider(TxsETHSpider):
         # parse data from response
         txs = self._load_txs_from_response(response)
         if txs is None:
-            logging.warning("On parse: Get error status from: %s" % response.url)
-            return
-        logging.info(
-            'On parse: Extend {} from seed of {}, residual {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['residual']
+            self.log(
+                message="On parse: Get error status from: %s" % response.url,
+                level=logging.WARNING,
             )
+            return
+        self.log(
+            message='On parse: Extend {} from seed of {}, residual {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['residual']
+            ),
+            level=logging.INFO
         )
 
         # push data to task and save tx
@@ -84,12 +88,18 @@ class TxsETHTTRSpider(TxsETHSpider):
         ):
             yield TxItem(source=kwargs['source'], tx=tx)
 
-        # next address request
         if len(txs) < 10000:
             task = self.task_map[kwargs['source']]
+            if task.is_locked():
+                return
+
+            # generate ppr item and finished
             item = task.pop()
             if item is None:
+                yield PPRItem(source=kwargs['source'], ppr=task.get_strategy().p)
                 return
+
+            # next address request
             for txs_type in self.txs_types:
                 now = time.time()
                 self.task_map[kwargs['source']].wait(now)
@@ -119,12 +129,16 @@ class TxsETHTTRSpider(TxsETHSpider):
         # parse data from response
         txs = self._load_txs_from_response(response)
         if txs is None:
-            logging.warning("On parse: Get error status from: %s" % response.url)
-            return
-        logging.info(
-            'On parse: Extend {} from seed of {}, residual {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['residual']
+            self.log(
+                message="On parse: Get error status from: %s" % response.url,
+                level=logging.WARNING,
             )
+            return
+        self.log(
+            message='On parse: Extend {} from seed of {}, residual {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['residual']
+            ),
+            level=logging.INFO
         )
 
         # push data to task and save tx
@@ -134,12 +148,18 @@ class TxsETHTTRSpider(TxsETHSpider):
             wait_key=kwargs['wait_key']
         )
 
-        # next address request
         if len(txs) < 10000:
             task = self.task_map[kwargs['source']]
+            if task.is_locked():
+                return
+
+            # generate ppr item and finished
             item = task.pop()
             if item is None:
+                yield PPRItem(source=kwargs['source'], ppr=task.get_strategy().p)
                 return
+
+            # next address request
             for txs_type in self.txs_types:
                 now = time.time()
                 self.task_map[kwargs['source']].wait(now)

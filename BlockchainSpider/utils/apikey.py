@@ -13,6 +13,4 @@ class StaticAPIKeyBucket(APIKeyBucket):
         self._cnt = len(self.apikeys)
 
     def get(self) -> str:
-        apikey = self.apikeys[self._idx]
-        self._idx = (self._idx + 1) % self._cnt
-        return apikey
+        return random.choice(self.apikeys)
