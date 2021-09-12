@@ -7,7 +7,7 @@ from extractors._meta import Extractor
 
 
 class LocalCommunityExtractor(Extractor):
-    def __init__(self, phi: float = 1e-3):
+    def __init__(self, phi: float = 5e-5):
         super().__init__()
         self.phi = phi
 
@@ -52,7 +52,7 @@ class LocalCommunityExtractor(Extractor):
                 inter_sum, outer_sum, new_node, g, inter_nodes, outer_nodes, p
             )
 
-        return [edge['info'] for edge in g.subgraph(inter_nodes).edges(data=True)]
+        return [attr['info'] for _, _, attr in g.subgraph(inter_nodes).edges(data=True)]
 
     def __call__(self, *args, **kwargs):
         super().__call__(*args, **kwargs)
@@ -72,7 +72,7 @@ class LocalCommunityExtractor(Extractor):
 
             for row in reader:
                 tx = {header[i]: row[i] for i in range(len(header))}
-            txs.append(tx)
+                txs.append(tx)
 
         # load ppr
         p = dict()

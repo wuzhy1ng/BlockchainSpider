@@ -49,7 +49,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
                     **{
                         'source': node,
                         'residual': 1.0,
-                        'wait_key': now
+                        'wait_key': now,
                     }
                 )
 
@@ -59,7 +59,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
 
     def _gen_tx_items(self, txs, **kwargs):
         for tx in txs:
-            yield TxItem(source=kwargs, tx=tx)
+            yield TxItem(source=kwargs['source'], tx=tx)
 
     def parse_external_txs(self, response, **kwargs):
         # parse data from response
@@ -84,7 +84,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
         )
 
         # next address request
-        if len(txs) < 10000:
+        if len(txs) < 10000 or self.auto_page is False:
             task = self.task_map[kwargs['source']]
             item = task.pop()
             if item is None:
@@ -137,7 +137,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
         )
 
         # next address request
-        if len(txs) < 10000:
+        if len(txs) < 10000 or self.auto_page is False:
             task = self.task_map[kwargs['source']]
             item = task.pop()
             if item is None:

@@ -71,7 +71,7 @@ class TxsETHPoisonSpider(TxsETHSpider):
             )
 
             # next address request
-            if data['result'] is None or len(data['result']) < 10000:
+            if data['result'] is None or len(data['result']) < 10000 or self.auto_page is False:
                 task = self.task_map[kwargs['source']]
                 for item in task.pop():
                     yield from self.gen_txs_requests(

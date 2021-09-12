@@ -19,7 +19,7 @@ NEWSPIDER_MODULE = 'BlockchainSpider.spiders'
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 8
+CONCURRENT_REQUESTS = 16
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
@@ -86,7 +86,7 @@ ITEM_PIPELINES = {
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
 # HTTPCACHE_ENABLED = True
 HTTPCACHE_EXPIRATION_SECS = 0
-HTTPCACHE_DIR = './cache'
+HTTPCACHE_DIR = 'D:\\cache'
 HTTPCACHE_IGNORE_HTTP_CODES = []
 HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 HTTPCACHE_GZIP = True
@@ -100,6 +100,9 @@ SCAN_APIKEYS = [
     '5YQ9QUKFUEA65AX24ZQ2IZXXGA286NMPP3',
     '5T4C2NFG9TA94ZMM6WS871EFEW93ZZH9HV',
     'J8DDWDM3PNVPBQ4WF2J2A6U28GCB1X91NE',
+    'NMGM7KTHBAH8SPKJ7TX79RRAY8MUBJ3MYJ',
+    'K72KJ7XNTFBYRSSV4RMY5XUQU4KG2CKTF2',
+    'P29D3G4CJ2GW8IMMHP5K99EGCS1BPG68KH',
 
     # 'J9996KUX8WNA5I86WY67ZMZK72SST1BIW8',
     # 'YEZRSSP7JJW93WNZ8AIM4CFEIQ1XDI8CDW',

@@ -234,31 +234,12 @@ class TTRBase(TTR):
             yield e
 
     def pop(self):
-        nodes_r = [(node, r) for node, r in self.r.items()]
-        nodes_r.sort(key=lambda x: x[1])
-        while len(nodes_r) > 0:
-            node, r = nodes_r.pop()
-            if r > self.epsilon:
-                print(node, r)
-                return node
-        return None
+        node, r = None, self.epsilon
+        for _node, _r in self.r.items():
+            if _r > r:
+                node, r = _node, _r
 
-    def generate(self, func_get_data_with_kwargs, **kwargs):
-        vis_hash = set()
-        address = self.source
-
-        while True:
-            txs = func_get_data_with_kwargs(address, **kwargs)
-
-            for tx in self.push(address, txs, ):
-                if tx['hash'] in vis_hash:
-                    continue
-                vis_hash.add(tx['hash'])
-                yield tx
-
-            address = self.pop()
-            if address is None:
-                break
+        return dict(node=node, residual=r) if node is not None else None
 
 
 class TTRWeight(TTR):
@@ -312,31 +293,12 @@ class TTRWeight(TTR):
             yield e
 
     def pop(self):
-        nodes_r = [(node, r) for node, r in self.r.items()]
-        nodes_r.sort(key=lambda x: x[1])
-        while len(nodes_r) > 0:
-            node, r = nodes_r.pop()
-            if r > self.epsilon:
-                print(node, r)
-                return node
-        return None
+        node, r = None, self.epsilon
+        for _node, _r in self.r.items():
+            if _r > r:
+                node, r = _node, _r
 
-    def generate(self, func_get_data_with_kwargs, **kwargs):
-        vis_hash = set()
-        address = self.source
-
-        while True:
-            txs = func_get_data_with_kwargs(address, **kwargs)
-
-            for tx in self.push(address, txs, ):
-                if tx['hash'] in vis_hash:
-                    continue
-                vis_hash.add(tx['hash'])
-                yield tx
-
-            address = self.pop()
-            if address is None:
-                break
+        return dict(node=node, residual=r) if node is not None else None
 
 
 class TTRTime(TTR):
