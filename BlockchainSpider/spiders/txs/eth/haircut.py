@@ -53,7 +53,14 @@ class TxsETHHaircutSpider(TxsETHSpider):
 
     def _load_txs_from_response(self, response):
         data = json.loads(response.text)
-        return data.get('result') if isinstance(data.get('result'), list) else None
+        txs = None
+        if isinstance(data.get('result'), list):
+            txs = list()
+            for tx in data['result']:
+                if tx['from'] == '' or tx['to'] == '':
+                    continue
+                txs.append(tx)
+        return txs
 
     def _gen_tx_items(self, txs, **kwargs):
         for tx in txs:

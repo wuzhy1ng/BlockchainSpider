@@ -3,7 +3,7 @@ import json
 import logging
 import time
 
-from BlockchainSpider.items import TxItem
+from BlockchainSpider.items import TxItem, PPRItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.strategies import APPR
 from BlockchainSpider.tasks import SyncTask
@@ -19,7 +19,6 @@ class TxsETHAPPRSpider(TxsETHSpider):
         self.task_map = dict()
         self.alpha = float(kwargs.get('alpha', 0.1))
         self.epsilon = float(kwargs.get('epsilon', 5e-5))
-        self.phi = float(kwargs.get('phi', 5e-5))
 
     def start_requests(self):
         # load source nodes
@@ -55,7 +54,14 @@ class TxsETHAPPRSpider(TxsETHSpider):
 
     def _load_txs_from_response(self, response):
         data = json.loads(response.text)
-        return data.get('result') if isinstance(data.get('result'), list) else None
+        txs = None
+        if isinstance(data.get('result'), list):
+            txs = list()
+            for tx in data['result']:
+                if tx['from'] == '' or tx['to'] == '':
+                    continue
+                txs.append(tx)
+        return txs
 
     def _gen_tx_items(self, txs, **kwargs):
         for tx in txs:
@@ -86,9 +92,16 @@ class TxsETHAPPRSpider(TxsETHSpider):
         # next address request
         if len(txs) < 10000 or self.auto_page is False:
             task = self.task_map[kwargs['source']]
+            if task.is_locked():
+                return
+
+            # generate ppr item and finished
             item = task.pop()
             if item is None:
+                yield PPRItem(source=kwargs['source'], ppr=task.get_strategy().p)
                 return
+
+            # next address request
             for txs_type in self.txs_types:
                 now = time.time()
                 self.task_map[kwargs['source']].wait(now)
@@ -139,9 +152,16 @@ class TxsETHAPPRSpider(TxsETHSpider):
         # next address request
         if len(txs) < 10000 or self.auto_page is False:
             task = self.task_map[kwargs['source']]
+            if task.is_locked():
+                return
+
+            # generate ppr item and finished
             item = task.pop()
             if item is None:
+                yield PPRItem(source=kwargs['source'], ppr=task.get_strategy().p)
                 return
+
+            # next address request
             for txs_type in self.txs_types:
                 now = time.time()
                 self.task_map[kwargs['source']].wait(now)

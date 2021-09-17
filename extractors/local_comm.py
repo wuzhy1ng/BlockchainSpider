@@ -7,14 +7,14 @@ from extractors._meta import Extractor
 
 
 class LocalCommunityExtractor(Extractor):
-    def __init__(self, phi: float = 5e-5):
+    def __init__(self, phi: float = 1e-4):
         super().__init__()
         self.phi = phi
 
     def extract(self, txs: list, source, p, **kwargs) -> list:
         g = nx.MultiDiGraph()
         for tx in txs:
-            g.add_edge(tx['from'], tx['to'], info=tx)
+            g.add_edge(tx['from'], tx['to'], hash=tx['hash'])
 
         def _calc_conductance_incr(inter_sum, outer_sum, new_node, g, inter_nodes, outer_nodes, p):
             inter_nodes.add(new_node)
@@ -52,7 +52,12 @@ class LocalCommunityExtractor(Extractor):
                 inter_sum, outer_sum, new_node, g, inter_nodes, outer_nodes, p
             )
 
-        return [attr['info'] for _, _, attr in g.subgraph(inter_nodes).edges(data=True)]
+        _txs = list()
+        _txs_hash = set([attr['hash'] for _, _, attr in g.subgraph(inter_nodes).edges(data=True)])
+        for tx in txs:
+            if tx['hash'] in _txs_hash:
+                _txs.append(tx)
+        return _txs
 
     def __call__(self, *args, **kwargs):
         super().__call__(*args, **kwargs)

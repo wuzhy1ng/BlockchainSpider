@@ -21,7 +21,6 @@ class TxsETHTTRSpider(TxsETHSpider):
         self.alpha = float(kwargs.get('alpha', 0.1))
         self.beta = float(kwargs.get('beta', 0.6))
         self.epsilon = float(kwargs.get('epsilon', 5e-5))
-        self.phi = float(kwargs.get('phi', 5e-5))
 
         self.strategy_cls = kwargs.get('strategy', 'TTRTime')
         assert self.strategy_cls in TxsETHTTRSpider.allow_strategies
@@ -73,10 +72,13 @@ class TxsETHTTRSpider(TxsETHSpider):
         data = json.loads(response.text)
         txs = None
         if isinstance(data.get('result'), list):
-            txs = data['result']
-            for i in range(len(txs)):
-                txs[i]['value'] = float(txs[i]['value'])
-                txs[i]['timeStamp'] = int(txs[i]['timeStamp'])
+            txs = list()
+            for tx in data['result']:
+                if tx['from'] == '' or tx['to'] == '':
+                    continue
+                tx['value'] = float(tx['value'])
+                tx['timeStamp'] = float(tx['timeStamp'])
+                txs.append(tx)
         return txs
 
     def parse_external_txs(self, response, **kwargs):
