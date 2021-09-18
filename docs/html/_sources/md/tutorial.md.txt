@@ -1,0 +1,8 @@
+# Tutorial
+
+Blockchain spiders aim to collect data of public chains, 
+and this project base on `scrapy` framework.
+
+## Dependency
+Python3.7 or higher version
+
