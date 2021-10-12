@@ -1,3 +1,5 @@
+import sys
+
 from BlockchainSpider.strategies import PushPopModel
 
 
@@ -317,16 +319,28 @@ class TTRTime(TTR):
 
         # 当更新的是源节点时
         if node == self.source and self.source not in self._vis:
-            s = sum([e['value'] for e in edges])
-            for e in edges:
-                if e['from'] == self.source:
-                    self.r[node][e['timeStamp'] - 0.001] = \
-                        self.r[node].get(e['timeStamp'], 0) + e['value'] / s
-                elif e['to'] == self.source:
-                    self.r[node][e['timeStamp'] + 0.001] = \
-                        self.r[node].get(e['timeStamp'], 0) + e['value'] / s
+            self.p[self.source] = self.alpha
 
-        self._vis.add(node)
+            out_sum = sum([e['value'] if e['from'] == self.source else 0 for e in edges])
+            in_sum = sum([e['value'] if e['to'] == self.source else 0 for e in edges])
+            for e in edges:
+                if e['from'] == self.source and out_sum != 0:
+                    self.r[self.source][e['timeStamp']] = \
+                        (1 - self.alpha) * self.beta * e['value'] / out_sum
+                elif e['to'] == self.source and in_sum != 0:
+                    self.r[self.source][e['timeStamp']] = \
+                        (1 - self.alpha) * (1 - self.beta) * e['value'] / in_sum
+            if out_sum == 0:
+                # 如果对某个节点的expand结果始终是一样的那么可以改成注释这行代码
+                # self.p[self.source] += (1 - self.alpha) * self.beta
+                self.r[self.source][0] = (1 - self.alpha) * self.beta
+            if in_sum == 0:
+                # 如果对某个节点的expand结果始终是一样的那么可以改成注释这行代码
+                # self.p[self.source] += (1 - self.alpha) * (1 - self.beta)
+                self.r[self.source][sys.maxsize] = (1 - self.alpha) * (1 - self.beta)
+
+            self._vis.add(self.source)
+            return
 
         # 拷贝一份residual vector，原有的清空
         r = self.r[node]

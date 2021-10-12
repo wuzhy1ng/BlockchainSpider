@@ -3,7 +3,7 @@ from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
 
 
 class TxsBSCAPPRSpider(TxsETHAPPRSpider):
-    name = 'txs.bsc.haircut'
+    name = 'txs.bsc.appr'
     TXS_API_URL = 'https://api.bscscan.com/api'
 
     def __init__(self, **kwargs):

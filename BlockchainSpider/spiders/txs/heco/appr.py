@@ -3,7 +3,7 @@ from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
 
 
 class TxsHecoAPPRSpider(TxsETHAPPRSpider):
-    name = 'txs.heco.haircut'
+    name = 'txs.heco.appr'
     TXS_API_URL = 'https://api.hecoinfo.com/api'
 
     def __init__(self, **kwargs):
