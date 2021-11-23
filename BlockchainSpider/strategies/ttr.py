@@ -1,3 +1,5 @@
+import sys
+
 from BlockchainSpider.strategies import PushPopModel
 
 
@@ -234,31 +236,12 @@ class TTRBase(TTR):
             yield e
 
     def pop(self):
-        nodes_r = [(node, r) for node, r in self.r.items()]
-        nodes_r.sort(key=lambda x: x[1])
-        while len(nodes_r) > 0:
-            node, r = nodes_r.pop()
-            if r > self.epsilon:
-                print(node, r)
-                return node
-        return None
+        node, r = None, self.epsilon
+        for _node, _r in self.r.items():
+            if _r > r:
+                node, r = _node, _r
 
-    def generate(self, func_get_data_with_kwargs, **kwargs):
-        vis_hash = set()
-        address = self.source
-
-        while True:
-            txs = func_get_data_with_kwargs(address, **kwargs)
-
-            for tx in self.push(address, txs, ):
-                if tx['hash'] in vis_hash:
-                    continue
-                vis_hash.add(tx['hash'])
-                yield tx
-
-            address = self.pop()
-            if address is None:
-                break
+        return dict(node=node, residual=r) if node is not None else None
 
 
 class TTRWeight(TTR):
@@ -312,31 +295,12 @@ class TTRWeight(TTR):
             yield e
 
     def pop(self):
-        nodes_r = [(node, r) for node, r in self.r.items()]
-        nodes_r.sort(key=lambda x: x[1])
-        while len(nodes_r) > 0:
-            node, r = nodes_r.pop()
-            if r > self.epsilon:
-                print(node, r)
-                return node
-        return None
+        node, r = None, self.epsilon
+        for _node, _r in self.r.items():
+            if _r > r:
+                node, r = _node, _r
 
-    def generate(self, func_get_data_with_kwargs, **kwargs):
-        vis_hash = set()
-        address = self.source
-
-        while True:
-            txs = func_get_data_with_kwargs(address, **kwargs)
-
-            for tx in self.push(address, txs, ):
-                if tx['hash'] in vis_hash:
-                    continue
-                vis_hash.add(tx['hash'])
-                yield tx
-
-            address = self.pop()
-            if address is None:
-                break
+        return dict(node=node, residual=r) if node is not None else None
 
 
 class TTRTime(TTR):
@@ -355,16 +319,28 @@ class TTRTime(TTR):
 
         # 当更新的是源节点时
         if node == self.source and self.source not in self._vis:
-            s = sum([e['value'] for e in edges])
-            for e in edges:
-                if e['from'] == self.source:
-                    self.r[node][e['timeStamp'] - 0.001] = \
-                        self.r[node].get(e['timeStamp'], 0) + e['value'] / s
-                elif e['to'] == self.source:
-                    self.r[node][e['timeStamp'] + 0.001] = \
-                        self.r[node].get(e['timeStamp'], 0) + e['value'] / s
+            self.p[self.source] = self.alpha
 
-        self._vis.add(node)
+            out_sum = sum([e['value'] if e['from'] == self.source else 0 for e in edges])
+            in_sum = sum([e['value'] if e['to'] == self.source else 0 for e in edges])
+            for e in edges:
+                if e['from'] == self.source and out_sum != 0:
+                    self.r[self.source][e['timeStamp']] = \
+                        (1 - self.alpha) * self.beta * e['value'] / out_sum
+                elif e['to'] == self.source and in_sum != 0:
+                    self.r[self.source][e['timeStamp']] = \
+                        (1 - self.alpha) * (1 - self.beta) * e['value'] / in_sum
+            if out_sum == 0:
+                # 如果对某个节点的expand结果始终是一样的那么可以改成注释这行代码
+                # self.p[self.source] += (1 - self.alpha) * self.beta
+                self.r[self.source][0] = (1 - self.alpha) * self.beta
+            if in_sum == 0:
+                # 如果对某个节点的expand结果始终是一样的那么可以改成注释这行代码
+                # self.p[self.source] += (1 - self.alpha) * (1 - self.beta)
+                self.r[self.source][sys.maxsize] = (1 - self.alpha) * (1 - self.beta)
+
+            self._vis.add(self.source)
+            return
 
         # 拷贝一份residual vector，原有的清空
         r = self.r[node]
@@ -486,45 +462,25 @@ class TTRTime(TTR):
             j -= 1
 
     def pop(self):
-        nodes_r = list()
-        for node, chips in self.r.items():
+        node, r = None, self.epsilon
+        for _node, chips in self.r.items():
             sum_r = 0
-            for _, v in chips.items():
+            for v in chips.values():
                 sum_r += v
-            nodes_r.append((node, sum_r))
+            if sum_r > r:
+                node, r = _node, sum_r
 
-        if len(nodes_r) > 0:
-            nodes_r.sort(key=lambda x: x[1], reverse=True)
-            for node, sum_r in nodes_r:
-                if sum_r > self.epsilon:
-                    print(node, sum_r)
-                    return node
+        return dict(node=node, residual=r) if node is not None else None
 
-        return None
-
-    def generate(self, func_get_data_with_kwargs, **kwargs):
-        vis_hash = set()
-        address = self.source
-
-        while True:
-            txs = func_get_data_with_kwargs(address, **kwargs)
-
-            for tx in self.push(address, txs, ):
-                if tx['hash'] in vis_hash:
-                    continue
-                vis_hash.add(tx['hash'])
-                yield tx
-
-            address = self.pop()
-            if address is None:
-                break
-
-            # 获取ttr所需的时间范围
-            tss = list(self.r[address].keys())
-            if kwargs.get('out_before_ts'):
-                del kwargs['out_before_ts']
-            if kwargs.get('in_after_ts'):
-                del kwargs['in_after_ts']
-            if len(tss) > 0:
-                kwargs['out_after_ts'] = min(tss)
-                kwargs['in_before_ts'] = max(tss)
+        # nodes_r = list()
+        # for node, chips in self.r.items():
+        #     sum_r = 0
+        #     for _, v in chips.items():
+        #         sum_r += v
+        #     nodes_r.append((node, sum_r))
+        # 
+        # if len(nodes_r) > 0:
+        #     nodes_r.sort(key=lambda x: x[1], reverse=True)
+        #     for node, sum_r in nodes_r:
+        #         if sum_r > self.epsilon:
+        #             return dict(node=node, residual=sum_r)

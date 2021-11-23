@@ -1,37 +1,25 @@
 import csv
 import json
 import logging
+import urllib.parse
 
 import scrapy
 
 from BlockchainSpider.items import TxItem
-from BlockchainSpider.settings import TXS_ETH_ORIGINAL_URL, SCAN_APIKEYS
+from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.strategies import BFS
-from BlockchainSpider.utils.apikey import StaticAPIKeyBucket
-from BlockchainSpider.utils.url import URLBuilder
+from BlockchainSpider.tasks import AsyncTask
 
 
-class TxsETHBFSSpider(scrapy.Spider):
+class TxsETHBFSSpider(TxsETHSpider):
     name = 'txs.eth.bfs'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        # input source nodes
-        self.source = kwargs.get('source', None)
-        self.filename = kwargs.get('file', None)
-        assert self.source or self.filename, "`source` or `file` arguments are needed"
-
-        # output dir
-        self.out_dir = kwargs.get('out', './data')
-
         # task map
         self.task_map = dict()
-        self.strategy = BFS
         self.depth = int(kwargs.get('depth', 2))
-
-        # apikey bucket
-        self.apikey_bucket = StaticAPIKeyBucket(SCAN_APIKEYS)
 
     def start_requests(self):
         # load source nodes
@@ -40,51 +28,33 @@ class TxsETHBFSSpider(scrapy.Spider):
             with open(self.filename, 'r') as f:
                 for row in csv.reader(f):
                     source_nodes.add(row[0])
-                    self.task_map[row[0]] = {
-                        'strategy': self.strategy(
-                            source=row[0],
-                            depth=self.depth,
-                        )
-                    }
+                    self.task_map[row[0]] = AsyncTask(
+                        strategy=BFS(source=row[0], depth=self.depth),
+                        source=row[0],
+                    )
         elif self.source is not None:
             source_nodes.add(self.source)
-            self.task_map[self.source] = {
-                'strategy': self.strategy(
-                    source=self.source,
-                    depth=self.depth,
-                )
-            }
+            self.task_map[self.source] = AsyncTask(
+                strategy=BFS(source=self.source, depth=self.depth),
+                source=self.source,
+            )
 
         # generate requests
         for node in source_nodes:
-            yield scrapy.Request(
-                url=URLBuilder(TXS_ETH_ORIGINAL_URL).get({
-                    'module': 'account',
-                    'action': 'txlist',
-                    'address': node,
-                    'offset': 10000,
-                    'page': 1,
-                    'apikey': self.apikey_bucket.get()
-                }),
-                method='GET',
-                dont_filter=True,
-                cb_kwargs={
-                    'source': node,
-                    'address': node,
-                    'page': 1,
-                    'depth': 1,
-                }
-            )
+            yield from self.gen_txs_requests(node, **{
+                'source': node,
+                'depth': 1,
+            })
 
-    def parse(self, response, **kwargs):
+    def _parse_txs(self, response, **kwargs):
         # parse data from response
         data = json.loads(response.text)
         if data['status'] == 0:
             logging.warning("On parse: Get error status from:%s" % response.url)
             return
         logging.info(
-            'On parse: Extend {} from seed of {}, page {}, depth {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['page'], kwargs['depth']
+            'On parse: Extend {} from seed of {}, depth {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['depth']
             )
         )
 
@@ -93,55 +63,52 @@ class TxsETHBFSSpider(scrapy.Spider):
             for row in data['result']:
                 yield TxItem(source=kwargs['source'], tx=row)
 
-            # push data to strategy
-            self.task_map[kwargs['source']]['strategy'].push(
+            # push data to task
+            self.task_map[kwargs['source']].push(
                 node=kwargs['address'],
                 edges=data['result'],
                 cur_depth=kwargs['depth'],
             )
 
             # next address request
-            if data['result'] is None or len(data['result']) < 10000:
-                strategy = self.task_map[kwargs['source']]['strategy']
-                while True:
-                    node, depth = strategy.pop()
-                    if node is None:
-                        break
-                    yield scrapy.Request(
-                        url=URLBuilder(TXS_ETH_ORIGINAL_URL).get({
-                            'module': 'account',
-                            'action': 'txlist',
-                            'address': node,
-                            'offset': 10000,
-                            'page': 1,
-                            'apikey': self.apikey_bucket.get()
-                        }),
-                        method='GET',
-                        dont_filter=True,
-                        cb_kwargs={
-                            'source': kwargs['source'],
-                            'address': node,
-                            'page': kwargs['page'] + 1,
-                            'depth': depth,
-                        }
+            if data['result'] is None or len(data['result']) < 10000 or self.auto_page is False:
+                task = self.task_map[kwargs['source']]
+                for item in task.pop():
+                    yield from self.gen_txs_requests(
+                        source=kwargs['source'],
+                        address=item['node'],
+                        depth=item['depth']
                     )
             # next page request
             else:
+                _url = response.url
+                _url = urllib.parse.urlparse(_url)
+                query_args = {k: v[0] if len(v) > 0 else None for k, v in urllib.parse.parse_qs(_url.query).items()}
+                query_args['startblock'] = self.get_max_blk(data['result'])
+                _url = '?'.join([
+                    '%s://%s%s' % (_url.scheme, _url.netloc, _url.path),
+                    urllib.parse.urlencode(query_args)
+                ])
                 yield scrapy.Request(
-                    url=URLBuilder(TXS_ETH_ORIGINAL_URL).get({
-                        'module': 'account',
-                        'action': 'txlist',
-                        'address': kwargs['address'],
-                        'offset': 10000,
-                        'page': kwargs['page'] + 1,
-                        'apikey': self.apikey_bucket.get()
-                    }),
+                    url=_url,
                     method='GET',
                     dont_filter=True,
                     cb_kwargs={
                         'source': kwargs['source'],
                         'address': kwargs['address'],
-                        'page': kwargs['page'] + 1,
                         'depth': kwargs['depth'],
-                    }
+                    },
+                    callback=self._parse_txs
                 )
+
+    def parse_external_txs(self, response, **kwargs):
+        yield from self._parse_txs(response, **kwargs)
+
+    def parse_internal_txs(self, response, **kwargs):
+        yield from self._parse_txs(response, **kwargs)
+
+    def parse_erc20_txs(self, response, **kwargs):
+        yield from self._parse_txs(response, **kwargs)
+
+    def parse_erc721_txs(self, response, **kwargs):
+        yield from self._parse_txs(response, **kwargs)

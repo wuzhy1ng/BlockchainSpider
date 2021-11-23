@@ -17,6 +17,9 @@ class Haircut(PushPopModel):
                 out_sum += float(e.get('value', 0))
                 out_edges.append(e)
 
+        if out_sum == 0:
+            return
+
         node_weight = self._weight_map.get(node, 0)
         self._weight_map[node] = 0
         for oe in out_edges:
@@ -33,4 +36,4 @@ class Haircut(PushPopModel):
                 return
             if node not in self._vis:
                 self._vis.add(node)
-                return node
+                return dict(node=node, weight=weight)

@@ -1,0 +1,11 @@
+# Labels Spider
+
+## Etherscan labels Cloud Spider
+Launch the following command in the console to crawl the labels from etherscan labels cloud. 
+Before doing this, please make sure you have installed `chromedriver`.
+```shell
+scrapy crawl labels.etherscan -a out=./labels
+```
+the argument for Etherscan labels Cloud Spider including:
+
+- **out**: the output labels filename

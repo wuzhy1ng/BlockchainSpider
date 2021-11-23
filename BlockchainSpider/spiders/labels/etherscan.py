@@ -8,7 +8,7 @@ import scrapy
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 
-from ..items import LabelItem
+from BlockchainSpider.items import LabelItem
 
 
 class LabelsEtherscanSpider(scrapy.Spider):

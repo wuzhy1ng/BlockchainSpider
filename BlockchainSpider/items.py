@@ -15,3 +15,8 @@ class LabelItem(scrapy.Item):
 class TxItem(scrapy.Item):
     source = scrapy.Field()
     tx = scrapy.Field()
+
+
+class PPRItem(scrapy.Item):
+    source = scrapy.Field()
+    ppr = scrapy.Field()
