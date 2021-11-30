@@ -21,7 +21,7 @@ class TxsBTCSpider(scrapy.Spider):
 
         # output dir
         self.out_dir = kwargs.get('out', './data')
-        self.out_fields = kwargs.get('fields', 'hash,from,to,value,timeStamp,address,spent').split(',')
+        self.out_fields = kwargs.get('fields', 'hash,from,to,value,timeStamp,blockNumber,age').split(',')
 
         # apikey bucket
         self.apikey_bucket = JsonAPIKeyBucket('btc')
@@ -57,7 +57,9 @@ class TxsBTCSpider(scrapy.Spider):
                     'address': tx['addresses'][0] if len(tx['addresses']) > 0 else '',
                     'timeStamp': int(datetime.datetime.strptime(data['confirmed'], '%Y-%m-%dT%H:%M:%S%z').timestamp()),
                     'spent': True,
-                    'script': tx['script'],
+                    'blockNumber': data['block_height'],
+                    'script': tx.get('script', ''),
+                    'age': tx.get('age', 0)
                 }
             ))
         return txs
@@ -76,7 +78,9 @@ class TxsBTCSpider(scrapy.Spider):
                     'address': tx.get('addresses')[0] if tx.get('addresses') and len(tx['addresses']) > 0 else '',
                     'timeStamp': int(datetime.datetime.strptime(data['confirmed'], '%Y-%m-%dT%H:%M:%S%z').timestamp()),
                     'spent': True if spent_by else False,
-                    'script': tx['script'],
+                    'blockNumber': data['block_height'],
+                    'script': tx.get('script', ''),
+                    'age': tx.get('age', 0)
                 }
             ))
         return txs

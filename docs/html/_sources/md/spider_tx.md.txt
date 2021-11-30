@@ -3,6 +3,7 @@
 The transaction spider named `Tx Spider` starts from one or more source addresses and outputs a series of subgraphs.
 `Tx Spider` supports eth/bsc/polygan/heco until now:
 
+- `txs.btc`: `btc` transaction spider.
 - `txs.eth`: `eth` transaction spider.
 - `txs.bsc`: `bsc` transaction spider.
 - `txs.polygan`: `polygan` transaction spider.
@@ -10,9 +11,9 @@ The transaction spider named `Tx Spider` starts from one or more source addresse
 
 This section will introduce more configurations about Tx Spider through `txs.eth` as example.
 
-## Common arguments
+## Crawling arguments
 
-No matter what kind of tx spider, the following arguments are common, including:
+When starting tx Spider, the following arguments can be set, including:
 
 - **source**: a source address which cannot exist with `file` argument.
 - **file**: the source address `csv` file, which cannot exist with `source` argument.
@@ -20,9 +21,12 @@ No matter what kind of tx spider, the following arguments are common, including:
 - **fields**: the output fields joined by `,` for each transaction, default
   is `hash,from,to,value,timeStamp,blockNumber`
 - **types**: the transaction types joined by `,` that spider crawled, default is `external`, and the options
-  including: `external`, `internal`, `erc20`, `erc721`.
+  including: `external`, `internal`, `erc20`, `erc721`. (This argument is only used in `txs.eth`, `txs.bsc`,
+  `txs.polygan` and `txs.heco`)
 
-For example, you can start a BFS tx spider just like this:
+Note that in Bitcoin spiders `txs.btc`, the source address must be transaction hash. 
+This is because the data structure of Bitcoin is UTXO, while for Ethereum-like spiders, the source address can be the address hash.
+For example, you can start a BFS tx spider for crawling the transactions on Ethereum just like this:
 
 ```shell
 scrapy crawl txs.eth.bfs \
@@ -121,8 +125,8 @@ scrapy crawl txs.eth.appr \
 In addition to the common arguments, the arguments for TTR tx spider including:
 
 - alpha: the alpha for TTR strategy, default is 0.15
-- beta: the beta for TTR strategy, default is 0.8
-- epsilon: the epsilon for TTR strategy, default is 0.001
+- beta: the beta for TTR strategy, default is 0.7
+- epsilon: the epsilon for TTR strategy, default is 0.0001
 
 For example:
 

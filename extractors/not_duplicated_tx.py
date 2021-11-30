@@ -61,10 +61,9 @@ class NotDuplicatedBTCTxExtractor(Extractor):
             out_writer.writerow(header)
             for row in reader:
                 tx = {header[i]: row[i] for i in range(len(header))}
-                row[0] = tx['hash'] = '{}_{}_{}'.format(
+                row[0] = tx['hash'] = '{}_{}'.format(
                     tx['hash'],
-                    tx['from'] + tx['to'],
-                    tx['index']
+                    tx['age'],
                 )
                 if self.extract(tx) is not None:
                     out_writer.writerow(row)
