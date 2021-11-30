@@ -18,9 +18,9 @@ class TxsETHTTRSpider(TxsETHSpider):
 
         # task map
         self.task_map = dict()
-        self.alpha = float(kwargs.get('alpha', 0.1))
-        self.beta = float(kwargs.get('beta', 0.6))
-        self.epsilon = float(kwargs.get('epsilon', 5e-5))
+        self.alpha = float(kwargs.get('alpha', 0.15))
+        self.beta = float(kwargs.get('beta', 0.7))
+        self.epsilon = float(kwargs.get('epsilon', 1e-4))
 
         self.strategy_cls = kwargs.get('strategy', 'TTRTime')
         assert self.strategy_cls in TxsETHTTRSpider.allow_strategies
@@ -113,7 +113,7 @@ class TxsETHTTRSpider(TxsETHSpider):
             # generate ppr item and finished
             item = task.pop()
             if item is None:
-                yield PPRItem(source=kwargs['source'], ppr=task.get_strategy().p)
+                yield PPRItem(source=kwargs['source'], ppr=task.strategy.p)
                 return
 
             # next address request

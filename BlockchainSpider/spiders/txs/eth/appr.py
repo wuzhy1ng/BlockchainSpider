@@ -158,7 +158,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
             # generate ppr item and finished
             item = task.pop()
             if item is None:
-                yield PPRItem(source=kwargs['source'], ppr=task.get_strategy().p)
+                yield PPRItem(source=kwargs['source'], ppr=task.strategy.p)
                 return
 
             # next address request
