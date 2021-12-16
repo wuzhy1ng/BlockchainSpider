@@ -20,7 +20,7 @@ class SyncTask(Task):
             for cache in self._cache.values():
                 edges.extend(cache)
             self._cache = dict()
-            return self.strategy.push(node, edges, **kwargs)
+            yield from self.strategy.push(node, edges, **kwargs)
 
     def pop(self):
         if self.is_locked():
