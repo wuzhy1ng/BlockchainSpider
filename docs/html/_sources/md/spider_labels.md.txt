@@ -4,8 +4,9 @@
 Launch the following command in the console to crawl the labels from etherscan labels cloud. 
 Before doing this, please make sure you have installed `chromedriver`.
 ```shell
-scrapy crawl labels.etherscan -a out=./labels
+scrapy crawl labels.etherscan -a out=./labels_file -a labels=phish,exchange
 ```
 the argument for Etherscan labels Cloud Spider including:
 
-- **out**: the output labels filename
+- **out**: the output labels filename.
+- **labels**(optional): the specified label name, if not set, defaults to crawl all labels.

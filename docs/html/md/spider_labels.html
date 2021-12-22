@@ -181,12 +181,13 @@
 <h2>Etherscan labels Cloud Spider<a class="headerlink" href="#etherscan-labels-cloud-spider" title="Permalink to this headline">¶</a></h2>
 <p>Launch the following command in the console to crawl the labels from etherscan labels cloud.
 Before doing this, please make sure you have installed <code class="docutils literal notranslate"><span class="pre">chromedriver</span></code>.</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.etherscan -a <span class="nv">out</span><span class="o">=</span>./labels
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.etherscan -a <span class="nv">out</span><span class="o">=</span>./labels_file -a <span class="nv">labels</span><span class="o">=</span>phish,exchange
 </pre></div>
 </div>
 <p>the argument for Etherscan labels Cloud Spider including:</p>
 <ul class="simple">
-<li><p><strong>out</strong>: the output labels filename</p></li>
+<li><p><strong>out</strong>: the output labels filename.</p></li>
+<li><p><strong>labels</strong>(optional): the specified label name, if not set, defaults to crawl all labels.</p></li>
 </ul>
 </div>
 </div>
