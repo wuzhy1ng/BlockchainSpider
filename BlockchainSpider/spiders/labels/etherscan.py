@@ -1,7 +1,4 @@
-import json
-import os
 import re
-import logging
 from urllib.parse import urlsplit, urljoin, urlencode
 
 import scrapy
@@ -44,23 +41,6 @@ class LabelsEtherscanSpider(scrapy.Spider):
             if c.get('name') == 'ASP.NET_SessionId':
                 session_cookie['ASP.NET_SessionId'] = c['value']
                 break
-
-        # input filename and filter the url crawled
-        logging.info('filtering crawled url...')
-        if os.path.exists(self.out_filename):
-            df = self.crawler.engine.slot.scheduler.df
-            with open(self.out_filename, 'r') as f:
-                while True:
-                    line = f.readline()
-                    if line == '':
-                        break
-                    item = json.loads(line)
-                    url = item['info'].get('url', '')
-                    df.request_seen(scrapy.Request(
-                        url=url,
-                        method='GET',
-                        cookies=session_cookie,
-                    ))
 
         # generate request for label cloud
         yield scrapy.Request(
@@ -164,7 +144,7 @@ class LabelsEtherscanSpider(scrapy.Spider):
             for i, td in enumerate(row.xpath('./td').extract()):
                 info[info_headers[i]] = re.sub('<.*?>', '', td)
             yield LabelItem(
-                net='txs',
+                net='eth',
                 label=label,
                 info=info,
             )
