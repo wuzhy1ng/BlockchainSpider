@@ -96,6 +96,7 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Labels Spider</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#etherscan-labels-cloud-spider">Etherscan labels Cloud Spider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cryptoscamdb-labels-spider">CryptoScamDB Labels Spider</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="spider_tx.html">Tx Spider</a></li>
@@ -181,13 +182,24 @@
 <h2>Etherscan labels Cloud Spider<a class="headerlink" href="#etherscan-labels-cloud-spider" title="Permalink to this headline">¶</a></h2>
 <p>Launch the following command in the console to crawl the labels from etherscan labels cloud.
 Before doing this, please make sure you have installed <code class="docutils literal notranslate"><span class="pre">chromedriver</span></code>.</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.etherscan -a <span class="nv">out</span><span class="o">=</span>./labels_file -a <span class="nv">labels</span><span class="o">=</span>phish,exchange
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.etherscan -a <span class="nv">out</span><span class="o">=</span>./labels_etherscan -a <span class="nv">labels</span><span class="o">=</span>phish,exchange
 </pre></div>
 </div>
 <p>the argument for Etherscan labels Cloud Spider including:</p>
 <ul class="simple">
 <li><p><strong>out</strong>: the output labels filename.</p></li>
 <li><p><strong>labels</strong>(optional): the specified label name which supports fuzzy matching, if not set, defaults to crawl all labels.</p></li>
+</ul>
+</div>
+<div class="section" id="cryptoscamdb-labels-spider">
+<h2>CryptoScamDB Labels Spider<a class="headerlink" href="#cryptoscamdb-labels-spider" title="Permalink to this headline">¶</a></h2>
+<p>Launch the following command in the console to crawl the labels from CryptoScamDB.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.cryptoscamdb -a <span class="nv">out</span><span class="o">=</span>./labels_cryptoscamdb
+</pre></div>
+</div>
+<p>the argument for Etherscan labels Cloud Spider including:</p>
+<ul class="simple">
+<li><p><strong>out</strong>: the output labels filename.</p></li>
 </ul>
 </div>
 </div>
