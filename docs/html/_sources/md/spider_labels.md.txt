@@ -16,6 +16,15 @@ Launch the following command in the console to crawl the labels from CryptoScamD
 ```shell
 scrapy crawl labels.cryptoscamdb -a out=./labels_cryptoscamdb
 ```
-the argument for Etherscan labels Cloud Spider including:
+the argument for CryptoScamDB Labels Spider including:
+
+- **out**: the output labels filename.
+
+## OFAC Labels Spider
+Launch the following command in the console to crawl the labels from OFAC.
+```shell
+scrapy crawl labels.ofac -a out=./labels_ofac
+```
+the argument for OFAC Labels Spider including:
 
 - **out**: the output labels filename.

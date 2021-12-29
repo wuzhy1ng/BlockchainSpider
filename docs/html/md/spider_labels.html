@@ -97,6 +97,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Labels Spider</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#etherscan-labels-cloud-spider">Etherscan labels Cloud Spider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#cryptoscamdb-labels-spider">CryptoScamDB Labels Spider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ofac-labels-spider">OFAC Labels Spider</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="spider_tx.html">Tx Spider</a></li>
@@ -197,7 +198,18 @@ Before doing this, please make sure you have installed <code class="docutils lit
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.cryptoscamdb -a <span class="nv">out</span><span class="o">=</span>./labels_cryptoscamdb
 </pre></div>
 </div>
-<p>the argument for Etherscan labels Cloud Spider including:</p>
+<p>the argument for CryptoScamDB Labels Spider including:</p>
+<ul class="simple">
+<li><p><strong>out</strong>: the output labels filename.</p></li>
+</ul>
+</div>
+<div class="section" id="ofac-labels-spider">
+<h2>OFAC Labels Spider<a class="headerlink" href="#ofac-labels-spider" title="Permalink to this headline">¶</a></h2>
+<p>Launch the following command in the console to crawl the labels from OFAC.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.ofac -a <span class="nv">out</span><span class="o">=</span>./labels_ofac
+</pre></div>
+</div>
+<p>the argument for OFAC Labels Spider including:</p>
 <ul class="simple">
 <li><p><strong>out</strong>: the output labels filename.</p></li>
 </ul>
