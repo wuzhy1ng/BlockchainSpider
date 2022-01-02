@@ -183,12 +183,12 @@
   <div class="tex2jax_ignore mathjax_ignore section" id="tx-spider">
 <h1>Tx Spider<a class="headerlink" href="#tx-spider" title="Permalink to this headline">¶</a></h1>
 <p>The transaction spider named <code class="docutils literal notranslate"><span class="pre">Tx</span> <span class="pre">Spider</span></code> starts from one or more source addresses and outputs a series of subgraphs.
-<code class="docutils literal notranslate"><span class="pre">Tx</span> <span class="pre">Spider</span></code> supports eth/bsc/polygan/heco until now:</p>
+<code class="docutils literal notranslate"><span class="pre">Tx</span> <span class="pre">Spider</span></code> supports eth/bsc/polygon/heco until now:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">txs.btc</span></code>: <code class="docutils literal notranslate"><span class="pre">btc</span></code> transaction spider.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">txs.eth</span></code>: <code class="docutils literal notranslate"><span class="pre">eth</span></code> transaction spider.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">txs.bsc</span></code>: <code class="docutils literal notranslate"><span class="pre">bsc</span></code> transaction spider.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">txs.polygan</span></code>: <code class="docutils literal notranslate"><span class="pre">polygan</span></code> transaction spider.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">txs.polygon</span></code>: <code class="docutils literal notranslate"><span class="pre">polygon</span></code> transaction spider.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">txs.heco</span></code>: <code class="docutils literal notranslate"><span class="pre">heco</span></code> transaction spider.</p></li>
 </ul>
 <p>This section will introduce more configurations about Tx Spider through <code class="docutils literal notranslate"><span class="pre">txs.eth</span></code> as example.</p>
@@ -203,7 +203,7 @@
 is <code class="docutils literal notranslate"><span class="pre">hash,from,to,value,timeStamp,blockNumber</span></code></p></li>
 <li><p><strong>types</strong>: the transaction types joined by <code class="docutils literal notranslate"><span class="pre">,</span></code> that spider crawled, default is <code class="docutils literal notranslate"><span class="pre">external</span></code>, and the options
 including: <code class="docutils literal notranslate"><span class="pre">external</span></code>, <code class="docutils literal notranslate"><span class="pre">internal</span></code>, <code class="docutils literal notranslate"><span class="pre">erc20</span></code>, <code class="docutils literal notranslate"><span class="pre">erc721</span></code>. (This argument is only used in <code class="docutils literal notranslate"><span class="pre">txs.eth</span></code>, <code class="docutils literal notranslate"><span class="pre">txs.bsc</span></code>,
-<code class="docutils literal notranslate"><span class="pre">txs.polygan</span></code> and <code class="docutils literal notranslate"><span class="pre">txs.heco</span></code>)</p></li>
+<code class="docutils literal notranslate"><span class="pre">txs.polygon</span></code> and <code class="docutils literal notranslate"><span class="pre">txs.heco</span></code>)</p></li>
 </ul>
 <p>Note that in Bitcoin spiders <code class="docutils literal notranslate"><span class="pre">txs.btc</span></code>, the source address must be transaction hash.
 This is because the data structure of Bitcoin is UTXO, while for Ethereum-like spiders, the source address can be the address hash.

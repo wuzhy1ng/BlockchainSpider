@@ -1,12 +1,12 @@
 # Tx Spider
 
 The transaction spider named `Tx Spider` starts from one or more source addresses and outputs a series of subgraphs.
-`Tx Spider` supports eth/bsc/polygan/heco until now:
+`Tx Spider` supports eth/bsc/polygon/heco until now:
 
 - `txs.btc`: `btc` transaction spider.
 - `txs.eth`: `eth` transaction spider.
 - `txs.bsc`: `bsc` transaction spider.
-- `txs.polygan`: `polygan` transaction spider.
+- `txs.polygon`: `polygon` transaction spider.
 - `txs.heco`: `heco` transaction spider.
 
 This section will introduce more configurations about Tx Spider through `txs.eth` as example.
@@ -22,7 +22,7 @@ When starting tx Spider, the following arguments can be set, including:
   is `hash,from,to,value,timeStamp,blockNumber`
 - **types**: the transaction types joined by `,` that spider crawled, default is `external`, and the options
   including: `external`, `internal`, `erc20`, `erc721`. (This argument is only used in `txs.eth`, `txs.bsc`,
-  `txs.polygan` and `txs.heco`)
+  `txs.polygon` and `txs.heco`)
 
 Note that in Bitcoin spiders `txs.btc`, the source address must be transaction hash. 
 This is because the data structure of Bitcoin is UTXO, while for Ethereum-like spiders, the source address can be the address hash.

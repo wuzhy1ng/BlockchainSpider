@@ -28,3 +28,33 @@ scrapy crawl labels.ofac -a out=./labels_ofac
 the argument for OFAC Labels Spider including:
 
 - **out**: the output labels filename.
+
+## Contract Labels Spiders
+Launch the following command in the console to crawl the labels of contracts at Ethereum-like blockchain,
+including
+
+- `ETH`: please use `labels.contract.eth`
+- `BSC`: please use `labels.contract.bsc`
+- `polygon`: please use `labels.contract.polygon`
+- `heco`: please use `labels.contract.heco`
+
+The following example shows how to start a contract labels spider at Ethereum:
+```shell
+scrapy crawl labels.contract.eth -a out=./labels_contract_eth  
+```
+
+The principle of this spider is to scan the transactions for creating contracts in the block,
+so we provide some arguments to control the numbers of block for scanning.
+In addition, if you only want to know the labels of some contract addresses,
+you can also use them as input without scanning the blocks, just like:
+```
+0xb6d11c0bd7df8a3728ca972ebd9136ac6b0d92c0
+0xb621bc2c30dc420995cdca93985b0fbedfa905a0
+0x344cb09ce4919d803536bcd49184880c2a822080
+```
+
+The arguments for Contract Labels Spiders including:
+- **out**: the output labels filename.
+- **start_blk**: the scanning start block.
+- **end_blk**: the scanning end block.
+- **file**: the contract address filename.
