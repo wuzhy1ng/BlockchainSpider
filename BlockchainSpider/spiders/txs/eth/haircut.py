@@ -82,7 +82,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
         yield from self._gen_tx_items(txs, **kwargs)
 
         # push data to task
-        self.task_map[kwargs['source']].push(
+        yield from self.task_map[kwargs['source']].push(
             node=kwargs['address'],
             edges=txs,
             wait_key=kwargs['wait_key']
