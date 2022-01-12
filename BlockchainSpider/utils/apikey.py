@@ -2,6 +2,8 @@ import json
 import random
 import time
 
+from twisted.internet.defer import DeferredLock
+
 from BlockchainSpider import settings
 
 
@@ -12,14 +14,22 @@ class APIKeyBucket:
 
         self._last_get_time = 0
         self._get_interval = 1 / (len(self.apikeys) * kps)
+        self._lock = DeferredLock()
 
     def get(self) -> str:
+        # get lock
+        self._lock.acquire()
+
+        # get apikey
         now = time.time()
         duration = now - self._last_get_time
         if duration < self._get_interval:
             time.sleep(self._get_interval - duration)
         self._last_get_time = time.time()
         key = self.get_apikey()
+
+        # release lock and return key
+        self._lock.release()
         return key
 
     def get_apikey(self) -> str:
