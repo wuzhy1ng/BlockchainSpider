@@ -20,7 +20,6 @@ class APIKeyBucket:
             time.sleep(self._get_interval - duration)
         self._last_get_time = time.time()
         key = self.get_apikey()
-        print('------', key)
         return key
 
     def get_apikey(self) -> str:
