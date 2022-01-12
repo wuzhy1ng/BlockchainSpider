@@ -41,7 +41,7 @@ class LabelsContractETHSpider(scrapy.Spider):
 
         self.start_block = int(self.start_block)
         self.end_block = int(self.end_block)
-        for i in range(self.start_block, self.end_block + 1):
+        for i in range(self.end_block, self.start_block - 1, -1):
             url = self.base_api_url + '?module=proxy&action=eth_getBlockByNumber&tag=%s&boolean=true&apikey=%s' % (
                 hex(i), self.apikey_bucket.get()
             )

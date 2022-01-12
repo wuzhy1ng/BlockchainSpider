@@ -24,7 +24,7 @@ class TxsBTCSpider(scrapy.Spider):
         self.out_fields = kwargs.get('fields', 'hash,from,to,value,timeStamp,blockNumber,age').split(',')
 
         # apikey bucket
-        self.apikey_bucket = JsonAPIKeyBucket('btc')
+        self.apikey_bucket = JsonAPIKeyBucket('btc', kps=3)
 
     def get_tx_request(self, txhash: str, **kwargs):
         return scrapy.Request(
