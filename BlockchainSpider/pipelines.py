@@ -22,7 +22,7 @@ class LabelsPipeline:
 
         # init file from filename
         if self.file is None:
-            self.file = open(spider.out_filename, 'a')
+            self.file = open(spider.out_filename, 'w')
 
         # write item
         json.dump({**item}, self.file)

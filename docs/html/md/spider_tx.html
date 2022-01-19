@@ -96,7 +96,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="spider_labels.html">Labels Spider</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Tx Spider</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#common-arguments">Common arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#crawling-arguments">Crawling arguments</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#bfs-tx-spider">BFS tx spider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#poison-tx-spider">Poison tx Spider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#haircut-tx-spider">Haircut tx Spider</a></li>
@@ -183,17 +183,18 @@
   <div class="tex2jax_ignore mathjax_ignore section" id="tx-spider">
 <h1>Tx Spider<a class="headerlink" href="#tx-spider" title="Permalink to this headline">¶</a></h1>
 <p>The transaction spider named <code class="docutils literal notranslate"><span class="pre">Tx</span> <span class="pre">Spider</span></code> starts from one or more source addresses and outputs a series of subgraphs.
-<code class="docutils literal notranslate"><span class="pre">Tx</span> <span class="pre">Spider</span></code> supports eth/bsc/polygan/heco until now:</p>
+<code class="docutils literal notranslate"><span class="pre">Tx</span> <span class="pre">Spider</span></code> supports eth/bsc/polygon/heco until now:</p>
 <ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">txs.btc</span></code>: <code class="docutils literal notranslate"><span class="pre">btc</span></code> transaction spider.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">txs.eth</span></code>: <code class="docutils literal notranslate"><span class="pre">eth</span></code> transaction spider.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">txs.bsc</span></code>: <code class="docutils literal notranslate"><span class="pre">bsc</span></code> transaction spider.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">txs.polygan</span></code>: <code class="docutils literal notranslate"><span class="pre">polygan</span></code> transaction spider.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">txs.polygon</span></code>: <code class="docutils literal notranslate"><span class="pre">polygon</span></code> transaction spider.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">txs.heco</span></code>: <code class="docutils literal notranslate"><span class="pre">heco</span></code> transaction spider.</p></li>
 </ul>
 <p>This section will introduce more configurations about Tx Spider through <code class="docutils literal notranslate"><span class="pre">txs.eth</span></code> as example.</p>
-<div class="section" id="common-arguments">
-<h2>Common arguments<a class="headerlink" href="#common-arguments" title="Permalink to this headline">¶</a></h2>
-<p>No matter what kind of tx spider, the following arguments are common, including:</p>
+<div class="section" id="crawling-arguments">
+<h2>Crawling arguments<a class="headerlink" href="#crawling-arguments" title="Permalink to this headline">¶</a></h2>
+<p>When starting tx Spider, the following arguments can be set, including:</p>
 <ul class="simple">
 <li><p><strong>source</strong>: a source address which cannot exist with <code class="docutils literal notranslate"><span class="pre">file</span></code> argument.</p></li>
 <li><p><strong>file</strong>: the source address <code class="docutils literal notranslate"><span class="pre">csv</span></code> file, which cannot exist with <code class="docutils literal notranslate"><span class="pre">source</span></code> argument.</p></li>
@@ -201,9 +202,12 @@
 <li><p><strong>fields</strong>: the output fields joined by <code class="docutils literal notranslate"><span class="pre">,</span></code> for each transaction, default
 is <code class="docutils literal notranslate"><span class="pre">hash,from,to,value,timeStamp,blockNumber</span></code></p></li>
 <li><p><strong>types</strong>: the transaction types joined by <code class="docutils literal notranslate"><span class="pre">,</span></code> that spider crawled, default is <code class="docutils literal notranslate"><span class="pre">external</span></code>, and the options
-including: <code class="docutils literal notranslate"><span class="pre">external</span></code>, <code class="docutils literal notranslate"><span class="pre">internal</span></code>, <code class="docutils literal notranslate"><span class="pre">erc20</span></code>, <code class="docutils literal notranslate"><span class="pre">erc721</span></code>.</p></li>
+including: <code class="docutils literal notranslate"><span class="pre">external</span></code>, <code class="docutils literal notranslate"><span class="pre">internal</span></code>, <code class="docutils literal notranslate"><span class="pre">erc20</span></code>, <code class="docutils literal notranslate"><span class="pre">erc721</span></code>. (This argument is only used in <code class="docutils literal notranslate"><span class="pre">txs.eth</span></code>, <code class="docutils literal notranslate"><span class="pre">txs.bsc</span></code>,
+<code class="docutils literal notranslate"><span class="pre">txs.polygon</span></code> and <code class="docutils literal notranslate"><span class="pre">txs.heco</span></code>)</p></li>
 </ul>
-<p>For example, you can start a BFS tx spider just like this:</p>
+<p>Note that in Bitcoin spiders <code class="docutils literal notranslate"><span class="pre">txs.btc</span></code>, the source address must be transaction hash.
+This is because the data structure of Bitcoin is UTXO, while for Ethereum-like spiders, the source address can be the address hash.
+For example, you can start a BFS tx spider for crawling the transactions on Ethereum just like this:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl txs.eth.bfs <span class="se">\</span>
 -a <span class="nv">file</span><span class="o">=</span>./sources.csv <span class="se">\</span>
 -a <span class="nv">out</span><span class="o">=</span>./data/bfs <span class="se">\</span>
@@ -293,8 +297,8 @@ including: <code class="docutils literal notranslate"><span class="pre">external
 <p>In addition to the common arguments, the arguments for TTR tx spider including:</p>
 <ul class="simple">
 <li><p>alpha: the alpha for TTR strategy, default is 0.15</p></li>
-<li><p>beta: the beta for TTR strategy, default is 0.8</p></li>
-<li><p>epsilon: the epsilon for TTR strategy, default is 0.001</p></li>
+<li><p>beta: the beta for TTR strategy, default is 0.7</p></li>
+<li><p>epsilon: the epsilon for TTR strategy, default is 0.0001</p></li>
 </ul>
 <p>For example:</p>
 <div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl txs.eth.appr <span class="se">\</span>

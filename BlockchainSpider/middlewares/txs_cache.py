@@ -24,6 +24,9 @@ def _decorator_ignore_request_apikey(func):
         apikey = query_args.get('apikey', list())
         if len(apikey) != 0:
             del query_args['apikey']
+        token = query_args.get('token', list())
+        if len(token) != 0:
+            del query_args['token']
 
         _url = '?'.join([
             '%s://%s%s' % (url.scheme, url.netloc, url.path),
@@ -46,6 +49,9 @@ def _decorator_ignore_response_apikey(func):
         apikey = query_args.get('apikey', list())
         if len(apikey) != 0:
             del query_args['apikey']
+        token = query_args.get('token', list())
+        if len(token) != 0:
+            del query_args['token']
 
         _url = '?'.join([
             '%s://%s%s' % (url.scheme, url.netloc, url.path),
@@ -59,6 +65,9 @@ def _decorator_ignore_response_apikey(func):
         apikey = query_args.get('apikey', list())
         if len(apikey) != 0:
             del query_args['apikey']
+        token = query_args.get('token', list())
+        if len(token) != 0:
+            del query_args['token']
 
         _url = '?'.join([
             '%s://%s%s' % (url.scheme, url.netloc, url.path),
@@ -67,6 +76,17 @@ def _decorator_ignore_response_apikey(func):
         _response = response.replace(url=_url)
 
         return func(self, _request, _response, spider)
+
+    return wrapper
+
+
+def _decorator_ignore_error_status_response(func):
+    @wraps(func)
+    def wrapper(self, request: Request, response: Response, spider: Spider):
+        if response.status != 200:
+            request.meta['dont_cache'] = True
+
+        return func(self, request, response, spider)
 
     return wrapper
 
@@ -112,6 +132,7 @@ class TxsCacheMiddleware(HttpCacheMiddleware):
         return None
 
     @_decorator_ignore_response_apikey
+    @_decorator_ignore_error_status_response
     def process_response(self, request: Request, response: Response, spider: Spider) -> Response:
         if request.meta.get('dont_cache', False):
             return response

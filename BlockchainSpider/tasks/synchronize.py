@@ -1,3 +1,5 @@
+from collections import Iterator
+
 from ._meta import Task
 
 
@@ -20,12 +22,15 @@ class SyncTask(Task):
             for cache in self._cache.values():
                 edges.extend(cache)
             self._cache = dict()
-            return self._strategy.push(node, edges, **kwargs)
+
+            rlt = self.strategy.push(node, edges, **kwargs)
+            if isinstance(rlt, Iterator):
+                yield from rlt
 
     def pop(self):
         if self.is_locked():
             return None
-        item = self._strategy.pop()
+        item = self.strategy.pop()
         return item
 
     def is_locked(self):

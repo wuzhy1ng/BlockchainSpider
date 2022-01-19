@@ -1,7 +1,7 @@
 import scrapy
 
 from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
-from BlockchainSpider.utils.url import URLBuilder
+from BlockchainSpider.utils.url import QueryURLBuilder
 
 
 class TxsETHSpider(scrapy.Spider):
@@ -52,7 +52,7 @@ class TxsETHSpider(scrapy.Spider):
 
     def get_external_txs_request(self, address: str, **kwargs):
         return scrapy.Request(
-            url=URLBuilder(self.TXS_API_URL).get({
+            url=QueryURLBuilder(self.TXS_API_URL).get({
                 'module': 'account',
                 'action': 'txlist',
                 'address': address,
@@ -73,7 +73,7 @@ class TxsETHSpider(scrapy.Spider):
 
     def get_internal_txs_request(self, address: str, **kwargs):
         return scrapy.Request(
-            url=URLBuilder(self.TXS_API_URL).get({
+            url=QueryURLBuilder(self.TXS_API_URL).get({
                 'module': 'account',
                 'action': 'txlistinternal',
                 'address': address,
@@ -94,7 +94,7 @@ class TxsETHSpider(scrapy.Spider):
 
     def get_erc20_txs_request(self, address: str, **kwargs):
         return scrapy.Request(
-            url=URLBuilder(self.TXS_API_URL).get({
+            url=QueryURLBuilder(self.TXS_API_URL).get({
                 'module': 'account',
                 'action': 'tokentx',
                 'address': address,
@@ -115,7 +115,7 @@ class TxsETHSpider(scrapy.Spider):
 
     def get_erc721_txs_request(self, address: str, **kwargs):
         return scrapy.Request(
-            url=URLBuilder(self.TXS_API_URL).get({
+            url=QueryURLBuilder(self.TXS_API_URL).get({
                 'module': 'account',
                 'action': 'tokennfttx',
                 'address': address,

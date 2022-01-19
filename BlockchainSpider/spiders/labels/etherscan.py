@@ -1,7 +1,4 @@
-import json
-import os
 import re
-import logging
 from urllib.parse import urlsplit, urljoin, urlencode
 
 import scrapy
@@ -23,6 +20,9 @@ class LabelsEtherscanSpider(scrapy.Spider):
         self.page_size = 100
 
         self.out_filename = kwargs.get('out', self.name)
+        self.label_names = kwargs.get('labels', None)
+        if self.label_names is not None:
+            self.label_names = self.label_names.split(',')
 
     def start_requests(self):
         # open selenium to login in
@@ -42,23 +42,6 @@ class LabelsEtherscanSpider(scrapy.Spider):
                 session_cookie['ASP.NET_SessionId'] = c['value']
                 break
 
-        # input filename and filter the url crawled
-        logging.info('filtering crawled url...')
-        if os.path.exists(self.out_filename):
-            df = self.crawler.engine.slot.scheduler.df
-            with open(self.out_filename, 'r') as f:
-                while True:
-                    line = f.readline()
-                    if line == '':
-                        break
-                    item = json.loads(line)
-                    url = item['info'].get('url', '')
-                    df.request_seen(scrapy.Request(
-                        url=url,
-                        method='GET',
-                        cookies=session_cookie,
-                    ))
-
         # generate request for label cloud
         yield scrapy.Request(
             url=self.url_label_cloud,
@@ -68,20 +51,27 @@ class LabelsEtherscanSpider(scrapy.Spider):
         )
 
     def parse_label_cloud(self, response, **kwargs):
+        root_url = '%s://%s' % (urlsplit(response.url).scheme, urlsplit(response.url).netloc)
+
         for a in response.xpath('//div[contains(@class,"dropdown-menu")]//a'):
             href = a.xpath('@href').get()
             size = a.xpath('text()').get()
             size = re.sub('<.*?>', '', size)
             size = re.search(r'\d+', size).group() if re.search(r'\d+', size) else self.page_size
 
-            root_url = '%s://%s' % (urlsplit(response.url).scheme, urlsplit(response.url).netloc)
-            yield scrapy.Request(
+            request = scrapy.Request(
                 url=urljoin(root_url, href),
                 method='GET',
                 cookies=response.request.cookies,
                 callback=self.parse_label_navigation,
                 cb_kwargs=dict(size=size)
             )
+            if self.label_names is None:
+                yield request
+            else:
+                for label_name in self.label_names:
+                    if href.find(label_name) >= 0:
+                        yield request
 
     def parse_label_navigation(self, response, **kwargs):
         label = ','.join([
@@ -144,6 +134,7 @@ class LabelsEtherscanSpider(scrapy.Spider):
                 start += self.page_size
 
     def parse_labels(self, response, **kwargs):
+        self.log('Crawled url: ' + response.url)
         label = kwargs.get('label')
 
         info_headers = response.xpath('//thead/tr/th/text()').getall()
@@ -153,7 +144,7 @@ class LabelsEtherscanSpider(scrapy.Spider):
             for i, td in enumerate(row.xpath('./td').extract()):
                 info[info_headers[i]] = re.sub('<.*?>', '', td)
             yield LabelItem(
-                net='txs',
+                net='eth',
                 label=label,
                 info=info,
             )

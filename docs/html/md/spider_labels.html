@@ -96,6 +96,9 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Labels Spider</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#etherscan-labels-cloud-spider">Etherscan labels Cloud Spider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cryptoscamdb-labels-spider">CryptoScamDB Labels Spider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ofac-labels-spider">OFAC Labels Spider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#contract-labels-spiders">Contract Labels Spiders</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="spider_tx.html">Tx Spider</a></li>
@@ -181,12 +184,66 @@
 <h2>Etherscan labels Cloud Spider<a class="headerlink" href="#etherscan-labels-cloud-spider" title="Permalink to this headline">¶</a></h2>
 <p>Launch the following command in the console to crawl the labels from etherscan labels cloud.
 Before doing this, please make sure you have installed <code class="docutils literal notranslate"><span class="pre">chromedriver</span></code>.</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.etherscan -a <span class="nv">out</span><span class="o">=</span>./labels
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.etherscan -a <span class="nv">out</span><span class="o">=</span>./labels_etherscan -a <span class="nv">labels</span><span class="o">=</span>phish,exchange
 </pre></div>
 </div>
 <p>the argument for Etherscan labels Cloud Spider including:</p>
 <ul class="simple">
-<li><p><strong>out</strong>: the output labels filename</p></li>
+<li><p><strong>out</strong>: the output labels filename.</p></li>
+<li><p><strong>labels</strong>(optional): the specified label name which supports fuzzy matching, if not set, defaults to crawl all labels.</p></li>
+</ul>
+</div>
+<div class="section" id="cryptoscamdb-labels-spider">
+<h2>CryptoScamDB Labels Spider<a class="headerlink" href="#cryptoscamdb-labels-spider" title="Permalink to this headline">¶</a></h2>
+<p>Launch the following command in the console to crawl the labels from CryptoScamDB.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.cryptoscamdb -a <span class="nv">out</span><span class="o">=</span>./labels_cryptoscamdb
+</pre></div>
+</div>
+<p>the argument for CryptoScamDB Labels Spider including:</p>
+<ul class="simple">
+<li><p><strong>out</strong>: the output labels filename.</p></li>
+</ul>
+</div>
+<div class="section" id="ofac-labels-spider">
+<h2>OFAC Labels Spider<a class="headerlink" href="#ofac-labels-spider" title="Permalink to this headline">¶</a></h2>
+<p>Launch the following command in the console to crawl the labels from OFAC.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.ofac -a <span class="nv">out</span><span class="o">=</span>./labels_ofac
+</pre></div>
+</div>
+<p>the argument for OFAC Labels Spider including:</p>
+<ul class="simple">
+<li><p><strong>out</strong>: the output labels filename.</p></li>
+</ul>
+</div>
+<div class="section" id="contract-labels-spiders">
+<h2>Contract Labels Spiders<a class="headerlink" href="#contract-labels-spiders" title="Permalink to this headline">¶</a></h2>
+<p>Launch the following command in the console to crawl the labels of contracts at Ethereum-like blockchain,
+including</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ETH</span></code>: please use <code class="docutils literal notranslate"><span class="pre">labels.contract.eth</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BSC</span></code>: please use <code class="docutils literal notranslate"><span class="pre">labels.contract.bsc</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">polygon</span></code>: please use <code class="docutils literal notranslate"><span class="pre">labels.contract.polygon</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">heco</span></code>: please use <code class="docutils literal notranslate"><span class="pre">labels.contract.heco</span></code></p></li>
+</ul>
+<p>The following example shows how to start a contract labels spider at Ethereum:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>scrapy crawl labels.contract.eth -a <span class="nv">out</span><span class="o">=</span>./labels_contract_eth  
+</pre></div>
+</div>
+<p>The principle of this spider is to scan the transactions for creating contracts in the block,
+so we provide some arguments to control the numbers of block for scanning.
+In addition, if you only want to know the labels of some contract addresses,
+you can also use them as input without scanning the blocks, just like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mh">0xb6d11c0bd7df8a3728ca972ebd9136ac6b0d92c0</span>
+<span class="mh">0xb621bc2c30dc420995cdca93985b0fbedfa905a0</span>
+<span class="mh">0x344cb09ce4919d803536bcd49184880c2a822080</span>
+</pre></div>
+</div>
+<p>The arguments for Contract Labels Spiders including:</p>
+<ul class="simple">
+<li><p><strong>out</strong>: the output labels filename.</p></li>
+<li><p><strong>start_blk</strong>: the scanning start block.</p></li>
+<li><p><strong>end_blk</strong>: the scanning end block.</p></li>
+<li><p><strong>file</strong>: the contract address filename.</p></li>
 </ul>
 </div>
 </div>

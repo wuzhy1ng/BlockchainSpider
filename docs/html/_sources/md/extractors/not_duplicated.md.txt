@@ -13,5 +13,5 @@ python extract.py \
 Parameter Description:
 - `-i`: the input directory of raw data.
 - `-o`: the output directory of filtered data.
-- `-e`: `Extractor` name.
+- `-e`: `Extractor` name, especially, for BTC filtering, please use `NotDuplicatedBTCTxExtractor`.
 - `-p`: Whether to enable parallel acceleration, the default is `False`.

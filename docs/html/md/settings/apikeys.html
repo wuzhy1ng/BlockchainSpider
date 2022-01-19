@@ -175,13 +175,21 @@
   <div class="tex2jax_ignore mathjax_ignore section" id="apikeys">
 <h1>APIKeys<a class="headerlink" href="#apikeys" title="Permalink to this headline">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">Tx</span> <span class="pre">Spider</span></code> depends on apikeys.</p>
-<p>You can configure Apikey in a json file for spider, default is <code class="docutils literal notranslate"><span class="pre">./apikeys.json</span></code>.
-Before that, please make sure that <code class="docutils literal notranslate"><span class="pre">settings.py</span></code> contains the following statement:</p>
+<p>You can configure Apikey in a json file for spider, default is <code class="docutils literal notranslate"><span class="pre">./apikeys.json</span></code>. Before that, please make sure
+that <code class="docutils literal notranslate"><span class="pre">settings.py</span></code> contains the following statement:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">APIKEYS_JSON_FILENAME</span> <span class="o">=</span> <span class="s1">&#39;./apikeys.json&#39;</span>
 </pre></div>
 </div>
 <p><strong>Attention</strong>: It is recommended that the number of apikeys be greater than or equal to the
-<code class="docutils literal notranslate"><span class="pre">CONCURRENT_REQUESTS</span></code> in <code class="docutils literal notranslate"><span class="pre">settings.py</span></code> parameter to maximize the performance of spider.</p>
+<code class="docutils literal notranslate"><span class="pre">CONCURRENT_REQUESTS</span></code> in <code class="docutils literal notranslate"><span class="pre">settings.py</span></code> parameter to maximize the performance of spider. The websites for apikeys as
+follows:</p>
+<ul class="simple">
+<li><p>BTC: <span class="xref myst">blockcypher.com</span></p></li>
+<li><p>ETH: <span class="xref myst">etherscan.io</span></p></li>
+<li><p>BSC: <span class="xref myst">bscscan.com</span></p></li>
+<li><p>Polygan: <span class="xref myst">polygonscan.com</span></p></li>
+<li><p>HECO: <span class="xref myst">hecoinfo.com</span></p></li>
+</ul>
 </div>
 
 
