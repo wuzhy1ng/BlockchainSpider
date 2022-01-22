@@ -39,8 +39,8 @@ class TxsETHSpider(scrapy.Spider):
         self.end_blk = int(kwargs.get('end_blk', 99999999))
 
         # auto turn page, for the etherscan api offer 10k txs per request
-        self.auto_page = kwargs.get('auto_page', True)
-        self.auto_page = False if self.auto_page == 'False' else True
+        self.auto_page = kwargs.get('auto_page', False)
+        self.auto_page = True if self.auto_page == 'True' else False
 
     def get_max_blk(self, txs: list):
         rlt = 0

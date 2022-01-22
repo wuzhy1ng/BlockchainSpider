@@ -307,41 +307,342 @@ class TTRTime(TTR):
 
         return dict(node=node, residual=r) if node is not None else None
 
-        # nodes_r = list()
-        # for node, chips in self.r.items():
-        #     sum_r = 0
-        #     for _, v in chips.items():
-        #         sum_r += v
-        #     nodes_r.append((node, sum_r))
-        # 
-        # if len(nodes_r) > 0:
-        #     nodes_r.sort(key=lambda x: x[1], reverse=True)
-        #     for node, sum_r in nodes_r:
-        #         if sum_r > self.epsilon:
-        #             return dict(node=node, residual=sum_r)
 
+class TTRAggregate(TTR):
+    name = 'TTRAggregate'
 
-class TTRReduction(TTR):
+    def __init__(self, source, alpha: float = 0.15, beta: float = 0.8, epsilon=1e-5):
+        super().__init__(source, alpha, beta, epsilon)
+        self.p = dict()
+        self.r = dict()
+        self._cache = dict()
+        self._is_start = False
+
     def push(self, node, edges: list, **kwargs):
-        pass
+        # if residual vector is none, add empty list
+        if self.r.get(node) is None:
+            self.r[node] = list()
+
+        # push on first time
+        if not self._is_start:
+            self._is_start = True
+
+            # first self push
+            self.p[self.source] = self.alpha
+
+            # calc value of each symbol
+            in_sum = dict()
+            out_sum = dict()
+            symbols = set()
+            for e in edges:
+                symbols.add(e.get('symbol'))
+                if e.get('to') == self.source:
+                    in_sum[e.get('symbol')] = in_sum.get(e.get('symbol'), 0) + e.get('value', 0)
+                elif e.get('from') == self.source:
+                    out_sum[e.get('symbol')] = out_sum.get(e.get('symbol'), 0) + e.get('value', 0)
+            for e in edges:
+                if e.get('from') == self.source and out_sum.get(e.get('symbol'), 0) != 0:
+                    if self.r.get(e.get('to')) is None:
+                        self.r[e.get('to')] = list()
+                    value = (1 - self.alpha) * self.beta * e.get('value', 0) / out_sum[e.get('symbol')]
+                    # print('--------------', e.get('value', 0), out_sum[e.get('symbol')], value)
+                    if value > 0:
+                        self.r[e.get('to')].append(dict(
+                            value=value,
+                            timestamp=e.get('timeStamp'),
+                            symbol=e.get('symbol')
+                        ))
+                elif e.get('to') == self.source and in_sum.get(e.get('symbol'), 0) != 0:
+                    if self.r.get(e.get('from')) is None:
+                        self.r[e.get('from')] = list()
+                    self.r[e.get('from')].append(dict(
+                        value=(1 - self.alpha) * (1 - self.beta) * e.get('value', 0) / in_sum[e.get('symbol')],
+                        timestamp=e.get('timeStamp'),
+                        symbol=e.get('symbol')
+                    ))
+            for symbol in symbols:
+                if out_sum.get(symbol, 0) == 0:
+                    self.r[self.source].append(dict(
+                        value=(1 - self.alpha) * self.beta,
+                        timestamp=0,
+                        symbol=symbol
+                    ))
+                elif in_sum.get(symbol, 0) == 0:
+                    self.r[self.source].append(dict(
+                        value=(1 - self.alpha) * (1 - self.beta),
+                        timestamp=sys.maxsize,
+                        symbol=symbol
+                    ))
+            print('------------', sum([_r.get('value', 0) for _r in self.r[self.source]]))
+            return
+
+            # copy residual vector with sort and clear
+        r = self.r[node]
+        r.sort(key=lambda x: x.get('timestamp', 0))
+        self.r[node] = list()
+
+        # aggregate edges
+        agg_es = self._get_aggregated_edges(node, edges)
+
+        # push
+        self._self_push(node, r)
+        self._forward_push(node, agg_es, r)
+        self._backward_push(node, agg_es, r)
+
+        # clear cache
+        self._cache = dict()
+
+        yield from edges
+
+    def _self_push(self, node, r: list):
+        sum_r = 0
+        for chip in r:
+            sum_r += chip.get('value')
+        self.p[node] = self.p.get(node, 0) + self.alpha * sum_r
+
+    def _forward_push(self, node, aggregated_edges: list, r: list):
+        if len(r) == 0:
+            return
+
+        for chip in r:
+            if chip.get('value', 0) < self.epsilon:
+                continue
+
+            es_out_indices = list()
+            es_out_value = list()
+            es_out_sum = 0
+            for i, e in enumerate(aggregated_edges):
+                if chip.get('timestamp', 0) < e.get_timestamp():
+                    continue
+                profit = e.get_output_profit(chip.get('symbol'))
+                if profit is not None:
+                    es_out_indices.append(i)
+                    es_out_value.append(profit.value)
+                    es_out_sum += profit.value
+
+            for i, idx in enumerate(es_out_indices):
+                val = es_out_value[i]
+                profits = self._get_distributing_profit(
+                    direction=-1,
+                    symbol=chip.get('symbol'),
+                    index=idx,
+                    aggregated_edges=aggregated_edges
+                )
+                if len(profits) == 0:
+                    _chip = chip.copy()
+                    _chip['value'] = (1 - self.alpha) * self.beta * chip.get('value', 0)
+                    self.r[node].append(_chip)
+                else:
+                    for profit in profits:
+                        _chip = dict(
+                            value=val / len(profits),
+                            timestamp=profit.timestamp,
+                            symbol=profit.symbol,
+                        )
+                        self.r[node].append(_chip)
+
+    def _backward_push(self, node, aggregated_edges: list, r: list):
+        if len(r) == 0:
+            return
+
+        for chip in r:
+            if chip.get('value', 0) < self.epsilon:
+                continue
+
+            es_in_indices = list()
+            es_in_value = list()
+            es_in_sum = 0
+            for i, e in enumerate(aggregated_edges):
+                if chip.get('timestamp', sys.maxsize) > e.get_timestamp():
+                    continue
+                profit = e.get_output_profit(chip.get('symbol'))
+                if profit is not None:
+                    es_in_indices.append(i)
+                    es_in_value.append(profit.value)
+                    es_in_sum += profit.value
+
+            for i, idx in enumerate(es_in_indices):
+                val = es_in_value[i]
+                profits = self._get_distributing_profit(
+                    direction=1,
+                    symbol=chip.get('symbol'),
+                    index=idx,
+                    aggregated_edges=aggregated_edges
+                )
+                if len(profits) == 0:
+                    _chip = chip.copy()
+                    _chip['value'] = (1 - self.alpha) * (1 - self.beta) * chip.get('value', 0)
+                    self.r[node].append(_chip)
+                else:
+                    for profit in profits:
+                        _chip = dict(
+                            value=val / len(profits),
+                            timestamp=profit.timestamp,
+                            symbol=profit.symbol,
+                        )
+                        self.r[node].append(_chip)
 
     def pop(self):
-        pass
+        node, r = None, self.epsilon
+        for _node, chips in self.r.items():
+            sum_r = 0
+            for chip in chips:
+                sum_r += chip.get('value', 0)
+            if sum_r > r:
+                node, r = _node, sum_r
+        return dict(node=node, residual=r) if node is not None else None
 
-    def _calc_profit(self, node, edges: list) -> dict:
+    def _get_swapped_aggregate_edge_indices(
+            self,
+            direction: int,
+            profit,
+            index: int,
+            aggregated_edges: list,
+    ):
+        rlt = list()
+        indices = range(index + 1, len(aggregated_edges)) if direction < 0 else range(0, index)
+        for _index in indices:
+            profits = aggregated_edges[_index].profits
+            profits = [p for p in profits if p.symbol == profit.symbol and p.value * profit.value < 0]
+            if len(profits) > 0:
+                rlt.append(_index)
+        return rlt
+
+    def _get_distributing_profit(
+            self,
+            direction: int,
+            symbol: str,
+            index: int,
+            aggregated_edges: list,
+    ) -> list:
+        """
+
+        :param direction: 1 means input and -1 means output
+        :param index: current aggregated edge index
+        :param aggregated_edges:
+        :return: a list of profit
+        """
+        cache = self._cache.get("{}_{}_{}".format(direction, symbol, index))
+        if cache is not None:
+            return cache
+
+        cur_aggregate_edge = aggregated_edges[index]
+
+        no_reverse_profits = [profit for profit in cur_aggregate_edge.profits if profit.value * direction > 0]
+        reverse_profits = [profit for profit in cur_aggregate_edge.profits if profit.value * direction < 0]
+        if len(reverse_profits) == 0:
+            return [profit for profit in no_reverse_profits if profit.symbol == symbol]
+
+        rlt = list()
+        if len(reverse_profits) == 1:
+            profit = reverse_profits[0]
+            indices = self._get_swapped_aggregate_edge_indices(direction, profit, index, aggregated_edges)
+            for _index in indices:
+                rlt.extend(self._get_distributing_profit(direction, profit.symbol, _index, aggregated_edges))
+        else:
+            rlt.extend(cur_aggregate_edge.profits)
+            for profit in reverse_profits:
+                indices = self._get_swapped_aggregate_edge_indices(direction, profit, index, aggregated_edges)
+                for _index in indices:
+                    rlt.extend(self._get_distributing_profit(direction, profit.symbol, _index, aggregated_edges))
+
+        self._cache["{}_{}_{}".format(direction, symbol, index)] = rlt
+        return rlt
+
+    def _get_aggregated_edges(self, node, edges: list) -> list:
         """
         :param node:
         :param edges: hash, from, to, value, timeStamp, symbol
         :return:
         """
-        profit = dict()
+        aggregated_edges = dict()
         for edge in edges:
-            symbol = edge.get('symbol')
-            if edge.get('from') == node:
-                profit[symbol] = profit.get(symbol, 0) - edge.get('value', 0)
-            elif edge.get('to') == node:
-                profit[symbol] = profit.get(symbol, 0) + edge.get('value', 0)
-        return profit
+            _hash = edge.get('hash')
+            aggregated_edge = TTRAggregate.AggregatedEdge(
+                _hash=_hash,
+                _profits=[TTRAggregate.AggregatedEdgeProfit(
+                    _address=edge.get('to') if edge.get('from') == node else edge.get('from'),
+                    _value=-edge.get('value') if edge.get('from') == node else edge.get('value'),
+                    _timestamp=edge.get('timeStamp'),
+                    _symbol=edge.get('symbol')
+                )],
+                _aggregated_edges=[edge],
+            )
 
-    def _edge_infer(self, node, edges: list, edge: dict):
-        pass
+            aggregated_edge = aggregated_edge.aggregate(aggregated_edges.get(_hash))
+            aggregated_edges[_hash] = aggregated_edge
+            if len(aggregated_edge.profits) == 0:
+                del aggregated_edges[_hash]
+        return [aggregated_edge for aggregated_edge in aggregated_edges.values()]
+
+    class AggregatedEdge:
+        def __init__(
+                self,
+                _hash: str,
+                _profits: list,
+                _aggregated_edges: list,
+        ):
+            self.hash = _hash
+            self.profits = _profits
+            self.aggregated_edges = _aggregated_edges
+
+        def aggregate(self, aggregated_edge):
+            if aggregated_edge is None:
+                return self
+            assert isinstance(aggregated_edge, self.__class__)
+
+            # 1. collect all edges
+            self.aggregated_edges.extend(aggregated_edge.aggregated_edges)
+
+            # 2. according to symbol to classify profit and aggregate
+            aggregated_profits = dict()
+            for profit in self.profits + aggregated_edge.profits:
+                _profit = aggregated_profits.get(profit.symbol)
+                if _profit is None:
+                    if profit.value > 0:
+                        aggregated_profits[profit.symbol] = profit
+                    continue
+
+                if _profit.value + profit.value == 0:
+                    del aggregated_profits[profit.symbol]
+                    continue
+
+                sgn = 1 if _profit.value > 0 else -1
+                sgn *= 1 if _profit.value + profit.value > 0 else -1
+                aggregated_value = _profit.value + profit.value
+                if sgn < 0:
+                    _profit = profit
+                _profit.value = aggregated_value
+                aggregated_profits[profit.symbol] = _profit
+            self.profits = [v for v in aggregated_profits.values()]
+
+            return self
+
+        def get_input_profit(self, symbol):
+            for profit in self.profits:
+                if profit.symbol == symbol and profit.value > 0:
+                    return profit
+
+        def get_output_profit(self, symbol):
+            for profit in self.profits:
+                if profit.symbol == symbol and profit.value < 0:
+                    return profit
+
+        def get_timestamp(self):
+            timestamp = 0
+            if len(self.profits) > 0:
+                timestamp = self.profits[0].timestamp
+            return timestamp
+
+    class AggregatedEdgeProfit:
+        def __init__(
+                self,
+                _address: str,
+                _value: float,
+                _timestamp: int,
+                _symbol: str,
+        ):
+            self.address = _address
+            self.value = _value
+            self.timestamp = _timestamp
+            self.symbol = _symbol

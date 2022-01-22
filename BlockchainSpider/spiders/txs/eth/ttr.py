@@ -11,7 +11,7 @@ from BlockchainSpider.tasks import SyncTask
 
 class TxsETHTTRSpider(TxsETHSpider):
     name = 'txs.eth.ttr'
-    allow_strategies = {'TTRBase', 'TTRWeight', 'TTRTime'}
+    allow_strategies = {'TTRBase', 'TTRWeight', 'TTRTime', 'TTRAggregate'}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -22,9 +22,12 @@ class TxsETHTTRSpider(TxsETHSpider):
         self.beta = float(kwargs.get('beta', 0.7))
         self.epsilon = float(kwargs.get('epsilon', 1e-4))
 
-        self.strategy_cls = kwargs.get('strategy', 'TTRTime')
+        self.strategy_cls = kwargs.get('strategy', 'TTRAggregate')
         assert self.strategy_cls in TxsETHTTRSpider.allow_strategies
         self.strategy_cls = getattr(strategies, self.strategy_cls)
+
+        self.symbols = kwargs.get('symbols', None)
+        self.symbols = set(self.symbols.split(',')) if self.symbols else self.symbols
 
     def start_requests(self):
         # load source nodes
@@ -76,8 +79,12 @@ class TxsETHTTRSpider(TxsETHSpider):
             for tx in data['result']:
                 if tx['from'] == '' or tx['to'] == '':
                     continue
-                tx['value'] = float(tx['value'])
+                tx['value'] = int(tx['value'])
                 tx['timeStamp'] = float(tx['timeStamp'])
+
+                if self.symbols and tx.get('tokenSymbol', 'ETH') not in self.symbols:
+                    continue
+                tx['symbol'] = '{}_{}'.format(tx.get('tokenSymbol', 'ETH'), tx.get('contractAddress'))
                 txs.append(tx)
         return txs
 
@@ -202,8 +209,63 @@ class TxsETHTTRSpider(TxsETHSpider):
             )
 
     def parse_erc20_txs(self, response, **kwargs):
-        # TODO
-        pass
+        # parse data from response
+        txs = self._load_txs_from_response(response)
+        if txs is None:
+            self.log(
+                message="On parse: Get error status from: %s" % response.url,
+                level=logging.WARNING,
+            )
+            return
+        self.log(
+            message='On parse: Extend {} from seed of {}, residual {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['residual']
+            ),
+            level=logging.INFO
+        )
+
+        # push data to task and save tx
+        yield from self.task_map[kwargs['source']].push(
+            node=kwargs['address'],
+            edges=txs,
+            wait_key=kwargs['wait_key']
+        )
+
+        if len(txs) < 10000 or self.auto_page is False:
+            task = self.task_map[kwargs['source']]
+            if task.is_locked():
+                return
+
+            # generate ppr item and finished
+            item = task.pop()
+            if item is None:
+                yield PPRItem(source=kwargs['source'], ppr=task.strategy.p)
+                return
+
+            # next address request
+            for txs_type in self.txs_types:
+                now = time.time()
+                self.task_map[kwargs['source']].wait(now)
+                yield self.txs_req_getter[txs_type](
+                    address=item['node'],
+                    **{
+                        'source': kwargs['source'],
+                        'residual': item['residual'],
+                        'wait_key': now
+                    }
+                )
+        # next page request
+        else:
+            now = time.time()
+            self.task_map[kwargs['source']].wait(now)
+            yield self.get_erc20_txs_request(
+                address=kwargs['address'],
+                **{
+                    'source': kwargs['source'],
+                    'residual': kwargs['residual'],
+                    'wait_key': now
+                }
+            )
 
     def parse_erc721_txs(self, response, **kwargs):
         # TODO
