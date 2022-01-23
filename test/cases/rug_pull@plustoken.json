@@ -1,0 +1,71 @@
+{
+    "name": "PlusToken Rug Pull",
+    "net": "eth",
+    "blockAt": 7993213,
+    "reporter": "Peckshield",
+    "url": "https://trace.coinholmes.com",
+    "source": [
+      {
+        "address": "0xf4a2eff88a408ff4c4550148151c33c93442619e",
+        "label": "PlusToken"
+      }
+    ],
+    "target": [
+      {
+        "address": "0xf0d9fcb4fefdbd3e7929374b4632f8ad511bd7e3",
+        "label": "ZB"
+      },
+      {
+        "address": "0x167a9333bf582556f35bd4d16a7e80e191aa6476",
+        "label": "Coinone"
+      },
+      {
+        "address": "0x96faaeefd3dabdd10dbe928d75884ef22ec157db",
+        "label": "Binance"
+      },
+      {
+        "address": "0x5e032243d507c743b061ef021e2ec7fcc6d3ab89",
+        "label": "Bittrex"
+      },
+      {
+        "address": "0xd8a83b72377476d0a66683cde20a8aad0b628713",
+        "label": "Huobi"
+      },
+      {
+        "address": "0xf056f435ba0cc4fcd2f1b17e3766549ffc404b94",
+        "label": "Huobi"
+      },
+      {
+        "address": "0x6f50c6bff08ec925232937b204b0ae23c488402a",
+        "label": "Huobi"
+      },
+      {
+        "address": "0xb9a4873d8d2c22e56b8574e8605644d08e047549",
+        "label": "Huobi"
+      },
+      {
+        "address": "0x034f854b44d28e26386c1bc37ff9b20c6380b00d",
+        "label": "Huobi"
+      },
+      {
+        "address": "0x39d9f4640b98189540a9c0edcfa95c5e657706aa",
+        "label": "Huobi"
+      },
+      {
+        "address": "0xb2a48f542dc56b89b24c04076cbe565b3dc58e7b",
+        "label": "Huobi"
+      },
+      {
+        "address": "0x5861b8446a2f6e19a067874c133f04c578928727",
+        "label": "Huobi"
+      },
+      {
+        "address": "0xf775a9a0ad44807bc15936df0ee68902af1a0eee",
+        "label": "Huobi"
+      },
+      {
+        "address": "0x0d0707963952f2fba59dd06f2b425ace40b492fe",
+        "label": "GateIO"
+      }
+    ]
+  }
