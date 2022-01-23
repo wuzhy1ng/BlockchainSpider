@@ -1,3 +1,5 @@
+import json
+
 import scrapy
 
 from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
@@ -20,7 +22,7 @@ class TxsETHSpider(scrapy.Spider):
         self.out_dir = kwargs.get('out', './data')
         self.out_fields = kwargs.get(
             'fields',
-            'hash,from,to,value,timeStamp,blockNumber,tokenSymbol,contractAddress'
+            'id,hash,from,to,value,timeStamp,blockNumber,tokenSymbol,contractAddress'
         ).split(',')
 
         # apikey bucket
@@ -44,6 +46,10 @@ class TxsETHSpider(scrapy.Spider):
         # auto turn page, for the etherscan api offer 10k txs per request
         self.auto_page = kwargs.get('auto_page', False)
         self.auto_page = True if self.auto_page == 'True' else False
+
+        # restrict token symbol
+        self.symbols = kwargs.get('symbols', None)
+        self.symbols = set(self.symbols.split(',')) if self.symbols else self.symbols
 
     def get_max_blk(self, txs: list):
         rlt = 0
@@ -140,6 +146,25 @@ class TxsETHSpider(scrapy.Spider):
     def gen_txs_requests(self, address: str, **kwargs):
         for txs_type in self.txs_types:
             yield self.txs_req_getter[txs_type](address, **kwargs)
+
+    def load_txs_from_response(self, response):
+        data = json.loads(response.text)
+        txs = None
+        if isinstance(data.get('result'), list):
+            txs = list()
+            for tx in data['result']:
+                if tx['from'] == '' or tx['to'] == '':
+                    continue
+                tx['value'] = int(tx['value'])
+                tx['timeStamp'] = float(tx['timeStamp'])
+
+                if self.symbols and tx.get('tokenSymbol', 'ETH') not in self.symbols:
+                    continue
+                tx['symbol'] = '{}_{}'.format(tx.get('tokenSymbol', 'ETH'), tx.get('contractAddress'))
+
+                tx['id'] = '{}_{}_{}'.format(tx.get('hash'), tx.get('traceId'), tx['symbol'])
+                txs.append(tx)
+        return txs
 
     def parse_external_txs(self, response, **kwargs):
         raise NotImplementedError()

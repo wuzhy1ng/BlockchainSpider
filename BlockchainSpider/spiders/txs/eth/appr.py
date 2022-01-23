@@ -1,5 +1,4 @@
 import csv
-import json
 import logging
 import time
 
@@ -17,8 +16,8 @@ class TxsETHAPPRSpider(TxsETHSpider):
 
         # task map
         self.task_map = dict()
-        self.alpha = float(kwargs.get('alpha', 0.1))
-        self.epsilon = float(kwargs.get('epsilon', 5e-5))
+        self.alpha = float(kwargs.get('alpha', 0.15))
+        self.epsilon = float(kwargs.get('epsilon', 1e-3))
 
     def start_requests(self):
         # load source nodes
@@ -52,31 +51,24 @@ class TxsETHAPPRSpider(TxsETHSpider):
                     }
                 )
 
-    def _load_txs_from_response(self, response):
-        data = json.loads(response.text)
-        txs = None
-        if isinstance(data.get('result'), list):
-            txs = list()
-            for tx in data['result']:
-                if tx['from'] == '' or tx['to'] == '':
-                    continue
-                txs.append(tx)
-        return txs
-
     def _gen_tx_items(self, txs, **kwargs):
         for tx in txs:
             yield TxItem(source=kwargs['source'], tx=tx)
 
     def parse_external_txs(self, response, **kwargs):
         # parse data from response
-        txs = self._load_txs_from_response(response)
+        txs = self.load_txs_from_response(response)
         if txs is None:
-            logging.warning("On parse: Get error status from: %s" % response.url)
-            return
-        logging.info(
-            'On parse: Extend {} from seed of {}, residual {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['residual']
+            self.log(
+                message="On parse: Get error status from: %s" % response.url,
+                level=logging.WARNING
             )
+            return
+        self.log(
+            message='On parse: Extend {} from seed of {}, residual {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['residual']
+            ),
+            level=logging.INFO
         )
 
         # save tx
@@ -129,21 +121,25 @@ class TxsETHAPPRSpider(TxsETHSpider):
 
     def parse_internal_txs(self, response, **kwargs):
         # parse data from response
-        txs = self._load_txs_from_response(response)
+        txs = self.load_txs_from_response(response)
         if txs is None:
-            logging.warning("On parse: Get error status from: %s" % response.url)
-            return
-        logging.info(
-            'On parse: Extend {} from seed of {}, residual {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['residual']
+            self.log(
+                message="On parse: Get error status from: %s" % response.url,
+                level=logging.WARNING
             )
+            return
+        self.log(
+            message='On parse: Extend {} from seed of {}, residual {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['residual']
+            ),
+            level=logging.INFO
         )
 
         # save tx
         yield from self._gen_tx_items(txs, **kwargs)
 
         # push data to task
-        self.task_map[kwargs['source']].push(
+        yield from self.task_map[kwargs['source']].push(
             node=kwargs['address'],
             edges=txs,
             wait_key=kwargs['wait_key']
@@ -187,9 +183,67 @@ class TxsETHAPPRSpider(TxsETHSpider):
             )
 
     def parse_erc20_txs(self, response, **kwargs):
-        # TODO
-        pass
+        # parse data from response
+        txs = self.load_txs_from_response(response)
+        if txs is None:
+            self.log(
+                message="On parse: Get error status from: %s" % response.url,
+                level=logging.WARNING
+            )
+            return
+        self.log(
+            message='On parse: Extend {} from seed of {}, residual {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['residual']
+            ),
+            level=logging.INFO
+        )
+
+        # save tx
+        yield from self._gen_tx_items(txs, **kwargs)
+
+        # push data to task
+        yield from self.task_map[kwargs['source']].push(
+            node=kwargs['address'],
+            edges=txs,
+            wait_key=kwargs['wait_key']
+        )
+
+        # next address request
+        if len(txs) < 10000 or self.auto_page is False:
+            task = self.task_map[kwargs['source']]
+            if task.is_locked():
+                return
+
+            # generate ppr item and finished
+            item = task.pop()
+            if item is None:
+                yield PPRItem(source=kwargs['source'], ppr=task.strategy.p)
+                return
+
+            # next address request
+            for txs_type in self.txs_types:
+                now = time.time()
+                self.task_map[kwargs['source']].wait(now)
+                yield self.txs_req_getter[txs_type](
+                    address=item['node'],
+                    **{
+                        'source': kwargs['source'],
+                        'residual': item['residual'],
+                        'wait_key': now
+                    }
+                )
+        # next page request
+        else:
+            now = time.time()
+            self.task_map[kwargs['source']].wait(now)
+            yield self.get_erc20_txs_request(
+                address=kwargs['address'],
+                **{
+                    'source': kwargs['source'],
+                    'residual': kwargs['residual'],
+                    'wait_key': now
+                }
+            )
 
     def parse_erc721_txs(self, response, **kwargs):
-        # TODO
         pass

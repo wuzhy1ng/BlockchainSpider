@@ -1,4 +1,5 @@
 import sys
+import time
 
 from BlockchainSpider.strategies import PushPopModel
 
@@ -262,7 +263,7 @@ class TTRTime(TTR):
         es_in.sort(key=lambda _e: _e['timeStamp'])
         r_node.sort(key=lambda _c: _c[0])
 
-        # 累计叠加，计算每个chip之后的value之和
+        # 累计叠加，计算每个chip之前的value之和
         j = 0
         sum_w, W = 0, dict()
         for i in range(0, len(r_node)):
@@ -337,7 +338,6 @@ class TTRAggregate(TTR):
                     in_sum[e.get('symbol')] = in_sum.get(e.get('symbol'), 0) + e.get('value', 0)
                 elif e.get('from') == self.source:
                     out_sum[e.get('symbol')] = out_sum.get(e.get('symbol'), 0) + e.get('value', 0)
-
             # first self push
             self.p[self.source] = self.alpha * len(symbols)
 
@@ -375,12 +375,6 @@ class TTRAggregate(TTR):
                         timestamp=sys.maxsize,
                         symbol=symbol
                     ))
-            # s = 0
-            # for k in self.r.keys():
-            #     print('---------------', k,
-            #           sum([item.get('value', 0) for item in self.r[k]]))
-            #     s += sum([item.get('value', 0) for item in self.r[k]])
-            # print('------------', s, s+self.alpha*len(symbols), len(symbols))
             return
 
         # copy residual vector with sort and clear
@@ -390,11 +384,12 @@ class TTRAggregate(TTR):
 
         # aggregate edges
         agg_es = self._get_aggregated_edges(node, edges)
+        agg_es.sort(key=lambda x: x.get_timestamp())
 
         # push
         self._self_push(node, r)
-        self._forward_push(node, agg_es, r)
-        self._backward_push(node, agg_es, r)
+        self._forward_push_v2(node, agg_es, r)
+        self._backward_push_v2(node, agg_es, r)
 
         # clear cache
         self._cache = dict()
@@ -406,6 +401,127 @@ class TTRAggregate(TTR):
         for chip in r:
             sum_r += chip.get('value', 0)
         self.p[node] = self.p.get(node, 0) + self.alpha * sum_r
+
+    def _forward_push_v2(self, node, aggregated_edges: list, r: list):
+        if len(r) == 0:
+            return
+
+        # calc the weight sum after each chip
+        j = len(aggregated_edges) - 1
+        sum_w, W = dict(), dict()
+        for i in range(len(r) - 1, -1, -1):
+            c = r[i]
+            while j >= 0 and aggregated_edges[j].get_timestamp() > c.get('timestamp', 0):
+                e = aggregated_edges[j]
+                profits = e.get_output_profits()
+                for profit in profits:
+                    sum_w[profit.symbol] = sum_w.get(profit.symbol, 0) + profit.value
+                j -= 1
+            W[str(c)] = sum_w.get(c.get('symbol'), 0)
+
+        # push residual to neighbors
+        j = 0
+        d = dict()
+        for i in range(0, len(aggregated_edges)):
+            e = aggregated_edges[i]
+            output_profits = e.get_output_profits()
+            if len(output_profits) == 0:
+                continue
+
+            while j < len(r) and e.get_timestamp() > r[j].get('timestamp', 0):
+                c = r[j]
+                symbol = c.get('symbol')
+                inc_d = (c.get('value', 0) / W[str(c)]) if W[str(c)] > 0 else 0
+                d[symbol] = d.get(symbol, 0) + inc_d
+                j += 1
+
+            for profit in output_profits:
+                inc = (1 - self.alpha) * self.beta * profit.value * d.get(profit.symbol, 0)
+                if inc == 0:
+                    continue
+
+                distributing_profits = self._get_distributing_profit(
+                    direction=-1,
+                    symbol=profit.symbol,
+                    index=i,
+                    aggregated_edges=aggregated_edges
+                )
+                for dp in distributing_profits:
+                    if self.r.get(dp.address) is None:
+                        self.r[dp.address] = list()
+                    self.r[dp.address].append(dict(
+                        value=inc / len(distributing_profits),
+                        symbol=dp.symbol,
+                        timestamp=dp.timestamp,
+                    ))
+
+        # recycle the residual without push
+        while j < len(r):
+            c = r[j].copy()
+            c['value'] = (1 - self.alpha) * self.beta * c.get('value', 0)
+            self.r[node].append(c)
+            j += 1
+
+    def _backward_push_v2(self, node, aggregated_edges: list, r: list):
+        if len(r) == 0:
+            return
+
+        # calc the weight sum before each chip
+        j = 0
+        sum_w, W = dict(), dict()
+        for i in range(0, len(r)):
+            c = r[i]
+            while j < len(aggregated_edges) and aggregated_edges[j].get_timestamp() < c.get('timestamp', 0):
+                e = aggregated_edges[j]
+                profits = e.get_input_profits()
+                for profit in profits:
+                    sum_w[profit.symbol] = sum_w.get(profit.symbol, 0) + profit.value
+                j += 1
+            W[i] = sum_w.get(c.get('symbol'), 0)
+
+        # push residual to neighbors
+        j = len(r) - 1
+        d = dict()
+        for i in range(len(aggregated_edges) - 1, -1, -1):
+            e = aggregated_edges[i]
+            input_profits = e.get_input_profits()
+            if len(input_profits) == 0:
+                continue
+
+            while j >= 0 and e.get_timestamp() < r[j].get('timestamp', 0):
+                c = r[j]
+                symbol = c.get('symbol')
+                inc_d = (c.get('value', 0) / W[j]) if W[j] > 0 else 0
+                d[symbol] = d.get(symbol, 0) + inc_d
+                j -= 1
+
+            for profit in input_profits:
+                inc = (1 - self.alpha) * (1 - self.beta) * profit.value * d.get(profit.symbol, 0)
+                if inc == 0:
+                    continue
+                # print('---------- backward', inc, profit.value, d.get(profit.symbol, 0))
+
+                distributing_profits = self._get_distributing_profit(
+                    direction=1,
+                    symbol=profit.symbol,
+                    index=i,
+                    aggregated_edges=aggregated_edges
+                )
+                for dp in distributing_profits:
+                    if self.r.get(dp.address) is None:
+                        self.r[dp.address] = list()
+                    self.r[dp.address].append(dict(
+                        value=inc / len(distributing_profits),
+                        symbol=dp.symbol,
+                        timestamp=dp.timestamp,
+                    ))
+
+        # recycle the residual without push
+        while j >= 0:
+            c = r[j].copy()
+            c['value'] = (1 - self.alpha) * (1 - self.beta) * c.get('value', 0)
+            self.r[node].append(c)
+            j -= 1
 
     def _forward_push(self, node, aggregated_edges: list, r: list):
         if len(r) == 0:
@@ -646,6 +762,34 @@ class TTRAggregate(TTR):
             for profit in self.profits:
                 if profit.symbol == symbol and profit.value < 0:
                     return profit
+
+        def get_output_profits(self):
+            rlt = list()
+            for profit in self.profits:
+                if profit.value < 0:
+                    rlt.append(profit)
+            return rlt
+
+        def get_input_profits(self):
+            rlt = list()
+            for profit in self.profits:
+                if profit.value > 0:
+                    rlt.append(profit)
+            return rlt
+
+        def get_output_symbols(self):
+            symbols = set()
+            for profit in self.profits:
+                if profit.value < 0:
+                    symbols.add(profit.symbol)
+            return symbols
+
+        def get_input_symbols(self):
+            symbols = set()
+            for profit in self.profits:
+                if profit.value > 0:
+                    symbols.add(profit.symbol)
+            return symbols
 
         def get_timestamp(self):
             timestamp = 0

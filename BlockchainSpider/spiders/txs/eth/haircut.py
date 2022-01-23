@@ -1,5 +1,4 @@
 import csv
-import json
 import logging
 import time
 
@@ -51,31 +50,24 @@ class TxsETHHaircutSpider(TxsETHSpider):
                     }
                 )
 
-    def _load_txs_from_response(self, response):
-        data = json.loads(response.text)
-        txs = None
-        if isinstance(data.get('result'), list):
-            txs = list()
-            for tx in data['result']:
-                if tx['from'] == '' or tx['to'] == '':
-                    continue
-                txs.append(tx)
-        return txs
-
     def _gen_tx_items(self, txs, **kwargs):
         for tx in txs:
             yield TxItem(source=kwargs['source'], tx=tx)
 
     def parse_external_txs(self, response, **kwargs):
         # parse data from response
-        txs = self._load_txs_from_response(response)
+        txs = self.load_txs_from_response(response)
         if txs is None:
-            logging.warning("On parse: Get error status from: %s" % response.url)
-            return
-        logging.info(
-            'On parse: Extend {} from seed of {}, weight {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['weight']
+            self.log(
+                message="On parse: Get error status from: %s" % response.url,
+                level=logging.WARNING
             )
+            return
+        self.log(
+            message='On parse: Extend {} from seed of {}, weight {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['weight']
+            ),
+            level=logging.INFO
         )
 
         # save tx
@@ -121,21 +113,25 @@ class TxsETHHaircutSpider(TxsETHSpider):
 
     def parse_internal_txs(self, response, **kwargs):
         # parse data from response
-        txs = self._load_txs_from_response(response)
+        txs = self.load_txs_from_response(response)
         if txs is None:
-            logging.warning("On parse: Get error status from: %s" % response.url)
-            return
-        logging.info(
-            'On parse: Extend {} from seed of {}, weight {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['weight']
+            self.log(
+                message="On parse: Get error status from: %s" % response.url,
+                level=logging.WARNING
             )
+            return
+        self.log(
+            message='On parse: Extend {} from seed of {}, weight {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['weight']
+            ),
+            level=logging.INFO
         )
 
         # save tx
         yield from self._gen_tx_items(txs, **kwargs)
 
         # push data to task
-        self.task_map[kwargs['source']].push(
+        yield from self.task_map[kwargs['source']].push(
             node=kwargs['address'],
             edges=txs,
             wait_key=kwargs['wait_key']
@@ -172,9 +168,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
             )
 
     def parse_erc20_txs(self, response, **kwargs):
-        # TODO
         pass
 
     def parse_erc721_txs(self, response, **kwargs):
-        # TODO
         pass

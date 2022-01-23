@@ -34,6 +34,8 @@ class SyncTask(Task):
         return item
 
     def is_locked(self):
+        # print('-------', self._cache.keys())
+        # print('-------', [k for k in self._cache.keys() if self._cache[k] is None])
         for k in self._cache.keys():
             if self._cache[k] is None:
                 return True

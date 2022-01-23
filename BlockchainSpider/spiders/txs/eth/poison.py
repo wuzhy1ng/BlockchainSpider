@@ -1,5 +1,4 @@
 import csv
-import json
 import logging
 import urllib.parse
 
@@ -48,30 +47,34 @@ class TxsETHPoisonSpider(TxsETHSpider):
 
     def _parse_txs(self, response, **kwargs):
         # parse data from response
-        data = json.loads(response.text)
-        if data['status'] == 0:
-            logging.warning("On parse: Get error status from:%s" % response.url)
-            return
-        logging.info(
-            'On parse: Extend {} from seed of {}, depth {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['depth']
+        txs = self.load_txs_from_response(response)
+        if txs is None:
+            self.log(
+                message="On parse: Get error status from:%s" % response.url,
+                level=logging.WARNING
             )
+            return
+        self.log(
+            message='On parse: Extend {} from seed of {}, depth {}'.format(
+                kwargs['address'], kwargs['source'], kwargs['depth']
+            ),
+            level=logging.INFO
         )
 
-        if isinstance(data['result'], list):
+        if isinstance(txs, list):
             # save tx
-            for row in data['result']:
-                yield TxItem(source=kwargs['source'], tx=row)
+            for tx in txs:
+                yield TxItem(source=kwargs['source'], tx=tx)
 
             # push data to task
             self.task_map[kwargs['source']].push(
                 node=kwargs['address'],
-                edges=data['result'],
+                edges=txs,
                 cur_depth=kwargs['depth'],
             )
 
             # next address request
-            if data['result'] is None or len(data['result']) < 10000 or self.auto_page is False:
+            if txs is None or len(txs) < 10000 or self.auto_page is False:
                 task = self.task_map[kwargs['source']]
                 for item in task.pop():
                     yield from self.gen_txs_requests(
@@ -84,7 +87,7 @@ class TxsETHPoisonSpider(TxsETHSpider):
                 _url = response.url
                 _url = urllib.parse.urlparse(_url)
                 query_args = {k: v[0] if len(v) > 0 else None for k, v in urllib.parse.parse_qs(_url.query).items()}
-                query_args['startblock'] = self.get_max_blk(data['result'])
+                query_args['startblock'] = self.get_max_blk(txs)
                 _url = '?'.join([
                     '%s://%s%s' % (_url.scheme, _url.netloc, _url.path),
                     urllib.parse.urlencode(query_args)

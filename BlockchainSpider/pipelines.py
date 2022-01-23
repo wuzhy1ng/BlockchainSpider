@@ -52,7 +52,7 @@ class TxsPipeline:
         # init file
         if self.file_map.get(item['source']) is None:
             fn = os.path.join(self.out_dir, '%s.csv' % item['source'])
-            self.file_map[item['source']] = open(fn, 'w', newline='')
+            self.file_map[item['source']] = open(fn, 'w', newline='', encoding='utf-8')
             csv.writer(self.file_map[item['source']]).writerow(spider.out_fields)
 
         # write item
