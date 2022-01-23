@@ -18,7 +18,10 @@ class TxsETHSpider(scrapy.Spider):
 
         # output dir
         self.out_dir = kwargs.get('out', './data')
-        self.out_fields = kwargs.get('fields', 'hash,from,to,value,timeStamp,blockNumber').split(',')
+        self.out_fields = kwargs.get(
+            'fields',
+            'hash,from,to,value,timeStamp,blockNumber,tokenSymbol,contractAddress'
+        ).split(',')
 
         # apikey bucket
         self.apikey_bucket = JsonAPIKeyBucket('eth')

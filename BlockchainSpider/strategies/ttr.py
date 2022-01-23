@@ -327,9 +327,6 @@ class TTRAggregate(TTR):
         if not self._is_start:
             self._is_start = True
 
-            # first self push
-            self.p[self.source] = self.alpha
-
             # calc value of each symbol
             in_sum = dict()
             out_sum = dict()
@@ -340,12 +337,15 @@ class TTRAggregate(TTR):
                     in_sum[e.get('symbol')] = in_sum.get(e.get('symbol'), 0) + e.get('value', 0)
                 elif e.get('from') == self.source:
                     out_sum[e.get('symbol')] = out_sum.get(e.get('symbol'), 0) + e.get('value', 0)
+
+            # first self push
+            self.p[self.source] = self.alpha * len(symbols)
+
             for e in edges:
                 if e.get('from') == self.source and out_sum.get(e.get('symbol'), 0) != 0:
                     if self.r.get(e.get('to')) is None:
                         self.r[e.get('to')] = list()
                     value = (1 - self.alpha) * self.beta * e.get('value', 0) / out_sum[e.get('symbol')]
-                    # print('--------------', e.get('value', 0), out_sum[e.get('symbol')], value)
                     if value > 0:
                         self.r[e.get('to')].append(dict(
                             value=value,
@@ -355,11 +355,13 @@ class TTRAggregate(TTR):
                 elif e.get('to') == self.source and in_sum.get(e.get('symbol'), 0) != 0:
                     if self.r.get(e.get('from')) is None:
                         self.r[e.get('from')] = list()
-                    self.r[e.get('from')].append(dict(
-                        value=(1 - self.alpha) * (1 - self.beta) * e.get('value', 0) / in_sum[e.get('symbol')],
-                        timestamp=e.get('timeStamp'),
-                        symbol=e.get('symbol')
-                    ))
+                    value = (1 - self.alpha) * (1 - self.beta) * e.get('value', 0) / in_sum[e.get('symbol')]
+                    if value > 0:
+                        self.r[e.get('from')].append(dict(
+                            value=value,
+                            timestamp=e.get('timeStamp'),
+                            symbol=e.get('symbol')
+                        ))
             for symbol in symbols:
                 if out_sum.get(symbol, 0) == 0:
                     self.r[self.source].append(dict(
@@ -373,10 +375,15 @@ class TTRAggregate(TTR):
                         timestamp=sys.maxsize,
                         symbol=symbol
                     ))
-            print('------------', sum([_r.get('value', 0) for _r in self.r[self.source]]))
+            # s = 0
+            # for k in self.r.keys():
+            #     print('---------------', k,
+            #           sum([item.get('value', 0) for item in self.r[k]]))
+            #     s += sum([item.get('value', 0) for item in self.r[k]])
+            # print('------------', s, s+self.alpha*len(symbols), len(symbols))
             return
 
-            # copy residual vector with sort and clear
+        # copy residual vector with sort and clear
         r = self.r[node]
         r.sort(key=lambda x: x.get('timestamp', 0))
         self.r[node] = list()
@@ -397,7 +404,7 @@ class TTRAggregate(TTR):
     def _self_push(self, node, r: list):
         sum_r = 0
         for chip in r:
-            sum_r += chip.get('value')
+            sum_r += chip.get('value', 0)
         self.p[node] = self.p.get(node, 0) + self.alpha * sum_r
 
     def _forward_push(self, node, aggregated_edges: list, r: list):
@@ -420,8 +427,14 @@ class TTRAggregate(TTR):
                     es_out_value.append(profit.value)
                     es_out_sum += profit.value
 
+            if es_out_sum == 0:
+                _chip = chip.copy()
+                _chip['value'] = (1 - self.alpha) * self.beta * chip.get('value', 0)
+                self.r[node].append(_chip)
+                continue
+
             for i, idx in enumerate(es_out_indices):
-                val = es_out_value[i]
+                rated_val = chip.get('value', 0) * es_out_value[i] / es_out_sum
                 profits = self._get_distributing_profit(
                     direction=-1,
                     symbol=chip.get('symbol'),
@@ -430,12 +443,12 @@ class TTRAggregate(TTR):
                 )
                 if len(profits) == 0:
                     _chip = chip.copy()
-                    _chip['value'] = (1 - self.alpha) * self.beta * chip.get('value', 0)
+                    _chip['value'] = (1 - self.alpha) * self.beta * rated_val
                     self.r[node].append(_chip)
                 else:
                     for profit in profits:
                         _chip = dict(
-                            value=val / len(profits),
+                            value=rated_val / len(profits),
                             timestamp=profit.timestamp,
                             symbol=profit.symbol,
                         )
@@ -461,8 +474,14 @@ class TTRAggregate(TTR):
                     es_in_value.append(profit.value)
                     es_in_sum += profit.value
 
+            if es_in_sum == 0:
+                _chip = chip.copy()
+                _chip['value'] = (1 - self.alpha) * self.beta * chip.get('value', 0)
+                self.r[node].append(_chip)
+                continue
+
             for i, idx in enumerate(es_in_indices):
-                val = es_in_value[i]
+                rated_val = chip.get('value', 0) * es_in_value[i] / es_in_sum
                 profits = self._get_distributing_profit(
                     direction=1,
                     symbol=chip.get('symbol'),
@@ -471,12 +490,12 @@ class TTRAggregate(TTR):
                 )
                 if len(profits) == 0:
                     _chip = chip.copy()
-                    _chip['value'] = (1 - self.alpha) * (1 - self.beta) * chip.get('value', 0)
+                    _chip['value'] = (1 - self.alpha) * (1 - self.beta) * rated_val
                     self.r[node].append(_chip)
                 else:
                     for profit in profits:
                         _chip = dict(
-                            value=val / len(profits),
+                            value=rated_val / len(profits),
                             timestamp=profit.timestamp,
                             symbol=profit.symbol,
                         )
