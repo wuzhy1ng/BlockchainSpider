@@ -388,8 +388,8 @@ class TTRAggregate(TTR):
 
         # push
         self._self_push(node, r)
-        self._forward_push_v2(node, agg_es, r)
-        self._backward_push_v2(node, agg_es, r)
+        self._forward_push(node, agg_es, r)
+        self._backward_push(node, agg_es, r)
 
         # clear cache
         self._cache = dict()
@@ -402,7 +402,7 @@ class TTRAggregate(TTR):
             sum_r += chip.get('value', 0)
         self.p[node] = self.p.get(node, 0) + self.alpha * sum_r
 
-    def _forward_push_v2(self, node, aggregated_edges: list, r: list):
+    def _forward_push(self, node, aggregated_edges: list, r: list):
         if len(r) == 0:
             return
 
@@ -462,7 +462,7 @@ class TTRAggregate(TTR):
             self.r[node].append(c)
             j += 1
 
-    def _backward_push_v2(self, node, aggregated_edges: list, r: list):
+    def _backward_push(self, node, aggregated_edges: list, r: list):
         if len(r) == 0:
             return
 
@@ -522,100 +522,6 @@ class TTRAggregate(TTR):
             c['value'] = (1 - self.alpha) * (1 - self.beta) * c.get('value', 0)
             self.r[node].append(c)
             j -= 1
-
-    def _forward_push(self, node, aggregated_edges: list, r: list):
-        if len(r) == 0:
-            return
-
-        for chip in r:
-            if chip.get('value', 0) < self.epsilon:
-                continue
-
-            es_out_indices = list()
-            es_out_value = list()
-            es_out_sum = 0
-            for i, e in enumerate(aggregated_edges):
-                if chip.get('timestamp', 0) < e.get_timestamp():
-                    continue
-                profit = e.get_output_profit(chip.get('symbol'))
-                if profit is not None:
-                    es_out_indices.append(i)
-                    es_out_value.append(profit.value)
-                    es_out_sum += profit.value
-
-            if es_out_sum == 0:
-                _chip = chip.copy()
-                _chip['value'] = (1 - self.alpha) * self.beta * chip.get('value', 0)
-                self.r[node].append(_chip)
-                continue
-
-            for i, idx in enumerate(es_out_indices):
-                rated_val = chip.get('value', 0) * es_out_value[i] / es_out_sum
-                profits = self._get_distributing_profit(
-                    direction=-1,
-                    symbol=chip.get('symbol'),
-                    index=idx,
-                    aggregated_edges=aggregated_edges
-                )
-                if len(profits) == 0:
-                    _chip = chip.copy()
-                    _chip['value'] = (1 - self.alpha) * self.beta * rated_val
-                    self.r[node].append(_chip)
-                else:
-                    for profit in profits:
-                        _chip = dict(
-                            value=rated_val / len(profits),
-                            timestamp=profit.timestamp,
-                            symbol=profit.symbol,
-                        )
-                        self.r[node].append(_chip)
-
-    def _backward_push(self, node, aggregated_edges: list, r: list):
-        if len(r) == 0:
-            return
-
-        for chip in r:
-            if chip.get('value', 0) < self.epsilon:
-                continue
-
-            es_in_indices = list()
-            es_in_value = list()
-            es_in_sum = 0
-            for i, e in enumerate(aggregated_edges):
-                if chip.get('timestamp', sys.maxsize) > e.get_timestamp():
-                    continue
-                profit = e.get_output_profit(chip.get('symbol'))
-                if profit is not None:
-                    es_in_indices.append(i)
-                    es_in_value.append(profit.value)
-                    es_in_sum += profit.value
-
-            if es_in_sum == 0:
-                _chip = chip.copy()
-                _chip['value'] = (1 - self.alpha) * self.beta * chip.get('value', 0)
-                self.r[node].append(_chip)
-                continue
-
-            for i, idx in enumerate(es_in_indices):
-                rated_val = chip.get('value', 0) * es_in_value[i] / es_in_sum
-                profits = self._get_distributing_profit(
-                    direction=1,
-                    symbol=chip.get('symbol'),
-                    index=idx,
-                    aggregated_edges=aggregated_edges
-                )
-                if len(profits) == 0:
-                    _chip = chip.copy()
-                    _chip['value'] = (1 - self.alpha) * (1 - self.beta) * rated_val
-                    self.r[node].append(_chip)
-                else:
-                    for profit in profits:
-                        _chip = dict(
-                            value=rated_val / len(profits),
-                            timestamp=profit.timestamp,
-                            symbol=profit.symbol,
-                        )
-                        self.r[node].append(_chip)
 
     def pop(self):
         node, r = None, self.epsilon
