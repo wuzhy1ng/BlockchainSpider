@@ -21,7 +21,7 @@ class TxsBTCSpider(scrapy.Spider):
 
         # output dir
         self.out_dir = kwargs.get('out', './data')
-        self.out_fields = kwargs.get('fields', 'hash,from,to,value,timeStamp,blockNumber,age').split(',')
+        self.out_fields = kwargs.get('fields', 'id,hash,from,to,value,timeStamp,blockNumber,age').split(',')
 
         # apikey bucket
         self.apikey_bucket = JsonAPIKeyBucket('btc', kps=3)
@@ -50,6 +50,7 @@ class TxsBTCSpider(scrapy.Spider):
             txs.append(TxItem(
                 source=kwargs['source'],
                 tx={
+                    'id': data['hash'],
                     'hash': data['hash'],
                     'from': tx['prev_hash'],
                     'to': data['hash'],
@@ -71,6 +72,7 @@ class TxsBTCSpider(scrapy.Spider):
             txs.append(TxItem(
                 source=kwargs['source'],
                 tx={
+                    'id': data['hash'],
                     'hash': data['hash'],
                     'from': data['hash'],
                     'to': spent_by if spent_by else '',

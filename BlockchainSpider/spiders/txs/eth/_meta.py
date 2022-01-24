@@ -156,7 +156,7 @@ class TxsETHSpider(scrapy.Spider):
                 if tx['from'] == '' or tx['to'] == '':
                     continue
                 tx['value'] = int(tx['value'])
-                tx['timeStamp'] = float(tx['timeStamp'])
+                tx['timeStamp'] = int(tx['timeStamp'])
 
                 if self.symbols and tx.get('tokenSymbol', 'ETH') not in self.symbols:
                     continue

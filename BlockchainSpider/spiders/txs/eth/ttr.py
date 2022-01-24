@@ -3,7 +3,7 @@ import logging
 import time
 
 from BlockchainSpider import strategies
-from BlockchainSpider.items import TxItem, PPRItem
+from BlockchainSpider.items import TxItem, ImportanceItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.tasks import SyncTask
 
@@ -67,23 +67,6 @@ class TxsETHTTRSpider(TxsETHSpider):
                     }
                 )
 
-    # def _load_txs_from_response(self, response):
-    #     data = json.loads(response.text)
-    #     txs = None
-    #     if isinstance(data.get('result'), list):
-    #         txs = list()
-    #         for tx in data['result']:
-    #             if tx['from'] == '' or tx['to'] == '':
-    #                 continue
-    #             tx['value'] = int(tx['value'])
-    #             tx['timeStamp'] = float(tx['timeStamp'])
-    #
-    #             if self.symbols and tx.get('tokenSymbol', 'ETH') not in self.symbols:
-    #                 continue
-    #             tx['symbol'] = '{}_{}'.format(tx.get('tokenSymbol', 'ETH'), tx.get('contractAddress'))
-    #             txs.append(tx)
-    #     return txs
-
     def parse_external_txs(self, response, **kwargs):
         # parse data from response
         txs = self.load_txs_from_response(response)
@@ -116,7 +99,7 @@ class TxsETHTTRSpider(TxsETHSpider):
             # generate ppr item and finished
             item = task.pop()
             if item is None:
-                yield PPRItem(source=kwargs['source'], ppr=task.strategy.p)
+                yield ImportanceItem(source=kwargs['source'], importance=task.strategy.p)
                 return
 
             # next address request
@@ -176,7 +159,7 @@ class TxsETHTTRSpider(TxsETHSpider):
             # generate ppr item and finished
             item = task.pop()
             if item is None:
-                yield PPRItem(source=kwargs['source'], ppr=task.strategy.p)
+                yield ImportanceItem(source=kwargs['source'], importance=task.strategy.p)
                 return
 
             # next address request
@@ -235,7 +218,7 @@ class TxsETHTTRSpider(TxsETHSpider):
             # generate ppr item and finished
             item = task.pop()
             if item is None:
-                yield PPRItem(source=kwargs['source'], ppr=task.strategy.p)
+                yield ImportanceItem(source=kwargs['source'], importance=task.strategy.p)
                 return
 
             # next address request

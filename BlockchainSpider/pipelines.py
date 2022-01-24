@@ -9,7 +9,7 @@ import csv
 import json
 import os
 
-from BlockchainSpider.items import LabelItem, TxItem, PPRItem
+from BlockchainSpider.items import LabelItem, TxItem, ImportanceItem
 
 
 class LabelsPipeline:
@@ -67,17 +67,17 @@ class TxsPipeline:
             f.close()
 
 
-class PPRPipeline:
+class ImportancePipeline:
     def __init__(self):
         self.out_dir = None
 
     def process_item(self, item, spider):
-        if not isinstance(item, PPRItem):
+        if not isinstance(item, ImportanceItem):
             return item
 
         # create output dir
         if self.out_dir is None:
-            self.out_dir = os.path.join(spider.out_dir, 'ppr')
+            self.out_dir = os.path.join(spider.out_dir, 'importance')
             if not os.path.exists(self.out_dir):
                 os.makedirs(self.out_dir)
 
@@ -85,8 +85,8 @@ class PPRPipeline:
         fn = os.path.join(self.out_dir, '%s.csv' % item['source'])
         with open(fn, 'w', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(['node', 'p'])
-            for k, v in item['ppr'].items():
+            writer.writerow(['node', 'importance'])
+            for k, v in item['importance'].items():
                 writer.writerow([k, v])
 
         return item

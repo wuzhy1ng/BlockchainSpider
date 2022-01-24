@@ -3,7 +3,7 @@ import json
 import logging
 import time
 
-from BlockchainSpider.items import PPRItem
+from BlockchainSpider.items import ImportanceItem
 from BlockchainSpider.spiders.txs.btc._meta import TxsBTCSpider
 from BlockchainSpider.strategies import APPR
 from BlockchainSpider.tasks import SyncTask
@@ -88,4 +88,4 @@ class TxsBTCAPPRSpider(TxsBTCSpider):
             })
         else:
             # generate ppr item and finished
-            yield PPRItem(source=kwargs['source'], ppr=task.strategy.p)
+            yield ImportanceItem(source=kwargs['source'], importance=task.strategy.p)

@@ -17,6 +17,6 @@ class TxItem(scrapy.Item):
     tx = scrapy.Field()
 
 
-class PPRItem(scrapy.Item):
+class ImportanceItem(scrapy.Item):
     source = scrapy.Field()
-    ppr = scrapy.Field()
+    importance = scrapy.Field()

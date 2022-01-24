@@ -66,7 +66,7 @@ DOWNLOADER_MIDDLEWARES = {
 ITEM_PIPELINES = {
     'BlockchainSpider.pipelines.LabelsPipeline': 300,
     'BlockchainSpider.pipelines.TxsPipeline': 301,
-    'BlockchainSpider.pipelines.PPRPipeline': 302,
+    'BlockchainSpider.pipelines.ImportancePipeline': 302,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

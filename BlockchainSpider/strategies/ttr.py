@@ -316,10 +316,11 @@ class TTRAggregate(TTR):
         super().__init__(source, alpha, beta, epsilon)
         self.p = dict()
         self.r = dict()
-        self._cache = dict()
         self._is_start = False
 
     def push(self, node, edges: list, **kwargs):
+        start = time.time()
+
         # if residual vector is none, add empty list
         if self.r.get(node) is None:
             self.r[node] = list()
@@ -382,6 +383,8 @@ class TTRAggregate(TTR):
         r.sort(key=lambda x: x.get('timestamp', 0))
         self.r[node] = list()
 
+        print('------ local push residual chip:', len(r))
+
         # aggregate edges
         agg_es = self._get_aggregated_edges(node, edges)
         agg_es.sort(key=lambda x: x.get_timestamp())
@@ -391,8 +394,7 @@ class TTRAggregate(TTR):
         self._forward_push(node, agg_es, r)
         self._backward_push(node, agg_es, r)
 
-        # clear cache
-        self._cache = dict()
+        print('------ local push using time:', time.time() - start)
 
         yield from edges
 
@@ -456,11 +458,18 @@ class TTRAggregate(TTR):
                     ))
 
         # recycle the residual without push
+        cs = dict()
         while j < len(r):
-            c = r[j].copy()
-            c['value'] = (1 - self.alpha) * self.beta * c.get('value', 0)
-            self.r[node].append(c)
+            c = r[j]
+            key = c.get('symbol'), c.get('timestamp')
+            cs[key] = cs.get(key, 0) + (1 - self.alpha) * self.beta * c.get('value', 0)
             j += 1
+        for key, value in cs.items():
+            self.r[node].append(dict(
+                value=value,
+                symbol=key[0],
+                timestamp=key[1]
+            ))
 
     def _backward_push(self, node, aggregated_edges: list, r: list):
         if len(r) == 0:
@@ -499,7 +508,6 @@ class TTRAggregate(TTR):
                 inc = (1 - self.alpha) * (1 - self.beta) * profit.value * d.get(profit.symbol, 0)
                 if inc == 0:
                     continue
-                # print('---------- backward', inc, profit.value, d.get(profit.symbol, 0))
 
                 distributing_profits = self._get_distributing_profit(
                     direction=1,
@@ -517,11 +525,18 @@ class TTRAggregate(TTR):
                     ))
 
         # recycle the residual without push
+        cs = dict()
         while j >= 0:
-            c = r[j].copy()
-            c['value'] = (1 - self.alpha) * (1 - self.beta) * c.get('value', 0)
-            self.r[node].append(c)
+            c = r[j]
+            key = c.get('symbol'), c.get('timestamp')
+            cs[key] = cs.get(key, 0) + (1 - self.alpha) * (1 - self.beta) * c.get('value', 0)
             j -= 1
+        for key, value in cs.items():
+            self.r[node].append(dict(
+                value=value,
+                symbol=key[0],
+                timestamp=key[1]
+            ))
 
     def pop(self):
         node, r = None, self.epsilon
@@ -563,31 +578,35 @@ class TTRAggregate(TTR):
         :param aggregated_edges:
         :return: a list of profit
         """
-        cache = self._cache.get("{}_{}_{}".format(direction, symbol, index))
-        if cache is not None:
-            return cache
-
-        cur_aggregate_edge = aggregated_edges[index]
-
-        no_reverse_profits = [profit for profit in cur_aggregate_edge.profits if profit.value * direction > 0]
-        reverse_profits = [profit for profit in cur_aggregate_edge.profits if profit.value * direction < 0]
-        if len(reverse_profits) == 0:
-            return [profit for profit in no_reverse_profits if profit.symbol == symbol]
-
         rlt = list()
-        if len(reverse_profits) == 1:
-            profit = reverse_profits[0]
-            indices = self._get_swapped_aggregate_edge_indices(direction, profit, index, aggregated_edges)
-            for _index in indices:
-                rlt.extend(self._get_distributing_profit(direction, profit.symbol, _index, aggregated_edges))
-        else:
-            rlt.extend(cur_aggregate_edge.profits)
-            for profit in reverse_profits:
+
+        stack = list()
+        stack.append((direction, symbol, index))
+        vis = set()
+        while len(stack) > 0:
+            args = stack.pop()
+            if args in vis:
+                continue
+            vis.add(args)
+
+            direction, symbol, index = args
+            cur_e = aggregated_edges[index]
+            no_reverse_profits = [profit for profit in cur_e.profits if profit.value * direction > 0]
+            reverse_profits = [profit for profit in cur_e.profits if profit.value * direction < 0]
+            if len(reverse_profits) == 0:
+                rlt.extend([profit for profit in no_reverse_profits if profit.symbol == symbol])
+            elif len(reverse_profits) == 1:
+                profit = reverse_profits[0]
                 indices = self._get_swapped_aggregate_edge_indices(direction, profit, index, aggregated_edges)
                 for _index in indices:
-                    rlt.extend(self._get_distributing_profit(direction, profit.symbol, _index, aggregated_edges))
+                    stack.append((direction, symbol, _index))
+            else:
+                rlt.extend([profit for profit in no_reverse_profits if profit.symbol == symbol])
+                for profit in reverse_profits:
+                    indices = self._get_swapped_aggregate_edge_indices(direction, profit, index, aggregated_edges)
+                    for _index in indices:
+                        stack.append((direction, symbol, _index))
 
-        self._cache["{}_{}_{}".format(direction, symbol, index)] = rlt
         return rlt
 
     def _get_aggregated_edges(self, node, edges: list) -> list:

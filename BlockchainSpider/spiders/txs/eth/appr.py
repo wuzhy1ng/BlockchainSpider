@@ -2,7 +2,7 @@ import csv
 import logging
 import time
 
-from BlockchainSpider.items import TxItem, PPRItem
+from BlockchainSpider.items import TxItem, ImportanceItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.strategies import APPR
 from BlockchainSpider.tasks import SyncTask
@@ -90,7 +90,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
             # generate ppr item and finished
             item = task.pop()
             if item is None:
-                yield PPRItem(source=kwargs['source'], ppr=task.strategy.p)
+                yield ImportanceItem(source=kwargs['source'], importance=task.strategy.p)
                 return
 
             # next address request
@@ -154,7 +154,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
             # generate ppr item and finished
             item = task.pop()
             if item is None:
-                yield PPRItem(source=kwargs['source'], ppr=task.strategy.p)
+                yield ImportanceItem(source=kwargs['source'], importance=task.strategy.p)
                 return
 
             # next address request
@@ -217,7 +217,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
             # generate ppr item and finished
             item = task.pop()
             if item is None:
-                yield PPRItem(source=kwargs['source'], ppr=task.strategy.p)
+                yield ImportanceItem(source=kwargs['source'], importance=task.strategy.p)
                 return
 
             # next address request
