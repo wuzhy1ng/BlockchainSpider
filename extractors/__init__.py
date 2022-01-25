@@ -1,4 +1,4 @@
 from .not_duplicated_tx import NotDuplicatedTxExtractor, NotDuplicatedBTCTxExtractor
 from .local_comm import LocalCommunityExtractor
 from .deduplicate import DeduplicateExtractor
-from .local_comm import LocalCommunityExtractor_
+from .local_comm import LocalCommunityExtractor
