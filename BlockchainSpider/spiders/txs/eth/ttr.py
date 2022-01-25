@@ -1,4 +1,3 @@
-import csv
 import logging
 import time
 
@@ -26,48 +25,56 @@ class TxsETHTTRSpider(TxsETHSpider):
         self.strategy_cls = getattr(strategies, self.strategy_cls)
 
     def start_requests(self):
-        # load source nodes
-        source_nodes = set()
+        # load source infos
         if self.filename is not None:
-            with open(self.filename, 'r') as f:
-                for row in csv.reader(f):
-                    source_nodes.add(row[0])
-                    self.task_map[row[0]] = SyncTask(
-                        strategy=self.strategy_cls(
-                            source=row[0],
-                            alpha=self.alpha,
-                            beta=self.beta,
-                            epsilon=self.epsilon
-                        ),
-                        source=row[0],
-                    )
+            infos = self.load_task_info_from_csv(self.filename)
+            for i, info in enumerate(infos):
+                strategy = info.get('strategy', 'TTRAggregate')
+                assert strategy in TxsETHTTRSpider.allow_strategies
+                strategy = getattr(strategies, strategy)
+
+                self.task_map[i] = SyncTask(
+                    strategy=strategy(
+                        source=info['source'],
+                        alpha=info.get('alpha', 0.15),
+                        beta=info.get('beta', 0.7),
+                        epsilon=info.get('epsilon', 1e-3),
+                    ),
+                    **info
+                )
         elif self.source is not None:
-            source_nodes.add(self.source)
-            self.task_map[self.source] = SyncTask(
+            self.task_map[0] = SyncTask(
                 strategy=self.strategy_cls(
                     source=self.source,
                     alpha=self.alpha,
                     beta=self.beta,
                     epsilon=self.epsilon
                 ),
-                source=self.source,
+                **self.info
             )
 
         # generate requests
-        for node in source_nodes:
-            for txs_type in self.txs_types:
+        for tid in self.task_map.keys():
+            task = self.task_map[tid]
+            for txs_type in task.info['txs_types']:
                 now = time.time()
-                self.task_map[node].wait(now)
+                task.wait(now)
                 yield self.txs_req_getter[txs_type](
-                    address=node,
+                    address=task.info['source'],
                     **{
-                        'source': node,
                         'residual': 1.0,
+                        'startblock': task.info['start_blk'],
+                        'endblock': task.info['end_blk'],
                         'wait_key': now,
+                        'task_id': tid
                     }
                 )
 
-    def parse_external_txs(self, response, **kwargs):
+    def _proess_response(self, response, func_next_page_request, **kwargs):
+        # reload task id
+        tid = kwargs['task_id']
+        task = self.task_map[tid]
+
         # parse data from response
         txs = self.load_txs_from_response(response)
         if txs is None:
@@ -78,174 +85,69 @@ class TxsETHTTRSpider(TxsETHSpider):
             return
         self.log(
             message='On parse: Extend {} from seed of {}, residual {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['residual']
+                kwargs['address'], task.info['source'], kwargs['residual']
             ),
             level=logging.INFO
         )
 
         # push data to task and save tx
-        for tx in self.task_map[kwargs['source']].push(
+        for tx in task.push(
                 node=kwargs['address'],
                 edges=txs,
                 wait_key=kwargs['wait_key']
         ):
-            yield TxItem(source=kwargs['source'], tx=tx)
+            yield TxItem(source=task.info['source'], tx=tx)
 
-        if len(txs) < 10000 or self.auto_page is False:
-            task = self.task_map[kwargs['source']]
+        if len(txs) < 10000 or task.info['auto_page'] is False:
             if task.is_locked():
                 return
 
-            # generate ppr item and finished
+            # generate ttr item and finished
             item = task.pop()
             if item is None:
-                yield ImportanceItem(source=kwargs['source'], importance=task.strategy.p)
+                yield ImportanceItem(
+                    source=task.info['source'],
+                    importance=task.strategy.p
+                )
                 return
 
             # next address request
-            for txs_type in self.txs_types:
+            for txs_type in task.info['txs_types']:
                 now = time.time()
-                self.task_map[kwargs['source']].wait(now)
+                task.wait(now)
                 yield self.txs_req_getter[txs_type](
                     address=item['node'],
                     **{
-                        'source': kwargs['source'],
+                        'startblock': task.info['start_blk'],
+                        'endblock': task.info['end_blk'],
                         'residual': item['residual'],
-                        'wait_key': now
+                        'wait_key': now,
+                        'task_id': kwargs['task_id']
                     }
                 )
         # next page request
         else:
             now = time.time()
-            self.task_map[kwargs['source']].wait(now)
-            yield self.get_external_txs_request(
+            task.wait(now)
+            yield func_next_page_request(
                 address=kwargs['address'],
                 **{
-                    'source': kwargs['source'],
                     'startblock': self.get_max_blk(txs),
+                    'endblock': task.info['end_blk'],
                     'residual': kwargs['residual'],
-                    'wait_key': now
+                    'wait_key': now,
+                    'task_id': kwargs['task_id']
                 }
             )
+
+    def parse_external_txs(self, response, **kwargs):
+        yield from self._proess_response(response, self.get_external_txs_request, **kwargs)
 
     def parse_internal_txs(self, response, **kwargs):
-        # parse data from response
-        txs = self.load_txs_from_response(response)
-        if txs is None:
-            self.log(
-                message="On parse: Get error status from: %s" % response.url,
-                level=logging.WARNING,
-            )
-            return
-        self.log(
-            message='On parse: Extend {} from seed of {}, residual {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['residual']
-            ),
-            level=logging.INFO
-        )
-
-        # push data to task and save tx
-        yield from self.task_map[kwargs['source']].push(
-            node=kwargs['address'],
-            edges=txs,
-            wait_key=kwargs['wait_key']
-        )
-
-        if len(txs) < 10000 or self.auto_page is False:
-            task = self.task_map[kwargs['source']]
-            if task.is_locked():
-                return
-
-            # generate ppr item and finished
-            item = task.pop()
-            if item is None:
-                yield ImportanceItem(source=kwargs['source'], importance=task.strategy.p)
-                return
-
-            # next address request
-            for txs_type in self.txs_types:
-                now = time.time()
-                self.task_map[kwargs['source']].wait(now)
-                yield self.txs_req_getter[txs_type](
-                    address=item['node'],
-                    **{
-                        'source': kwargs['source'],
-                        'residual': item['residual'],
-                        'wait_key': now
-                    }
-                )
-        # next page request
-        else:
-            now = time.time()
-            self.task_map[kwargs['source']].wait(now)
-            yield self.get_internal_txs_request(
-                address=kwargs['address'],
-                **{
-                    'source': kwargs['source'],
-                    'residual': kwargs['residual'],
-                    'wait_key': now
-                }
-            )
+        yield from self._proess_response(response, self.get_internal_txs_request, **kwargs)
 
     def parse_erc20_txs(self, response, **kwargs):
-        # parse data from response
-        txs = self.load_txs_from_response(response)
-        if txs is None:
-            self.log(
-                message="On parse: Get error status from: %s" % response.url,
-                level=logging.WARNING,
-            )
-            return
-        self.log(
-            message='On parse: Extend {} from seed of {}, residual {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['residual']
-            ),
-            level=logging.INFO
-        )
-
-        # push data to task and save tx
-        yield from self.task_map[kwargs['source']].push(
-            node=kwargs['address'],
-            edges=txs,
-            wait_key=kwargs['wait_key']
-        )
-
-        if len(txs) < 10000 or self.auto_page is False:
-            task = self.task_map[kwargs['source']]
-            if task.is_locked():
-                return
-
-            # generate ppr item and finished
-            item = task.pop()
-            if item is None:
-                yield ImportanceItem(source=kwargs['source'], importance=task.strategy.p)
-                return
-
-            # next address request
-            for txs_type in self.txs_types:
-                now = time.time()
-                self.task_map[kwargs['source']].wait(now)
-                yield self.txs_req_getter[txs_type](
-                    address=item['node'],
-                    **{
-                        'source': kwargs['source'],
-                        'residual': item['residual'],
-                        'wait_key': now
-                    }
-                )
-        # next page request
-        else:
-            now = time.time()
-            self.task_map[kwargs['source']].wait(now)
-            yield self.get_erc20_txs_request(
-                address=kwargs['address'],
-                **{
-                    'source': kwargs['source'],
-                    'residual': kwargs['residual'],
-                    'wait_key': now
-                }
-            )
+        yield from self._proess_response(response, self.get_erc20_txs_request, **kwargs)
 
     def parse_erc721_txs(self, response, **kwargs):
-        # TODO
         pass

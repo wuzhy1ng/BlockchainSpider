@@ -69,7 +69,7 @@ class LocalCommunityExtractor(BaseExtractor):
     def _local_comm(self, source, txs: list, p: dict) -> list:
         g = nx.MultiDiGraph()
         for tx in txs:
-            g.add_edge(tx['from'], tx['to'], hash=tx['hash'])
+            g.add_edge(tx['from'], tx['to'], id=tx['id'])
 
         def _calc_conductance_incr(inter_sum, outer_sum, new_node, g, inter_nodes, outer_nodes, p):
             inter_nodes.add(new_node)
@@ -108,8 +108,8 @@ class LocalCommunityExtractor(BaseExtractor):
             )
 
         _txs = list()
-        _txs_hash = set([attr['hash'] for _, _, attr in g.subgraph(inter_nodes).edges(data=True)])
+        _txs_hash = set([attr['id'] for _, _, attr in g.subgraph(inter_nodes).edges(data=True)])
         for tx in txs:
-            if tx['hash'] in _txs_hash:
+            if tx['id'] in _txs_hash:
                 _txs.append(tx)
         return _txs

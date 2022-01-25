@@ -1,7 +1,7 @@
 class Task:
-    def __init__(self, strategy, source, **kwargs):
+    def __init__(self, strategy, **kwargs):
         self.strategy = strategy
-        self.source = source
+        self.info = kwargs
 
     def push(self, node, edges: list, **kwargs):
         raise NotImplementedError()

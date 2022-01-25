@@ -45,5 +45,5 @@ class DeduplicateExtractor(BaseExtractor):
                     if key in keys:
                         continue
                     keys.add(key)
-                    out_writer.writerow(row[:key_idx] + row[key_idx:])
+                    out_writer.writerow(row)
             out_f.close()

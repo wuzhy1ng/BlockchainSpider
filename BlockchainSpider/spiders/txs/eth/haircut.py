@@ -2,7 +2,7 @@ import csv
 import logging
 import time
 
-from BlockchainSpider.items import TxItem
+from BlockchainSpider.items import TxItem, ImportanceItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.strategies import Haircut
 from BlockchainSpider.tasks import SyncTask
@@ -20,152 +20,122 @@ class TxsETHHaircutSpider(TxsETHSpider):
 
     def start_requests(self):
         # load source nodes
-        source_nodes = set()
         if self.filename is not None:
-            with open(self.filename, 'r') as f:
-                for row in csv.reader(f):
-                    source_nodes.add(row[0])
-                    self.task_map[row[0]] = SyncTask(
-                        strategy=Haircut(source=row[0], min_weight=self.min_weight),
-                        source=row[0],
-                    )
+            infos = self.load_task_info_from_csv(self.filename)
+            for i, info in enumerate(infos):
+                self.task_map[i] = SyncTask(
+                    strategy=Haircut(
+                        source=info['source'],
+                        min_weight=info.get('min_weight', 1e-3)
+                    ),
+                    **info
+                )
         elif self.source is not None:
-            source_nodes.add(self.source)
-            self.task_map[self.source] = SyncTask(
-                strategy=Haircut(source=self.source, min_weight=self.min_weight),
-                source=self.source,
+            self.task_map[0] = SyncTask(
+                strategy=Haircut(
+                    source=self.source,
+                    min_weight=self.min_weight
+                ),
+                **self.info
             )
 
         # generate requests
-        for node in source_nodes:
-            for txs_type in self.txs_types:
+        for tid in self.task_map.keys():
+            task = self.task_map[tid]
+            for txs_type in task.info['txs_types']:
                 now = time.time()
-                self.task_map[node].wait(now)
+                task.wait(now)
                 yield self.txs_req_getter[txs_type](
-                    address=node,
+                    address=task.info['source'],
                     **{
-                        'source': node,
                         'weight': 1.0,
+                        'startblock': task.info['start_blk'],
+                        'endblock': task.info['end_blk'],
                         'wait_key': now,
+                        'task_id': tid
                     }
                 )
 
-    def _gen_tx_items(self, txs, **kwargs):
+    def _proess_response(self, response, func_next_page_request, **kwargs):
+        # reload task id
+        tid = kwargs['task_id']
+        task = self.task_map[tid]
+
+        # parse data from response
+        txs = self.load_txs_from_response(response)
+        if txs is None:
+            self.log(
+                message="On parse: Get error status from: %s" % response.url,
+                level=logging.WARNING
+            )
+            return
+        self.log(
+            message='On parse: Extend {} from seed of {}, weight {}'.format(
+                kwargs['address'], task.info['source'], kwargs['weight']
+            ),
+            level=logging.INFO
+        )
+
+        # save tx
         for tx in txs:
-            yield TxItem(source=kwargs['source'], tx=tx)
+            yield TxItem(source=task.info['source'], tx=tx)
+
+        # push data to task
+        yield from task.push(
+            node=kwargs['address'],
+            edges=txs,
+            wait_key=kwargs['wait_key']
+        )
+
+        # next address request
+        if len(txs) < 10000 or task.info['auto_page'] is False:
+            item = task.pop()
+            if item is None:
+                return
+
+            # generate pollute weight item and finished
+            item = task.pop()
+            if item is None:
+                yield ImportanceItem(
+                    source=task.info['source'],
+                    importance=task.strategy.weight_map
+                )
+                return
+
+            # next address request
+            for txs_type in self.txs_types:
+                now = time.time()
+                task.wait(now)
+                yield self.txs_req_getter[txs_type](
+                    address=item['node'],
+                    **{
+                        'startblock': task.info['start_blk'],
+                        'endblock': task.info['end_blk'],
+                        'weight': item['weight'],
+                        'wait_key': now,
+                        'task_id': kwargs['task_id']
+                    }
+                )
+        # next page request
+        else:
+            now = time.time()
+            task.wait(now)
+            yield func_next_page_request(
+                address=kwargs['address'],
+                **{
+                    'startblock': self.get_max_blk(txs),
+                    'endblock': task.info['end_blk'],
+                    'weight': kwargs['weight'],
+                    'wait_key': now,
+                    'task_id': kwargs['task_id']
+                }
+            )
 
     def parse_external_txs(self, response, **kwargs):
-        # parse data from response
-        txs = self.load_txs_from_response(response)
-        if txs is None:
-            self.log(
-                message="On parse: Get error status from: %s" % response.url,
-                level=logging.WARNING
-            )
-            return
-        self.log(
-            message='On parse: Extend {} from seed of {}, weight {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['weight']
-            ),
-            level=logging.INFO
-        )
-
-        # save tx
-        yield from self._gen_tx_items(txs, **kwargs)
-
-        # push data to task
-        yield from self.task_map[kwargs['source']].push(
-            node=kwargs['address'],
-            edges=txs,
-            wait_key=kwargs['wait_key']
-        )
-
-        # next address request
-        if len(txs) < 10000 or self.auto_page is False:
-            task = self.task_map[kwargs['source']]
-            item = task.pop()
-            if item is None:
-                return
-            for txs_type in self.txs_types:
-                now = time.time()
-                self.task_map[kwargs['source']].wait(now)
-                yield self.txs_req_getter[txs_type](
-                    address=item['node'],
-                    **{
-                        'source': kwargs['source'],
-                        'weight': item['weight'],
-                        'wait_key': now
-                    }
-                )
-        # next page request
-        else:
-            now = time.time()
-            self.task_map[kwargs['source']].wait(now)
-            yield self.get_external_txs_request(
-                address=kwargs['address'],
-                **{
-                    'source': kwargs['source'],
-                    'startblock': self.get_max_blk(txs),
-                    'weight': kwargs['weight'],
-                    'wait_key': now
-                }
-            )
+        yield from self._proess_response(response, self.get_external_txs_request, **kwargs)
 
     def parse_internal_txs(self, response, **kwargs):
-        # parse data from response
-        txs = self.load_txs_from_response(response)
-        if txs is None:
-            self.log(
-                message="On parse: Get error status from: %s" % response.url,
-                level=logging.WARNING
-            )
-            return
-        self.log(
-            message='On parse: Extend {} from seed of {}, weight {}'.format(
-                kwargs['address'], kwargs['source'], kwargs['weight']
-            ),
-            level=logging.INFO
-        )
-
-        # save tx
-        yield from self._gen_tx_items(txs, **kwargs)
-
-        # push data to task
-        yield from self.task_map[kwargs['source']].push(
-            node=kwargs['address'],
-            edges=txs,
-            wait_key=kwargs['wait_key']
-        )
-
-        # next address request
-        if len(txs) < 10000:
-            task = self.task_map[kwargs['source']]
-            item = task.pop()
-            if item is None:
-                return
-            for txs_type in self.txs_types:
-                now = time.time()
-                self.task_map[kwargs['source']].wait(now)
-                yield self.txs_req_getter[txs_type](
-                    address=item['node'],
-                    **{
-                        'source': kwargs['source'],
-                        'weight': item['weight'],
-                        'wait_key': now
-                    }
-                )
-        # next page request
-        else:
-            now = time.time()
-            self.task_map[kwargs['source']].wait(now)
-            yield self.get_internal_txs_request(
-                address=kwargs['address'],
-                **{
-                    'source': kwargs['source'],
-                    'weight': kwargs['weight'],
-                    'wait_key': now
-                }
-            )
+        yield from self._proess_response(response, self.get_internal_txs_request, **kwargs)
 
     def parse_erc20_txs(self, response, **kwargs):
         pass

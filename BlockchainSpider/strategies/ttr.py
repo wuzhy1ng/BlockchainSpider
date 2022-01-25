@@ -383,8 +383,6 @@ class TTRAggregate(TTR):
         r.sort(key=lambda x: x.get('timestamp', 0))
         self.r[node] = list()
 
-        print('------ local push residual chip:', len(r))
-
         # aggregate edges
         agg_es = self._get_aggregated_edges(node, edges)
         agg_es.sort(key=lambda x: x.get_timestamp())
@@ -393,8 +391,6 @@ class TTRAggregate(TTR):
         self._self_push(node, r)
         self._forward_push(node, agg_es, r)
         self._backward_push(node, agg_es, r)
-
-        print('------ local push using time:', time.time() - start)
 
         yield from edges
 

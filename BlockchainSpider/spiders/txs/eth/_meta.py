@@ -1,3 +1,4 @@
+import csv
 import json
 
 import scrapy
@@ -12,24 +13,30 @@ class TxsETHSpider(scrapy.Spider):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.info = dict()
 
         # input source nodes
         self.source = kwargs.get('source', None)
         self.filename = kwargs.get('file', None)
         assert self.source or self.filename, "`source` or `file` arguments are needed"
+        self.info['source'] = self.source
 
         # output dir
         self.out_dir = kwargs.get('out', './data')
+        self.info['out_dir'] = self.out_dir
+
+        # output fields
         self.out_fields = kwargs.get(
             'fields',
-            'id,hash,from,to,value,timeStamp,blockNumber,tokenSymbol,contractAddress'
-        ).split(',')
+            'id|hash|from|to|value|timeStamp|blockNumber|tokenSymbol|contractAddress'
+        ).split('|')
+        self.info['out_fields'] = self.out_fields
 
         # apikey bucket
         self.apikey_bucket = JsonAPIKeyBucket('eth')
 
         # tx types
-        self.txs_types = kwargs.get('types', 'external').split(',')
+        self.txs_types = kwargs.get('types', 'external').split('|')
         self.txs_req_getter = {
             'external': self.get_external_txs_request,
             'internal': self.get_internal_txs_request,
@@ -38,18 +45,47 @@ class TxsETHSpider(scrapy.Spider):
         }
         for txs_type in self.txs_types:
             assert txs_type in set(self.txs_req_getter.keys())
+        self.info['txs_types'] = self.txs_types
 
         # tx block range
         self.start_blk = int(kwargs.get('start_blk', 0))
         self.end_blk = int(kwargs.get('end_blk', 99999999))
+        self.info['start_blk'] = self.start_blk
+        self.info['end_blk'] = self.end_blk
 
         # auto turn page, for the etherscan api offer 10k txs per request
         self.auto_page = kwargs.get('auto_page', False)
         self.auto_page = True if self.auto_page == 'True' else False
+        self.info['auto_page'] = self.auto_page
 
         # restrict token symbol
         self.symbols = kwargs.get('symbols', None)
-        self.symbols = set(self.symbols.split(',')) if self.symbols else self.symbols
+        self.symbols = set(self.symbols.split('|')) if self.symbols else self.symbols
+        self.info['symbols'] = self.symbols
+
+    def load_task_info_from_csv(self, fn: str):
+        infos = list()
+        with open(fn, 'r') as f:
+            reader = csv.reader(f)
+            fields = next(reader)
+            for row in reader:
+                item = {fields[i]: row[i] for i in range(len(row))}
+                assert item.get('source') is not None
+
+                infos.append(dict(
+                    source=item['source'],
+                    out_dir=item.get('out', './data'),
+                    out_fields=item.get(
+                        'fields',
+                        'id|hash|from|to|value|timeStamp|blockNumber|tokenSymbol|contractAddress'
+                    ).split('|'),
+                    txs_types=item.get('types', 'external').split('|'),
+                    start_blk=int(item.get('start_blk', 0)),
+                    end_blk=int(item.get('end_blk', 99999999)),
+                    auto_page=bool(True if item.get('auto_page', 'False') == 'True' else False),
+                    symbols=item.get('symbols').split('|') if item.get('symbols') else None
+                ))
+        return infos
 
     def get_max_blk(self, txs: list):
         rlt = 0
@@ -73,7 +109,6 @@ class TxsETHSpider(scrapy.Spider):
             method='GET',
             dont_filter=True,
             cb_kwargs={
-                'source': kwargs['source'],
                 'address': address,
                 **kwargs
             },
@@ -94,7 +129,6 @@ class TxsETHSpider(scrapy.Spider):
             method='GET',
             dont_filter=True,
             cb_kwargs={
-                'source': kwargs['source'],
                 'address': address,
                 **kwargs
             },
@@ -115,7 +149,6 @@ class TxsETHSpider(scrapy.Spider):
             method='GET',
             dont_filter=True,
             cb_kwargs={
-                'source': kwargs['source'],
                 'address': address,
                 **kwargs
             },
@@ -136,7 +169,6 @@ class TxsETHSpider(scrapy.Spider):
             method='GET',
             dont_filter=True,
             cb_kwargs={
-                'source': kwargs['source'],
                 'address': address,
                 **kwargs
             },
