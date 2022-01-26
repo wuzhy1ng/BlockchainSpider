@@ -82,6 +82,12 @@ class TxsETHAPPRSpider(TxsETHSpider):
         for tx in txs:
             yield TxItem(source=task.info['source'], tx=tx)
 
+        # save ppr
+        yield ImportanceItem(
+            source=task.info['source'],
+            importance=task.strategy.p
+        )
+
         # push data to task
         yield from task.push(
             node=kwargs['address'],
@@ -94,13 +100,9 @@ class TxsETHAPPRSpider(TxsETHSpider):
             if task.is_locked():
                 return
 
-            # generate ppr item and finished
+            # generate next address or finish
             item = task.pop()
             if item is None:
-                yield ImportanceItem(
-                    source=task.info['source'],
-                    importance=task.strategy.p
-                )
                 return
 
             # next address request

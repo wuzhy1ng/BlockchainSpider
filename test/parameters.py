@@ -50,7 +50,7 @@ if __name__ == '__main__':
                 for case in cases:
                     writer.writerow([
                         case['source'][0]['address'],
-                        'external|internal|erc20',
+                        'external;internal;erc20',
                         case['blockAt'],
                         os.path.join(args.out_dir, 'epsilon_%s' % str(epsilon)),
                         epsilon,
@@ -59,5 +59,7 @@ if __name__ == '__main__':
                     ])
             cmd = 'scrapy crawl txs.%s.ttr -a file=./tmp.csv' % net
             os.system(cmd)
+
+        using_time.append(time.time() - start)
 
     print([{'epsilon': epsilons[i], 'using time': using_time[i]} for i in range(len(epsilons))])

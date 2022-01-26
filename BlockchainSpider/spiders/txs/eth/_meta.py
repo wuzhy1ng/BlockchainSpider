@@ -28,15 +28,15 @@ class TxsETHSpider(scrapy.Spider):
         # output fields
         self.out_fields = kwargs.get(
             'fields',
-            'id|hash|from|to|value|timeStamp|blockNumber|tokenSymbol|contractAddress'
-        ).split('|')
+            'id;hash;from;to;value;timeStamp;blockNumber;tokenSymbol;contractAddress'
+        ).split(';')
         self.info['out_fields'] = self.out_fields
 
         # apikey bucket
         self.apikey_bucket = JsonAPIKeyBucket('eth')
 
         # tx types
-        self.txs_types = kwargs.get('types', 'external').split('|')
+        self.txs_types = kwargs.get('types', 'external').split(';')
         self.txs_req_getter = {
             'external': self.get_external_txs_request,
             'internal': self.get_internal_txs_request,
@@ -60,7 +60,7 @@ class TxsETHSpider(scrapy.Spider):
 
         # restrict token symbol
         self.symbols = kwargs.get('symbols', None)
-        self.symbols = set(self.symbols.split('|')) if self.symbols else self.symbols
+        self.symbols = set(self.symbols.split(';')) if self.symbols else self.symbols
         self.info['symbols'] = self.symbols
 
     def load_task_info_from_csv(self, fn: str):
@@ -77,13 +77,13 @@ class TxsETHSpider(scrapy.Spider):
                     out_dir=item.get('out', './data'),
                     out_fields=item.get(
                         'fields',
-                        'id|hash|from|to|value|timeStamp|blockNumber|tokenSymbol|contractAddress'
+                        'id;hash;from;to;value;timeStamp;blockNumber;tokenSymbol;contractAddress'
                     ).split('|'),
-                    txs_types=item.get('types', 'external').split('|'),
+                    txs_types=item.get('types', 'external').split(';'),
                     start_blk=int(item.get('start_blk', 0)),
                     end_blk=int(item.get('end_blk', 99999999)),
                     auto_page=bool(True if item.get('auto_page', 'False') == 'True' else False),
-                    symbols=item.get('symbols').split('|') if item.get('symbols') else None
+                    symbols=item.get('symbols').split(';') if item.get('symbols') else None
                 ))
         return infos
 

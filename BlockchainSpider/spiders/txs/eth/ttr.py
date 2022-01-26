@@ -98,17 +98,19 @@ class TxsETHTTRSpider(TxsETHSpider):
         ):
             yield TxItem(source=task.info['source'], tx=tx)
 
+        # save ttr
+        yield ImportanceItem(
+            source=task.info['source'],
+            importance=task.strategy.p
+        )
+
         if len(txs) < 10000 or task.info['auto_page'] is False:
             if task.is_locked():
                 return
 
-            # generate ttr item and finished
+            # generate next address or finish
             item = task.pop()
             if item is None:
-                yield ImportanceItem(
-                    source=task.info['source'],
-                    importance=task.strategy.p
-                )
                 return
 
             # next address request

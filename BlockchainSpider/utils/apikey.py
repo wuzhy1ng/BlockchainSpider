@@ -41,8 +41,12 @@ class StaticAPIKeyBucket(APIKeyBucket):
         assert len(apikeys) > 0
         super().__init__(apikeys, kps)
 
+        self._index = 0
+
     def get_apikey(self) -> str:
-        return random.choice(self.apikeys)
+        key = self.apikeys[self._index]
+        self._index = (self._index + 1) % len(self.apikeys)
+        return key
 
 
 class JsonAPIKeyBucket(APIKeyBucket):
@@ -59,6 +63,9 @@ class JsonAPIKeyBucket(APIKeyBucket):
         assert len(apikeys) > 0
         super().__init__(apikeys, kps)
 
+        self._index = 0
+
     def get_apikey(self) -> str:
-        key = random.choice(self.apikeys)
+        key = self.apikeys[self._index]
+        self._index = (self._index + 1) % len(self.apikeys)
         return key
