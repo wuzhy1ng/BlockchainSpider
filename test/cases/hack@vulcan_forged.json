@@ -1,0 +1,31 @@
+{
+  "name": "Vulcan Forged Hack",
+  "net": "polygon",
+  "blockAt": 22452805,
+  "reporter": "VulcanForged",
+  "url": "https://twitter.com/VulcanForged/status/1470209893114294282",
+  "source": [
+    {
+      "address": "0x48ad05a3b73c9e7fac5918857687d6a11d2c73b1",
+      "label": "Hacker"
+    }
+  ],
+  "target": [
+    {
+      "address": "0xa435afc08d5bc9e69b484363faab559dc75255cf",
+      "label": "Cross Chain to ETH"
+    },
+    {
+      "address": "0xe3cd90be37a79d9da86b5e14e2f6042cd0e53b66",
+      "label": "Cross Chain to ETH"
+    },
+    {
+      "address": "0xc4d9b4366e96925b71fb416f7646456aa99472ae",
+      "label": "Cross Chain to ETH"
+    },
+    {
+      "address": "0x805d0e9042fe6820be99162394d82e1cae4f4e70",
+      "label": "Cross Chain to ETH"
+    }
+  ]
+}

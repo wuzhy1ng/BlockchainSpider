@@ -1,0 +1,35 @@
+{
+  "name": "BZX Hack",
+  "net": "polygon",
+  "blockAt": 21009718,
+  "reporter": "SlowMist",
+  "url": "https://hacked.slowmist.io/en/",
+  "source": [
+    {
+      "address": "0x74487eed1e67f4787e8c0570e8d5d168a05254d4",
+      "label": "Hacker"
+    }
+  ],
+  "target": [
+    {
+      "address": "0x0acc0e5faa09cb1976237c3a9af3d3d4b2f35fa5",
+      "label": "bZx PrivKey Exploiter 2"
+    },
+    {
+      "address": "0x967bb571f0fc9ee79c892abf9f99233aa1737e31",
+      "label": "bZx PrivKey Exploiter 3"
+    },
+    {
+      "address": "0x6551fb9be444987f7482012cbf7ea95a1ee8dd0e",
+      "label": "bZx PrivKey Exploiter 4"
+    },
+    {
+      "address": "0xafad9352eb6bcd085dd68268d353d0ed2571af89",
+      "label": "bZx PrivKey Exploiter 5"
+    },
+    {
+      "address": "0x0000000000000000000000000000000000000000",
+      "label": "Cross Chain to BTC"
+    }
+  ]
+}
