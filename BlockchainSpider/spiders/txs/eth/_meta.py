@@ -78,7 +78,7 @@ class TxsETHSpider(scrapy.Spider):
                     out_fields=item.get(
                         'fields',
                         'id;hash;from;to;value;timeStamp;blockNumber;tokenSymbol;contractAddress'
-                    ).split('|'),
+                    ).split(';'),
                     txs_types=item.get('types', 'external').split(';'),
                     start_blk=int(item.get('start_blk', 0)),
                     end_blk=int(item.get('end_blk', 99999999)),

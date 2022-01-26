@@ -1,3 +1,5 @@
+import os
+
 import scrapy
 
 from BlockchainSpider.items import LabelItem
@@ -10,7 +12,7 @@ class LabelsOFACSpider(scrapy.Spider):
         super().__init__(**kwargs)
         self.url_sdn = 'https://www.treasury.gov/ofac/downloads/sdn.xml'
 
-        self.out_filename = kwargs.get('out', self.name)
+        self.out_filename = kwargs.get('out', os.path.join('./data', self.name))
 
     def start_requests(self):
         yield scrapy.Request(

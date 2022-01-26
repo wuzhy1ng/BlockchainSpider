@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 import scrapy
 
@@ -13,7 +14,7 @@ class LabelsCryptoScamDBSpider(scrapy.Spider):
         super().__init__(**kwargs)
         self.url_api_addressses = 'https://api.cryptoscamdb.org/v1/addresses'
 
-        self.out_filename = kwargs.get('out', self.name)
+        self.out_filename = kwargs.get('out', os.path.join('./data', self.name))
 
     def start_requests(self):
         yield scrapy.Request(

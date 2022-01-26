@@ -96,12 +96,13 @@ class TxsETHTTRSpider(TxsETHSpider):
                 edges=txs,
                 wait_key=kwargs['wait_key']
         ):
-            yield TxItem(source=task.info['source'], tx=tx)
+            yield TxItem(source=task.info['source'], tx=tx, task_info=task.info)
 
         # save ttr
         yield ImportanceItem(
             source=task.info['source'],
-            importance=task.strategy.p
+            importance=task.strategy.p,
+            task_info=task.info
         )
 
         if len(txs) < 10000 or task.info['auto_page'] is False:

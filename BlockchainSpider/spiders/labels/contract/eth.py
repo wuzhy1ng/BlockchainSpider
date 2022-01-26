@@ -1,5 +1,6 @@
 import csv
 import json
+import os
 
 import scrapy
 
@@ -14,7 +15,7 @@ class LabelsContractETHSpider(scrapy.Spider):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.out_filename = kwargs.get('out', self.name)
+        self.out_filename = kwargs.get('out', os.path.join('./data', self.name))
         self.start_block = kwargs.get('start_blk', '0')
         self.end_block = kwargs.get('end_blk', None)
         self.contracts_file = kwargs.get('file', None)
