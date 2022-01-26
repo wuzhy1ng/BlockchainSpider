@@ -429,7 +429,7 @@ class TTRAggregate(TTR):
             while j < len(r) and e.get_timestamp() > r[j].get('timestamp', 0):
                 c = r[j]
                 symbol = c.get('symbol')
-                inc_d = (c.get('value', 0) / W[str(c)]) if W[str(c)] > 0 else 0
+                inc_d = (c.get('value', 0) / W[str(c)]) if W[str(c)] != 0 else 0
                 d[symbol] = d.get(symbol, 0) + inc_d
                 j += 1
 
@@ -496,7 +496,7 @@ class TTRAggregate(TTR):
             while j >= 0 and e.get_timestamp() < r[j].get('timestamp', 0):
                 c = r[j]
                 symbol = c.get('symbol')
-                inc_d = (c.get('value', 0) / W[j]) if W[j] > 0 else 0
+                inc_d = (c.get('value', 0) / W[j]) if W[j] != 0 else 0
                 d[symbol] = d.get(symbol, 0) + inc_d
                 j -= 1
 
