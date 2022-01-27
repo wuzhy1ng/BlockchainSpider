@@ -1,5 +1,4 @@
 import sys
-import time
 
 from BlockchainSpider.strategies import PushPopModel
 
@@ -41,8 +40,13 @@ class TTRBase(TTR):
 
         # push过程
         self._self_push(node, r)
-        yield from self._forward_push(node, edges, r)
-        yield from self._backward_push(node, edges, r)
+        self._forward_push(node, edges, r)
+        self._backward_push(node, edges, r)
+
+        # yield edges
+        if node not in self._vis:
+            self._vis.add(node)
+            yield from edges
 
     def _self_push(self, node, r):
         self.p[node] = self.p.get(node, 0) + self.alpha * r
@@ -57,7 +61,6 @@ class TTRBase(TTR):
         for e in out_edges:
             inc = (1 - self.alpha) * self.beta * r / out_edges_cnt if out_edges_cnt > 0 else 0
             self.r[e['to']] = self.r.get(e['to'], 0) + inc
-            yield e
 
     def _backward_push(self, node, edges: list, r):
         in_edges = list()
@@ -69,14 +72,12 @@ class TTRBase(TTR):
         for e in in_edges:
             inc = (1 - self.alpha) * (1 - self.beta) * r / in_edges_cnt if in_edges_cnt > 0 else 0
             self.r[e['from']] = self.r.get(e['from'], 0) + inc
-            yield e
 
     def pop(self):
         node, r = None, self.epsilon
         for _node, _r in self.r.items():
             if _r > r:
                 node, r = _node, _r
-
         return dict(node=node, residual=r) if node is not None else None
 
 
@@ -100,8 +101,13 @@ class TTRWeight(TTR):
 
         # push过程
         self._self_push(node, r)
-        yield from self._forward_push(node, edges, r)
-        yield from self._backward_push(node, edges, r)
+        self._forward_push(node, edges, r)
+        self._backward_push(node, edges, r)
+
+        # yield edges
+        if node not in self._vis:
+            self._vis.add(node)
+            yield from edges
 
     def _self_push(self, node, r):
         self.p[node] = self.p.get(node, 0) + self.alpha * r
@@ -116,7 +122,7 @@ class TTRWeight(TTR):
         for e in out_edges:
             inc = (1 - self.alpha) * self.beta * (e['value'] / out_sum) * r if out_sum > 0 else 0
             self.r[e['to']] = self.r.get(e['to'], 0) + inc
-            yield e
+            # yield e
 
     def _backward_push(self, node, edges: list, r):
         in_sum = 0
@@ -128,14 +134,13 @@ class TTRWeight(TTR):
         for e in in_edges:
             inc = (1 - self.alpha) * (1 - self.beta) * (e['value'] / in_sum) * r if in_sum > 0 else 0
             self.r[e['from']] = self.r.get(e['from'], 0) + inc
-            yield e
+            # yield e
 
     def pop(self):
         node, r = None, self.epsilon
         for _node, _r in self.r.items():
             if _r > r:
                 node, r = _node, _r
-
         return dict(node=node, residual=r) if node is not None else None
 
 
@@ -155,8 +160,12 @@ class TTRTime(TTR):
 
         # 当更新的是源节点时
         if node == self.source and self.source not in self._vis:
+            self._vis.add(self.source)
+
+            # first self push
             self.p[self.source] = self.alpha
 
+            # first forward and backward push
             out_sum = sum([e['value'] if e['from'] == self.source else 0 for e in edges])
             in_sum = sum([e['value'] if e['to'] == self.source else 0 for e in edges])
             for e in edges:
@@ -175,7 +184,6 @@ class TTRTime(TTR):
                 # self.p[self.source] += (1 - self.alpha) * (1 - self.beta)
                 self.r[self.source][sys.maxsize] = (1 - self.alpha) * (1 - self.beta)
 
-            self._vis.add(self.source)
             return
 
         # 拷贝一份residual vector，原有的清空
@@ -184,8 +192,13 @@ class TTRTime(TTR):
 
         # push过程
         self._self_push(node, r)
-        yield from self._forward_push(node, edges, r)
-        yield from self._backward_push(node, edges, r)
+        self._forward_push(node, edges, r)
+        self._backward_push(node, edges, r)
+
+        # yield edges
+        if node not in self._vis:
+            self._vis.add(node)
+            yield from edges
 
     def _self_push(self, node, r: dict):
         sum_r = 0
@@ -235,10 +248,6 @@ class TTRTime(TTR):
             inc = (1 - self.alpha) * self.beta * e['value'] * d
             self.r[e['to']][e['timeStamp']] = self.r[e['to']].get(e['timeStamp'], 0) + inc
 
-            # 返回权重传播的输出边
-            if inc > 0:
-                yield e
-
         # 当流动权重碎片缺失输出边时将回流到自身
         while j < len(r_node):
             self.r[node][r_node[j][0]] = self.r[node].get(r_node[j][0], 0) + \
@@ -287,10 +296,6 @@ class TTRTime(TTR):
             inc = (1 - self.alpha) * (1 - self.beta) * e['value'] * d
             self.r[e['from']][e['timeStamp']] = self.r[e['from']].get(e['timeStamp'], 0) + inc
 
-            # 返回权重传播的输入边
-            if inc > 0:
-                yield e
-
         # 当流动权重碎片缺失输入边时将回流到自身
         while j >= 0:
             self.r[node][r_node[j][0]] = self.r[node].get(r_node[j][0], 0) + \
@@ -316,18 +321,16 @@ class TTRAggregate(TTR):
         super().__init__(source, alpha, beta, epsilon)
         self.p = dict()
         self.r = dict()
-        self._is_start = False
+        self._vis = set()
 
     def push(self, node, edges: list, **kwargs):
-        start = time.time()
-
         # if residual vector is none, add empty list
         if self.r.get(node) is None:
             self.r[node] = list()
 
         # push on first time
-        if not self._is_start:
-            self._is_start = True
+        if node == self.source and node not in self._vis:
+            self._vis.add(self.source)
 
             # calc value of each symbol
             in_sum = dict()
@@ -339,9 +342,11 @@ class TTRAggregate(TTR):
                     in_sum[e.get('symbol')] = in_sum.get(e.get('symbol'), 0) + e.get('value', 0)
                 elif e.get('from') == self.source:
                     out_sum[e.get('symbol')] = out_sum.get(e.get('symbol'), 0) + e.get('value', 0)
+
             # first self push
             self.p[self.source] = self.alpha * len(symbols)
 
+            # first forward and backward push
             for e in edges:
                 if e.get('from') == self.source and out_sum.get(e.get('symbol'), 0) != 0:
                     if self.r.get(e.get('to')) is None:
@@ -363,6 +368,7 @@ class TTRAggregate(TTR):
                             timestamp=e.get('timeStamp'),
                             symbol=e.get('symbol')
                         ))
+
             for symbol in symbols:
                 if out_sum.get(symbol, 0) == 0:
                     self.r[self.source].append(dict(
@@ -392,7 +398,10 @@ class TTRAggregate(TTR):
         self._forward_push(node, agg_es, r)
         self._backward_push(node, agg_es, r)
 
-        yield from edges
+        # yield edges
+        if node not in self._vis:
+            self._vis.add(node)
+            yield from edges
 
     def _self_push(self, node, r: list):
         sum_r = 0
@@ -435,6 +444,7 @@ class TTRAggregate(TTR):
 
             for profit in output_profits:
                 inc = (1 - self.alpha) * self.beta * profit.value * d.get(profit.symbol, 0)
+
                 if inc == 0:
                     continue
 
@@ -542,6 +552,16 @@ class TTRAggregate(TTR):
                 sum_r += chip.get('value', 0)
             if sum_r > r:
                 node, r = _node, sum_r
+
+        # print(
+        #     self.p.get('0x22a6a143e445886d4eed72226ebdbfdd03736b57'),
+        #     self.r.get('0x22a6a143e445886d4eed72226ebdbfdd03736b57'),
+        # )
+        # print(
+        #     self.p.get('0x8894e0a0c962cb723c1976a4421c95949be2d4e3'),
+        #     self.r.get('0x8894e0a0c962cb723c1976a4421c95949be2d4e3'),
+        # )
+
         return dict(node=node, residual=r) if node is not None else None
 
     def _get_swapped_aggregate_edge_indices(

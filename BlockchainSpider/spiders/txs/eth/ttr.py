@@ -1,5 +1,4 @@
 import logging
-import time
 
 from BlockchainSpider import strategies
 from BlockchainSpider.items import TxItem, ImportanceItem
@@ -57,15 +56,13 @@ class TxsETHTTRSpider(TxsETHSpider):
         for tid in self.task_map.keys():
             task = self.task_map[tid]
             for txs_type in task.info['txs_types']:
-                now = time.time()
-                task.wait(now)
+                task.wait()
                 yield self.txs_req_getter[txs_type](
                     address=task.info['source'],
                     **{
                         'residual': 1.0,
                         'startblock': task.info['start_blk'],
                         'endblock': task.info['end_blk'],
-                        'wait_key': now,
                         'task_id': tid
                     }
                 )
@@ -78,11 +75,24 @@ class TxsETHTTRSpider(TxsETHSpider):
         # parse data from response
         txs = self.load_txs_from_response(response)
         if txs is None:
+            kwargs['retry'] = kwargs.get('retry', 0) + 1
+            if kwargs['retry'] > 3:
+                self.log(
+                    message="On parse: failed on %s" % response.url,
+                    level=logging.ERROR,
+                )
+                return
             self.log(
-                message="On parse: Get error status from: %s" % response.url,
+                message="On parse: Get error status from %s, retrying %d" % (response.url, kwargs['retry']),
                 level=logging.WARNING,
             )
+            yield func_next_page_request(
+                address=kwargs['address'],
+                **{k: v for k, v in kwargs.items() if k != 'address'}
+            )
             return
+
+        # tip for parse data successfully
         self.log(
             message='On parse: Extend {} from seed of {}, residual {}'.format(
                 kwargs['address'], task.info['source'], kwargs['residual']
@@ -94,7 +104,6 @@ class TxsETHTTRSpider(TxsETHSpider):
         for tx in task.push(
                 node=kwargs['address'],
                 edges=txs,
-                wait_key=kwargs['wait_key']
         ):
             yield TxItem(source=task.info['source'], tx=tx, task_info=task.info)
 
@@ -116,29 +125,24 @@ class TxsETHTTRSpider(TxsETHSpider):
 
             # next address request
             for txs_type in task.info['txs_types']:
-                now = time.time()
-                task.wait(now)
+                task.wait()
                 yield self.txs_req_getter[txs_type](
                     address=item['node'],
                     **{
                         'startblock': task.info['start_blk'],
                         'endblock': task.info['end_blk'],
                         'residual': item['residual'],
-                        'wait_key': now,
                         'task_id': kwargs['task_id']
                     }
                 )
         # next page request
         else:
-            now = time.time()
-            task.wait(now)
             yield func_next_page_request(
                 address=kwargs['address'],
                 **{
                     'startblock': self.get_max_blk(txs),
                     'endblock': task.info['end_blk'],
                     'residual': kwargs['residual'],
-                    'wait_key': now,
                     'task_id': kwargs['task_id']
                 }
             )

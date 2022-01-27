@@ -1,6 +1,4 @@
-import csv
 import logging
-import time
 
 from BlockchainSpider.items import TxItem, ImportanceItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
@@ -43,15 +41,13 @@ class TxsETHHaircutSpider(TxsETHSpider):
         for tid in self.task_map.keys():
             task = self.task_map[tid]
             for txs_type in task.info['txs_types']:
-                now = time.time()
-                task.wait(now)
+                task.wait()
                 yield self.txs_req_getter[txs_type](
                     address=task.info['source'],
                     **{
                         'weight': 1.0,
                         'startblock': task.info['start_blk'],
                         'endblock': task.info['end_blk'],
-                        'wait_key': now,
                         'task_id': tid
                     }
                 )
@@ -64,11 +60,24 @@ class TxsETHHaircutSpider(TxsETHSpider):
         # parse data from response
         txs = self.load_txs_from_response(response)
         if txs is None:
+            kwargs['retry'] = kwargs.get('retry', 0) + 1
+            if kwargs['retry'] > 3:
+                self.log(
+                    message="On parse: failed on %s" % response.url,
+                    level=logging.ERROR,
+                )
+                return
             self.log(
-                message="On parse: Get error status from: %s" % response.url,
-                level=logging.WARNING
+                message="On parse: Get error status from %s, retrying %d" % (response.url, kwargs['retry']),
+                level=logging.WARNING,
+            )
+            yield func_next_page_request(
+                address=kwargs['address'],
+                **{k: v for k, v in kwargs.items() if k != 'address'}
             )
             return
+
+        # tip for parse data successfully
         self.log(
             message='On parse: Extend {} from seed of {}, weight {}'.format(
                 kwargs['address'], task.info['source'], kwargs['weight']
@@ -78,7 +87,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
 
         # save tx
         for tx in txs:
-            yield TxItem(source=task.info['source'], tx=tx)
+            yield TxItem(source=task.info['source'], tx=tx, task_info=task.info)
 
         # save pollution
         yield ImportanceItem(
@@ -87,10 +96,9 @@ class TxsETHHaircutSpider(TxsETHSpider):
         )
 
         # push data to task
-        yield from task.push(
+        task.push(
             node=kwargs['address'],
             edges=txs,
-            wait_key=kwargs['wait_key']
         )
 
         # next address request
@@ -102,34 +110,28 @@ class TxsETHHaircutSpider(TxsETHSpider):
             # generate next address or finish
             item = task.pop()
             if item is None:
-
                 return
 
             # next address request
             for txs_type in self.txs_types:
-                now = time.time()
-                task.wait(now)
+                task.wait()
                 yield self.txs_req_getter[txs_type](
                     address=item['node'],
                     **{
                         'startblock': task.info['start_blk'],
                         'endblock': task.info['end_blk'],
                         'weight': item['weight'],
-                        'wait_key': now,
                         'task_id': kwargs['task_id']
                     }
                 )
         # next page request
         else:
-            now = time.time()
-            task.wait(now)
             yield func_next_page_request(
                 address=kwargs['address'],
                 **{
                     'startblock': self.get_max_blk(txs),
                     'endblock': task.info['end_blk'],
                     'weight': kwargs['weight'],
-                    'wait_key': now,
                     'task_id': kwargs['task_id']
                 }
             )

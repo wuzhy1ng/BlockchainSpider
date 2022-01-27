@@ -96,16 +96,19 @@ class TxsETHSpider(scrapy.Spider):
         return rlt
 
     def get_external_txs_request(self, address: str, **kwargs):
+        query_params = {
+            'module': 'account',
+            'action': 'txlist',
+            'address': address,
+            'sort': 'asc',
+            'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
+            'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
+            'apikey': self.apikey_bucket.get()
+        }
+        if kwargs.get('retry') is not None:
+            query_params['retry'] = kwargs['retry']
         return scrapy.Request(
-            url=QueryURLBuilder(self.TXS_API_URL).get({
-                'module': 'account',
-                'action': 'txlist',
-                'address': address,
-                'sort': 'asc',
-                'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
-                'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
-                'apikey': self.apikey_bucket.get()
-            }),
+            url=QueryURLBuilder(self.TXS_API_URL).get(query_params),
             method='GET',
             dont_filter=True,
             cb_kwargs={
@@ -116,16 +119,19 @@ class TxsETHSpider(scrapy.Spider):
         )
 
     def get_internal_txs_request(self, address: str, **kwargs):
+        query_params = {
+            'module': 'account',
+            'action': 'txlistinternal',
+            'address': address,
+            'sort': 'asc',
+            'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
+            'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
+            'apikey': self.apikey_bucket.get()
+        }
+        if kwargs.get('retry') is not None:
+            query_params['retry'] = kwargs['retry']
         return scrapy.Request(
-            url=QueryURLBuilder(self.TXS_API_URL).get({
-                'module': 'account',
-                'action': 'txlistinternal',
-                'address': address,
-                'sort': 'asc',
-                'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
-                'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
-                'apikey': self.apikey_bucket.get()
-            }),
+            url=QueryURLBuilder(self.TXS_API_URL).get(query_params),
             method='GET',
             dont_filter=True,
             cb_kwargs={
@@ -136,16 +142,19 @@ class TxsETHSpider(scrapy.Spider):
         )
 
     def get_erc20_txs_request(self, address: str, **kwargs):
+        query_params = {
+            'module': 'account',
+            'action': 'tokentx',
+            'address': address,
+            'sort': 'asc',
+            'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
+            'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
+            'apikey': self.apikey_bucket.get()
+        }
+        if kwargs.get('retry') is not None:
+            query_params['retry'] = kwargs['retry']
         return scrapy.Request(
-            url=QueryURLBuilder(self.TXS_API_URL).get({
-                'module': 'account',
-                'action': 'tokentx',
-                'address': address,
-                'sort': 'asc',
-                'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
-                'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
-                'apikey': self.apikey_bucket.get()
-            }),
+            url=QueryURLBuilder(self.TXS_API_URL).get(query_params),
             method='GET',
             dont_filter=True,
             cb_kwargs={
@@ -156,16 +165,19 @@ class TxsETHSpider(scrapy.Spider):
         )
 
     def get_erc721_txs_request(self, address: str, **kwargs):
+        query_params = {
+            'module': 'account',
+            'action': 'tokennfttx',
+            'address': address,
+            'sort': 'asc',
+            'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
+            'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
+            'apikey': self.apikey_bucket.get()
+        }
+        if kwargs.get('retry') is not None:
+            query_params['retry'] = kwargs['retry']
         return scrapy.Request(
-            url=QueryURLBuilder(self.TXS_API_URL).get({
-                'module': 'account',
-                'action': 'tokennfttx',
-                'address': address,
-                'sort': 'asc',
-                'startblock': max(kwargs.get('startblock', self.start_blk), self.start_blk),
-                'endblock': min(kwargs.get('endblock', self.end_blk), self.end_blk),
-                'apikey': self.apikey_bucket.get()
-            }),
+            url=QueryURLBuilder(self.TXS_API_URL).get(query_params),
             method='GET',
             dont_filter=True,
             cb_kwargs={
