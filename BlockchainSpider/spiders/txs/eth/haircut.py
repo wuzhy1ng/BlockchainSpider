@@ -97,15 +97,14 @@ class TxsETHHaircutSpider(TxsETHSpider):
         )
 
         # push data to task
-        task.push(
+        yield from task.push(
             node=kwargs['address'],
             edges=txs,
         )
 
         # next address request
         if len(txs) < 10000 or task.info['auto_page'] is False:
-            item = task.pop()
-            if item is None:
+            if task.is_locked():
                 return
 
             # generate next address or finish

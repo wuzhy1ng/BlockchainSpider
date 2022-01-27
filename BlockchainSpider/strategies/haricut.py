@@ -29,11 +29,11 @@ class Haircut(PushPopModel):
                                           node_weight * (edge_value / out_sum)
 
     def pop(self):
-        items = list(self.weight_map.items())
-        items.sort(key=lambda x: x[1], reverse=True)
-        for node, weight in items:
-            if weight < self.min_weight:
-                return
-            if node not in self._vis:
-                self._vis.add(node)
-                return dict(node=node, weight=weight)
+        node, weight = None, 0
+        for _node, _weight in self.weight_map.items():
+            if _weight < self.min_weight:
+                continue
+            if _node not in self._vis and _weight > weight:
+                self._vis.add(_node)
+                node, weight = _node, _weight
+        return dict(node=node, weight=weight) if node else None

@@ -19,7 +19,7 @@ parameters = {
     },
     'appr': {
         'core': 'appr',
-        'epsilon': 1e-3,
+        'epsilon': 1e-4,
         'alpha': 0.15
     },
     'ttr_base': {
@@ -106,9 +106,10 @@ if __name__ == '__main__':
             headers.extend(params_key)
             writer.writerow(headers)
             for case in cases:
+                not_token_core = {'haircut', 'appr', 'ttr_base', 'ttr_weight', 'ttr_time'}
                 info = [
                     case['source'][0]['address'],
-                    'external;internal;erc20',
+                    'external;internal;erc20' if core not in not_token_core else 'external;internal',
                     case['blockAt'],
                     os.path.join(args.out_dir, 'raw'),
                 ]
@@ -118,7 +119,7 @@ if __name__ == '__main__':
         os.system(cmd)
 
     # save using time
-    with open('./using_time', 'w')as f:
+    with open('./using_time', 'w') as f:
         f.write(str(time.time() - start))
 
     # deduplicate for raw data
@@ -129,7 +130,7 @@ if __name__ == '__main__':
     os.system(cmd)
 
     # local community discovery
-    phi = 1e-3
+    phi = 1e-4
     localcomm_methods = {'appr', 'ttr_base', 'ttr_weight', 'ttr_time', 'ttr_aggregate'}
     if args.method in localcomm_methods:
         cmd = 'python extract.py localcomm -i %s -o %s' % (
