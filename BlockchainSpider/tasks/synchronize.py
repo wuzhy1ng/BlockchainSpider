@@ -31,3 +31,15 @@ class SyncTask(Task):
     def is_locked(self):
         if self._mux < 0:
             return True
+
+    def fuse(self, node, **kwargs):
+        self._mux = 0
+        self._cache = list()
+
+        rlt = self.strategy.push(node, list(), **kwargs)
+        if isinstance(rlt, Iterator):
+            for _ in rlt:
+                pass
+
+        item = self.strategy.pop()
+        return item

@@ -55,7 +55,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
                     }
                 )
 
-    def _process_response(self, response, func_next_page_request, **kwargs):
+    def _process_response(self, response, func_txs_type_request, **kwargs):
         # reload task id
         tid = kwargs['task_id']
         task = self.task_map[tid]
@@ -64,20 +64,37 @@ class TxsETHAPPRSpider(TxsETHSpider):
         txs = self.load_txs_from_response(response)
         if txs is None:
             kwargs['retry'] = kwargs.get('retry', 0) + 1
-            if kwargs['retry'] > 3:
+
+            # retry if less than max retry count
+            if kwargs['retry'] < self.max_retry:
                 self.log(
-                    message="On parse: failed on %s" % response.url,
-                    level=logging.ERROR,
+                    message="On parse: Get error status from %s, retrying" % response.url,
+                    level=logging.WARNING,
+                )
+                yield func_txs_type_request(
+                    address=kwargs['address'],
+                    **{k: v for k, v in kwargs.items() if k != 'address'}
                 )
                 return
+
+            # fuse this address and generate next address request
             self.log(
-                message="On parse: Get error status from %s, retrying %d" % (response.url, kwargs['retry']),
-                level=logging.WARNING,
+                message="On parse: failed on %s" % response.url,
+                level=logging.ERROR,
             )
-            yield func_next_page_request(
-                address=kwargs['address'],
-                **{k: v for k, v in kwargs.items() if k != 'address'}
-            )
+            item = task.fuse(kwargs['address'])
+            if item is not None:
+                for txs_type in task.info['txs_types']:
+                    task.wait()
+                    yield self.txs_req_getter[txs_type](
+                        address=item['node'],
+                        **{
+                            'startblock': task.info['start_blk'],
+                            'endblock': task.info['end_blk'],
+                            'residual': item['residual'],
+                            'task_id': kwargs['task_id']
+                        }
+                    )
             return
 
         # tip for parse data successfully
@@ -126,7 +143,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
                 )
         # next page request
         else:
-            yield func_next_page_request(
+            yield func_txs_type_request(
                 address=kwargs['address'],
                 **{
                     'startblock': self.get_max_blk(txs),

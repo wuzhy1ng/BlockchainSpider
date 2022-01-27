@@ -61,7 +61,7 @@ class TxsETHBFSSpider(TxsETHSpider):
         txs = self.load_txs_from_response(response)
         if txs is None:
             kwargs['retry'] = kwargs.get('retry', 0) + 1
-            if kwargs['retry'] > 3:
+            if kwargs['retry'] > self.max_retry:
                 self.log(
                     message="On parse: failed on %s" % response.url,
                     level=logging.ERROR,

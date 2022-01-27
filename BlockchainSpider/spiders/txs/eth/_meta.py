@@ -63,6 +63,8 @@ class TxsETHSpider(scrapy.Spider):
         self.symbols = set(self.symbols.split(';')) if self.symbols else self.symbols
         self.info['symbols'] = self.symbols
 
+        self.max_retry = 2
+
     def load_task_info_from_csv(self, fn: str):
         infos = list()
         with open(fn, 'r') as f:
@@ -201,9 +203,9 @@ class TxsETHSpider(scrapy.Spider):
                 tx['value'] = int(tx['value'])
                 tx['timeStamp'] = int(tx['timeStamp'])
 
-                if self.symbols and tx.get('tokenSymbol', 'ETH') not in self.symbols:
+                if self.symbols and tx.get('tokenSymbol', 'native') not in self.symbols:
                     continue
-                tx['symbol'] = '{}_{}'.format(tx.get('tokenSymbol', 'ETH'), tx.get('contractAddress'))
+                tx['symbol'] = '{}_{}'.format(tx.get('tokenSymbol', 'native'), tx.get('contractAddress'))
 
                 tx['id'] = '{}_{}_{}'.format(tx.get('hash'), tx.get('traceId'), tx['symbol'])
                 txs.append(tx)
