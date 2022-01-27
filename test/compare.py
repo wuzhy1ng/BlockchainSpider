@@ -13,7 +13,7 @@ parameters = {
         'core': 'poison',
         'depth': 2,
     },
-    'haricut': {
+    'haircut': {
         'core': 'haricut',
         'min_weight': 1e-3,
     },
