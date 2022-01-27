@@ -14,7 +14,7 @@ parameters = {
         'depth': 2,
     },
     'haircut': {
-        'core': 'haricut',
+        'core': 'haircut',
         'min_weight': 1e-3,
     },
     'appr': {
