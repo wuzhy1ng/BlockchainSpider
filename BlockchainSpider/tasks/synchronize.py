@@ -17,11 +17,10 @@ class SyncTask(Task):
         self._cache.extend(edges)
 
         if not self.is_locked():
-            self._cache = list()
-
-            rlt = self.strategy.push(node, edges, **kwargs)
+            rlt = self.strategy.push(node, self._cache, **kwargs)
             if isinstance(rlt, Iterator):
                 yield from rlt
+            self._cache = list()
 
     def pop(self):
         if self.is_locked():

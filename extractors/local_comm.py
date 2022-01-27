@@ -93,9 +93,12 @@ class LocalCommunityExtractor(BaseExtractor):
         inter_sum, outer_sum = 0, 0
 
         p_items = list()
+        p_sum = 0
         for k, v in p.items():
+            p_sum += v
             if k != source:
                 p_items.append((k, v))
+        p_items = [(item[0], item[1] / p_sum) for item in p_items]
         p_items.sort(key=lambda x: x[1])
 
         inter_sum, outer_sum, inter_nodes, outer_nodes = _calc_conductance_incr(

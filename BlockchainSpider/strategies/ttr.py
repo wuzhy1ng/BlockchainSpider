@@ -554,12 +554,12 @@ class TTRAggregate(TTR):
                 node, r = _node, sum_r
 
         # print(
-        #     self.p.get('0x22a6a143e445886d4eed72226ebdbfdd03736b57'),
-        #     self.r.get('0x22a6a143e445886d4eed72226ebdbfdd03736b57'),
+        #     self.p.get('0x7d90b19c1022396b525c64ba70a293c3142979b7'),
+        #     self.r.get('0x7d90b19c1022396b525c64ba70a293c3142979b7'),
         # )
         # print(
-        #     self.p.get('0x8894e0a0c962cb723c1976a4421c95949be2d4e3'),
-        #     self.r.get('0x8894e0a0c962cb723c1976a4421c95949be2d4e3'),
+        #     self.p.get('0x338fdf0d792f7708d97383eb476e9418b3c16ff1'),
+        #     self.r.get('0x338fdf0d792f7708d97383eb476e9418b3c16ff1'),
         # )
 
         return dict(node=node, residual=r) if node is not None else None
