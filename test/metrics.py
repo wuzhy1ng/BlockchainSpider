@@ -27,10 +27,9 @@ def calc_recall(g: nx.Graph, targets: list) -> float:
     if g.has_node(upbit_savior):
         g.remove_node(upbit_savior)
 
-    nodes = set(g.nodes)
     target_cnt = 0
     for target in targets:
-        if target in nodes:
+        if g.has_node(target):
             target_cnt += 1
 
     return target_cnt / len(targets)
