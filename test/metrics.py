@@ -22,6 +22,11 @@ def load_graph_from_csv(fn: str) -> nx.Graph:
 def calc_recall(g: nx.Graph, targets: list) -> float:
     assert len(targets) > 0
 
+    # upbit savior related to all target nodes of upbit hacker, which must be masked
+    upbit_savior = '0x83053c32b7819f420dcfed2d218335fe430fe3b5'
+    if g.has_node(upbit_savior):
+        g.remove_node(upbit_savior)
+
     nodes = set(g.nodes)
     target_cnt = 0
     for target in targets:
