@@ -91,7 +91,8 @@ class TxsETHAPPRSpider(TxsETHSpider):
         # save ppr
         yield ImportanceItem(
             source=task.info['source'],
-            importance=task.strategy.p
+            importance=task.strategy.p,
+            task_info=task.info
         )
 
         # push data to task and save tx

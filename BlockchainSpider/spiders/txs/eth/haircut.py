@@ -92,7 +92,8 @@ class TxsETHHaircutSpider(TxsETHSpider):
         # save pollution
         yield ImportanceItem(
             source=task.info['source'],
-            importance=task.strategy.weight_map
+            importance=task.strategy.weight_map,
+            task_info=task.info,
         )
 
         # push data to task
