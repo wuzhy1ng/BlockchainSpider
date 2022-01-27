@@ -25,7 +25,7 @@ class TxsETHBFSSpider(TxsETHSpider):
                 self.task_map[i] = AsyncTask(
                     strategy=BFS(
                         source=info['source'],
-                        depth=info.get('depth', 2),
+                        depth=int(info.get('depth', 2)),
                     ),
                     **info
                 )

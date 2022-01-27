@@ -25,8 +25,8 @@ class TxsETHAPPRSpider(TxsETHSpider):
                 self.task_map[i] = SyncTask(
                     strategy=APPR(
                         source=info['source'],
-                        alpha=info.get('alpha', 0.15),
-                        epsilon=info.get('epsilon', 1e-3),
+                        alpha=float(info.get('alpha', 0.15)),
+                        epsilon=float(info.get('epsilon', 1e-3)),
                     ),
                     **info
                 )

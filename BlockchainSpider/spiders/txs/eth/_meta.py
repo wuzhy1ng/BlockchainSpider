@@ -70,21 +70,20 @@ class TxsETHSpider(scrapy.Spider):
             fields = next(reader)
             for row in reader:
                 item = {fields[i]: row[i] for i in range(len(row))}
-                assert item.get('source') is not None
 
-                infos.append(dict(
-                    source=item['source'],
-                    out_dir=item.get('out', './data'),
-                    out_fields=item.get(
-                        'fields',
-                        'id;hash;from;to;value;timeStamp;blockNumber;tokenSymbol;contractAddress'
-                    ).split(';'),
-                    txs_types=item.get('types', 'external').split(';'),
-                    start_blk=int(item.get('start_blk', 0)),
-                    end_blk=int(item.get('end_blk', 99999999)),
-                    auto_page=bool(True if item.get('auto_page', 'False') == 'True' else False),
-                    symbols=item.get('symbols').split(';') if item.get('symbols') else None
-                ))
+                assert item.get('source') is not None
+                item['out_dir'] = item.get('out', './data')
+                item['out_fields'] = item.get(
+                    'fields',
+                    'id;hash;from;to;value;timeStamp;blockNumber;tokenSymbol;contractAddress'
+                ).split(';')
+                item['txs_types'] = item.get('types', 'external').split(';')
+                item['start_blk'] = int(item.get('start_blk', 0))
+                item['end_blk'] = int(item.get('end_blk', 99999999))
+                item['auto_page'] = bool(True if item.get('auto_page', 'False') == 'True' else False)
+                item['symbols'] = item.get('symbols').split(';') if item.get('symbols') else None
+
+                infos.append(item)
         return infos
 
     def get_max_blk(self, txs: list):

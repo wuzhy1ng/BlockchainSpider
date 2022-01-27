@@ -24,7 +24,7 @@ class TxsETHPoisonSpider(TxsETHSpider):
                 self.task_map[i] = AsyncTask(
                     strategy=Poison(
                         source=info['source'],
-                        depth=info.get('depth', 2),
+                        depth=int(info.get('depth', 2)),
                     ),
                     **info
                 )

@@ -35,9 +35,9 @@ class TxsETHTTRSpider(TxsETHSpider):
                 self.task_map[i] = SyncTask(
                     strategy=strategy(
                         source=info['source'],
-                        alpha=info.get('alpha', 0.15),
-                        beta=info.get('beta', 0.7),
-                        epsilon=info.get('epsilon', 1e-3),
+                        alpha=float(info.get('alpha', 0.15)),
+                        beta=float(info.get('beta', 0.7)),
+                        epsilon=float(info.get('epsilon', 1e-3)),
                     ),
                     **info
                 )

@@ -24,7 +24,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
                 self.task_map[i] = SyncTask(
                     strategy=Haircut(
                         source=info['source'],
-                        min_weight=info.get('min_weight', 1e-3)
+                        min_weight=float(info.get('min_weight', 1e-3))
                     ),
                     **info
                 )
