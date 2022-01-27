@@ -23,9 +23,13 @@ def calc_recall(g: nx.Graph, targets: list) -> float:
     assert len(targets) > 0
 
     # upbit savior related to all target nodes of upbit hacker, which must be masked
-    upbit_savior = '0x83053c32b7819f420dcfed2d218335fe430fe3b5'
-    if g.has_node(upbit_savior):
-        g.remove_node(upbit_savior)
+    upbit_saviors = [
+        '0x83053c32b7819f420dcfed2d218335fe430fe3b5',
+        '0x4f16bf5d775eb08f8792f38aca8898abd2be7603'
+    ]
+    for savior in upbit_saviors:
+        if g.has_node(savior):
+            g.remove_node(savior)
 
     target_cnt = 0
     for target in targets:
