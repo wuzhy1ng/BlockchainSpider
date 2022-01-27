@@ -12,10 +12,10 @@ if __name__ == '__main__':
         help='output data folder(str)',
         dest='out_dir',
         type=str,
-        default='./data/test/parameters'
+        default=None
     )
-
     args = parser.parse_args()
+    assert args.out_dir is not None
     if not os.path.exists(args.out_dir):
         os.makedirs(args.out_dir)
 
@@ -35,7 +35,7 @@ if __name__ == '__main__':
         net_cases[net].append(case)
 
     using_time = list()
-    epsilons = [0.1, 0.05, 0.01, 0.005, 0.001]
+    epsilons = [0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001]
     epsilons.reverse()
     for epsilon in epsilons:
         start = time.time()

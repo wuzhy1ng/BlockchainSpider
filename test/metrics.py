@@ -73,7 +73,9 @@ if __name__ == '__main__':
         targets = [item['address'] for item in case['target']]
 
         fn = os.path.join(args.in_dir, '%s.csv' % source)
-        assert os.path.exists(fn), '%s does not existed' % fn
+        if not os.path.exists(fn):
+            print('warning: %s does not existed' % fn)
+            continue
         print('processing:', source, end=' ')
 
         g = load_graph_from_csv(fn)

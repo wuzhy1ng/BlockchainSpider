@@ -1,7 +1,7 @@
 {
-  "name": "AutoShark Hack",
+  "name": "Bitpoint Hack",
   "net": "eth",
-  "blockAt": 8129853,
+  "blockAt": 8139592,
   "reporter": "CoinDesk",
   "url": "https://www.coindeskjapan.com/14385/",
   "source": [
@@ -14,6 +14,10 @@
     {
       "address": "0xf5bec430576ff1b82e44ddb5a1c93f6f9d0884f3",
       "label": "Yobit.net"
+    },
+    {
+      "address": "0x1503b6cb665fea9a128a56244df392e950593486",
+      "label": "Bitpoint Hacker 2"
     }
   ]
 }
