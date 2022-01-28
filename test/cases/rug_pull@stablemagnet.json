@@ -16,10 +16,7 @@
       "label": "Binance: Hot Wallet"
     },{
       "address": "0xe5daac909a3205f99d370bc2b32b1810a4912a07",
-      "label": "Tether changed to DAI"
-    },{
-      "address": "0x55d398326f99059ff775485246999027b3197955",
-      "label": "BUSD-T Stablecoin"
+      "label": "Cross Chain to ETH"
     }
   ]
 }

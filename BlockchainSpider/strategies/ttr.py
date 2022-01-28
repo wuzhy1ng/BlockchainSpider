@@ -1,4 +1,5 @@
 import sys
+import time
 
 from BlockchainSpider.strategies import PushPopModel
 
@@ -324,6 +325,8 @@ class TTRAggregate(TTR):
         self._vis = set()
 
     def push(self, node, edges: list, **kwargs):
+        start = time.time()
+
         # if residual vector is none, add empty list
         if self.r.get(node) is None:
             self.r[node] = list()
@@ -398,6 +401,8 @@ class TTRAggregate(TTR):
         self._forward_push(node, agg_es, r)
         self._backward_push(node, agg_es, r)
 
+        print('------ push using time:', time.time() - start)
+
         # yield edges
         if node not in self._vis:
             self._vis.add(node)
@@ -426,6 +431,27 @@ class TTRAggregate(TTR):
                 j -= 1
             W[str(c)] = sum_w.get(c.get('symbol'), 0)
 
+        # construct index for distributing profit
+        symbol_agg_es = dict()
+        symbol_agg_es_idx = dict()
+        for i, e in enumerate(aggregated_edges):
+            for profit in e.get_output_profits():
+                if symbol_agg_es.get(profit.symbol) is None:
+                    symbol_agg_es[profit.symbol] = list()
+                    symbol_agg_es_idx[profit.symbol] = list()
+                symbol_agg_es[profit.symbol].append(e)
+                symbol_agg_es_idx[profit.symbol].append(i)
+        distributing_index = dict()
+        for symbol in symbol_agg_es.keys():
+            es_idx = symbol_agg_es_idx[symbol]
+            index = [0 for _ in range(len(aggregated_edges))]
+            j = 0
+            for i in range(len(index)):
+                if j < len(es_idx) and es_idx[j] <= i:
+                    j += 1 if j < len(es_idx) else 0
+                index[i] = j
+            distributing_index[symbol] = index
+
         # push residual to neighbors
         j = 0
         d = dict()
@@ -444,15 +470,17 @@ class TTRAggregate(TTR):
 
             for profit in output_profits:
                 inc = (1 - self.alpha) * self.beta * profit.value * d.get(profit.symbol, 0)
-
                 if inc == 0:
                     continue
 
-                distributing_profits = self._get_distributing_profit(
+                distributing_profits = self._get_distributing_profit_v2(
                     direction=-1,
                     symbol=profit.symbol,
                     index=i,
-                    aggregated_edges=aggregated_edges
+                    aggregated_edges=aggregated_edges,
+                    distributing_index=distributing_index,
+                    symbol_agg_es_idx=symbol_agg_es_idx,
+                    chip_value=inc
                 )
                 for dp in distributing_profits:
                     if self.r.get(dp.address) is None:
@@ -494,6 +522,27 @@ class TTRAggregate(TTR):
                 j += 1
             W[i] = sum_w.get(c.get('symbol'), 0)
 
+        # construct index for distributing profit
+        symbol_agg_es = dict()
+        symbol_agg_es_idx = dict()
+        for i, e in enumerate(aggregated_edges):
+            for profit in e.get_output_profits():
+                if symbol_agg_es.get(profit.symbol) is None:
+                    symbol_agg_es[profit.symbol] = list()
+                    symbol_agg_es_idx[profit.symbol] = list()
+                symbol_agg_es[profit.symbol].append(e)
+                symbol_agg_es_idx[profit.symbol].append(i)
+        distributing_index = dict()
+        for symbol in symbol_agg_es.keys():
+            es_idx = symbol_agg_es_idx[symbol]
+            index = [0 for _ in range(len(aggregated_edges))]
+            j = len(es_idx) - 1
+            for i in range(len(index) - 1, -1, -1):
+                if j > 0 and es_idx[j] >= i:
+                    j -= 1 if j > 0 else 0
+                index[i] = j
+            distributing_index[symbol] = index
+
         # push residual to neighbors
         j = len(r) - 1
         d = dict()
@@ -515,11 +564,14 @@ class TTRAggregate(TTR):
                 if inc == 0:
                     continue
 
-                distributing_profits = self._get_distributing_profit(
+                distributing_profits = self._get_distributing_profit_v2(
                     direction=1,
                     symbol=profit.symbol,
                     index=i,
-                    aggregated_edges=aggregated_edges
+                    aggregated_edges=aggregated_edges,
+                    distributing_index=distributing_index,
+                    symbol_agg_es_idx=symbol_agg_es_idx,
+                    chip_value=inc
                 )
                 for dp in distributing_profits:
                     if self.r.get(dp.address) is None:
@@ -554,15 +606,67 @@ class TTRAggregate(TTR):
                 node, r = _node, sum_r
 
         # print(
-        #     self.p.get('0x7d90b19c1022396b525c64ba70a293c3142979b7'),
-        #     self.r.get('0x7d90b19c1022396b525c64ba70a293c3142979b7'),
+        #     self.p.get('0x8bea99d414c9c50beb456c3c971e8936b151cb39'),
+        #     self.r.get('0x8bea99d414c9c50beb456c3c971e8936b151cb39'),
         # )
         # print(
-        #     self.p.get('0x338fdf0d792f7708d97383eb476e9418b3c16ff1'),
-        #     self.r.get('0x338fdf0d792f7708d97383eb476e9418b3c16ff1'),
+        #     self.p.get('0xdf5b180c0734fc448be30b7ff2c5bfc262bdef26'),
+        #     self.r.get('0xdf5b180c0734fc448be30b7ff2c5bfc262bdef26'),
         # )
 
         return dict(node=node, residual=r) if node is not None else None
+
+    def _get_distributing_profit_v2(
+            self,
+            direction: int,
+            symbol: str,
+            index: int,
+            aggregated_edges: list,
+            distributing_index: dict,
+            symbol_agg_es_idx: dict,
+            chip_value: float,
+    ) -> list:
+        """
+
+        :param direction: 1 means input and -1 means output
+        :param index: current aggregated edge index
+        :param aggregated_edges:
+        :return: a list of profit
+        """
+        rlt = list()
+
+        stack = list()
+        stack.append((direction, symbol, index))
+        vis = set()
+        while len(stack) > 0 and chip_value / len(stack) > self.epsilon:
+            args = stack.pop()
+            if args in vis:
+                continue
+            vis.add(args)
+
+            direction, symbol, index = args
+            cur_e = aggregated_edges[index]
+            no_reverse_profits = [profit for profit in cur_e.profits if profit.value * direction > 0]
+            reverse_profits = [profit for profit in cur_e.profits if profit.value * direction < 0]
+            if len(reverse_profits) == 1:
+                profit = reverse_profits[0]
+
+                _symbol_agg_es_idx = symbol_agg_es_idx.get(profit.symbol)
+                _distributing_index = distributing_index.get(profit.symbol)
+                if _symbol_agg_es_idx is None or _distributing_index is None:
+                    continue
+
+                if direction < 0:
+                    indices = _symbol_agg_es_idx[_distributing_index[index]:]
+                else:
+                    indices = _symbol_agg_es_idx[:_distributing_index[index]]
+
+                for _index in indices:
+                    stack.append((direction, symbol, _index))
+            else:
+                rlt.extend([profit for profit in no_reverse_profits if profit.symbol == symbol])
+
+        return rlt
 
     def _get_swapped_aggregate_edge_indices(
             self,
@@ -609,19 +713,13 @@ class TTRAggregate(TTR):
             cur_e = aggregated_edges[index]
             no_reverse_profits = [profit for profit in cur_e.profits if profit.value * direction > 0]
             reverse_profits = [profit for profit in cur_e.profits if profit.value * direction < 0]
-            if len(reverse_profits) == 0:
-                rlt.extend([profit for profit in no_reverse_profits if profit.symbol == symbol])
-            elif len(reverse_profits) == 1:
+            if len(reverse_profits) == 1:
                 profit = reverse_profits[0]
                 indices = self._get_swapped_aggregate_edge_indices(direction, profit, index, aggregated_edges)
                 for _index in indices:
                     stack.append((direction, symbol, _index))
             else:
                 rlt.extend([profit for profit in no_reverse_profits if profit.symbol == symbol])
-                for profit in reverse_profits:
-                    indices = self._get_swapped_aggregate_edge_indices(direction, profit, index, aggregated_edges)
-                    for _index in indices:
-                        stack.append((direction, symbol, _index))
 
         return rlt
 
@@ -675,7 +773,7 @@ class TTRAggregate(TTR):
             for profit in self.profits + aggregated_edge.profits:
                 _profit = aggregated_profits.get(profit.symbol)
                 if _profit is None:
-                    if profit.value > 0:
+                    if profit.value != 0:
                         aggregated_profits[profit.symbol] = profit
                     continue
 
