@@ -39,7 +39,7 @@ class TxsETHTTRSpider(TxsETHSpider):
                         beta=float(info.get('beta', 0.7)),
                         epsilon=float(info.get('epsilon', 1e-3)),
                     ),
-                    **info
+                    **{k: v for k, v in info.items() if k == 'strategy'}
                 )
         elif self.source is not None:
             self.task_map[0] = SyncTask(
