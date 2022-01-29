@@ -106,6 +106,8 @@ class LocalCommunityExtractor(BaseExtractor):
         )
         while outer_sum >= self.args.phi * inter_sum and len(p_items) > 0:
             new_node, weight = p_items.pop()
+            if not g.has_node(new_node):
+                continue
             inter_sum, outer_sum, inter_nodes, outer_nodes = _calc_conductance_incr(
                 inter_sum, outer_sum, new_node, g, inter_nodes, outer_nodes, p
             )
