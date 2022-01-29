@@ -12,12 +12,8 @@
   ],
   "target": [
     {
-      "address": "0x0d5550d52428e7e3175bfc9550207e4ad3859b17",
-      "label": "Tornado.Cash"
-    },
-    {
-      "address": "0x6ff1d9e9fb6d3e118f39672ceb7a7a2234007053",
-      "label": "Typhoon Network"
+      "address": "0x371725dac6963d443c926a227ed256abd3fa03e6",
+      "label": "Gather fund to Tornado.Cash"
     },
     {
       "address": "0x0000000000000000000000000000000000000000",

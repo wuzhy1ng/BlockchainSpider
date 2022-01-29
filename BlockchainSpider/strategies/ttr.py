@@ -401,6 +401,17 @@ class TTRAggregate(TTR):
         self._forward_push(node, agg_es, r)
         self._backward_push(node, agg_es, r)
 
+        # marge chips
+        for node, chips in self.r.items():
+            _chips = dict()
+            for chip in chips:
+                key = (chip.get('symbol'), chip.get('timestamp'))
+                if _chips.get(key) is None:
+                    _chips[key] = chip
+                    continue
+                _chips[key]['value'] += chip.get('value', 0)
+            self.r[node] = [v for v in _chips.values()]
+
         print('------ push using time:', time.time() - start)
 
         # yield edges
@@ -610,8 +621,16 @@ class TTRAggregate(TTR):
         #     self.r.get('0x8bea99d414c9c50beb456c3c971e8936b151cb39'),
         # )
         # print(
-        #     self.p.get('0xdf5b180c0734fc448be30b7ff2c5bfc262bdef26'),
-        #     self.r.get('0xdf5b180c0734fc448be30b7ff2c5bfc262bdef26'),
+        #     self.p.get('0x68fcec2c89e93bb95cf04bb4faea47dea1645cdb'),
+        #     self.r.get('0x68fcec2c89e93bb95cf04bb4faea47dea1645cdb'),
+        # )
+        # print(
+        #     self.p.get('0x0000000000000000000000000000000000000000'),
+        #     self.r.get('0x0000000000000000000000000000000000000000'),
+        # )
+        # print(
+        #     self.p.get('0x6fe59353d45f6f94d55af8586c6d093ce71f8515'),
+        #     self.r.get('0x6fe59353d45f6f94d55af8586c6d093ce71f8515'),
         # )
 
         return dict(node=node, residual=r) if node is not None else None
@@ -638,7 +657,7 @@ class TTRAggregate(TTR):
         stack = list()
         stack.append((direction, symbol, index))
         vis = set()
-        while len(stack) > 0 and chip_value / len(stack) > self.epsilon:
+        while len(stack) > 0:
             args = stack.pop()
             if args in vis:
                 continue
@@ -648,6 +667,10 @@ class TTRAggregate(TTR):
             cur_e = aggregated_edges[index]
             no_reverse_profits = [profit for profit in cur_e.profits if profit.value * direction > 0]
             reverse_profits = [profit for profit in cur_e.profits if profit.value * direction < 0]
+
+            if len(stack) > 0 and chip_value / len(stack) < self.epsilon:
+                return [profit for profit in no_reverse_profits if profit.symbol == symbol]
+
             if len(reverse_profits) == 1:
                 profit = reverse_profits[0]
 
@@ -662,7 +685,7 @@ class TTRAggregate(TTR):
                     indices = _symbol_agg_es_idx[:_distributing_index[index]]
 
                 for _index in indices:
-                    stack.append((direction, symbol, _index))
+                    stack.append((direction, profit.symbol, _index))
             else:
                 rlt.extend([profit for profit in no_reverse_profits if profit.symbol == symbol])
 
@@ -771,14 +794,15 @@ class TTRAggregate(TTR):
             # 2. according to symbol to classify profit and aggregate
             aggregated_profits = dict()
             for profit in self.profits + aggregated_edge.profits:
-                _profit = aggregated_profits.get(profit.symbol)
+                key = (profit.symbol, profit.address)
+                _profit = aggregated_profits.get(key)
                 if _profit is None:
                     if profit.value != 0:
-                        aggregated_profits[profit.symbol] = profit
+                        aggregated_profits[key] = profit
                     continue
 
                 if _profit.value + profit.value == 0:
-                    del aggregated_profits[profit.symbol]
+                    del aggregated_profits[key]
                     continue
 
                 sgn = 1 if _profit.value > 0 else -1
@@ -787,7 +811,7 @@ class TTRAggregate(TTR):
                 if sgn < 0:
                     _profit = profit
                 _profit.value = aggregated_value
-                aggregated_profits[profit.symbol] = _profit
+                aggregated_profits[key] = _profit
             self.profits = [v for v in aggregated_profits.values()]
 
             return self

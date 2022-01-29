@@ -35,7 +35,7 @@ if __name__ == '__main__':
         net_cases[net].append(case)
 
     using_time = list()
-    epsilons = [0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001]
+    epsilons = [0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005, 0.00001]
     epsilons.reverse()
     for epsilon in epsilons:
         start = time.time()
