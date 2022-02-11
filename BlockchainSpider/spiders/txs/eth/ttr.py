@@ -1,14 +1,14 @@
 import logging
 
 from BlockchainSpider import strategies
-from BlockchainSpider.items import TxItem, ImportanceItem
+from BlockchainSpider.items import TxItem, ImportanceItem, CloseItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.tasks import SyncTask
 
 
 class TxsETHTTRSpider(TxsETHSpider):
     name = 'txs.eth.ttr'
-    allow_strategies = {'TTRBase', 'TTRWeight', 'TTRTime', 'TTRAggregate'}
+    allow_strategies = {'TTRBase', 'TTRWeight', 'TTRTime', 'TTRRedirect'}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -19,16 +19,16 @@ class TxsETHTTRSpider(TxsETHSpider):
         self.beta = float(kwargs.get('beta', 0.7))
         self.epsilon = float(kwargs.get('epsilon', 1e-3))
 
-        self.strategy_cls = kwargs.get('strategy', 'TTRAggregate')
+        self.strategy_cls = kwargs.get('strategy', 'TTRRedirect')
         assert self.strategy_cls in TxsETHTTRSpider.allow_strategies
         self.strategy_cls = getattr(strategies, self.strategy_cls)
 
     def start_requests(self):
         # load source infos
         if self.filename is not None:
-            infos = self.load_task_info_from_csv(self.filename)
+            infos = self.load_task_info_from_json(self.filename)
             for i, info in enumerate(infos):
-                strategy = info.get('strategy', 'TTRAggregate')
+                strategy = info.get('strategy', 'TTRRedirect')
                 assert strategy in TxsETHTTRSpider.allow_strategies
                 strategy = getattr(strategies, strategy)
 

@@ -12,7 +12,7 @@ class LabelsOFACSpider(scrapy.Spider):
         super().__init__(**kwargs)
         self.url_sdn = 'https://www.treasury.gov/ofac/downloads/sdn.xml'
 
-        self.out_filename = kwargs.get('out', os.path.join('./data', self.name))
+        self.out_dir = kwargs.get('out', './data')
 
     def start_requests(self):
         yield scrapy.Request(

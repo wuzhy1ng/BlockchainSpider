@@ -1,5 +1,4 @@
 import json
-import random
 import time
 
 from twisted.internet.defer import DeferredLock
@@ -37,7 +36,11 @@ class APIKeyBucket:
 
 
 class StaticAPIKeyBucket(APIKeyBucket):
-    def __init__(self, apikeys: list, kps: int = 5):
+    def __init__(self, net: str, kps: int = 5):
+        apikeys = getattr(settings, 'APIKEYS', None)
+        assert isinstance(apikeys, dict)
+
+        apikeys = apikeys.get(net, list())
         assert len(apikeys) > 0
         super().__init__(apikeys, kps)
 

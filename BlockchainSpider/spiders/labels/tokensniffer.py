@@ -14,7 +14,7 @@ class LabelsTokenSnifferSpider(scrapy.Spider):
         super().__init__(**kwargs)
         self.domain_url = 'https://tokensniffer.com'
 
-        self.out_filename = kwargs.get('out', os.path.join('./data', self.name))
+        self.out_dir = kwargs.get('out', './data')
 
     def start_requests(self):
         request_paths = [

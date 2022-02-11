@@ -10,9 +10,15 @@ class SyncTask(Task):
         self._mux = 0
 
     def wait(self):
+        if self.is_closed:
+            return
+
         self._mux -= 1
 
     def push(self, node, edges: list, **kwargs):
+        if self.is_closed:
+            return
+
         self._mux += 1
         self._cache.extend(edges)
 
@@ -23,16 +29,25 @@ class SyncTask(Task):
             self._cache = list()
 
     def pop(self):
+        if self.is_closed:
+            return
+
         if self.is_locked():
             return None
         item = self.strategy.pop()
         return item
 
     def is_locked(self):
+        if self.is_closed:
+            return
+
         if self._mux < 0:
             return True
 
     def fuse(self, node, **kwargs):
+        if self.is_closed:
+            return
+
         self._mux = 0
         self._cache = list()
 

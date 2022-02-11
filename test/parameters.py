@@ -1,5 +1,4 @@
 import argparse
-import csv
 import json
 import os
 import time
@@ -20,7 +19,7 @@ if __name__ == '__main__':
         os.makedirs(args.out_dir)
 
     cases = list()
-    cases_path = './test/cases'
+    cases_path = './cases'
     for fn in os.listdir(cases_path):
         fn = os.path.join(cases_path, fn)
         with open(fn, 'r') as f:
@@ -35,29 +34,26 @@ if __name__ == '__main__':
         net_cases[net].append(case)
 
     using_time = list()
-    epsilons = [0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005, 0.00001]
+    epsilons = [0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005]
     epsilons.reverse()
     for epsilon in epsilons:
         start = time.time()
-
         for net, cases in net_cases.items():
-            with open('./tmp.csv', 'w', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow([
-                    'source', 'types', 'start_blk', 'out',
-                    'epsilon', 'alpha', 'beta'
-                ])
-                for case in cases:
-                    writer.writerow([
-                        case['source'][0]['address'],
-                        'external;internal;erc20',
-                        case['blockAt'],
-                        os.path.join(args.out_dir, 'epsilon_%s' % str(epsilon)),
-                        epsilon,
-                        0.15,
-                        0.7
-                    ])
-            cmd = 'scrapy crawl txs.%s.ttr -a file=./tmp.csv' % net
+            infos = list()
+            for case in cases:
+                infos.append({
+                    'source': case['source'][0]['address'],
+                    'types': 'external,internal,erc20',
+                    'start_blk': case['blockAt'],
+                    'out': os.path.join(args.out_dir, 'epsilon_%s' % str(epsilon)),
+                    'epsilon': epsilon,
+                    'alpha': 0.15,
+                    'beta': 0.7
+                })
+
+            with open('./tmp.json', 'w') as f:
+                json.dump(infos, f)
+            cmd = 'scrapy crawl txs.%s.ttr -a file=./tmp.json' % net
             os.system(cmd)
 
         using_time.append(time.time() - start)

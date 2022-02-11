@@ -315,8 +315,8 @@ class TTRTime(TTR):
         return dict(node=node, residual=r) if node is not None else None
 
 
-class TTRAggregate(TTR):
-    name = 'TTRAggregate'
+class TTRRedirect(TTR):
+    name = 'TTRRedirect'
 
     def __init__(self, source, alpha: float = 0.15, beta: float = 0.8, epsilon=1e-5):
         super().__init__(source, alpha, beta, epsilon)
@@ -411,8 +411,6 @@ class TTRAggregate(TTR):
                     continue
                 _chips[key]['value'] += chip.get('value', 0)
             self.r[node] = [v for v in _chips.values()]
-
-        print('------ push using time:', time.time() - start)
 
         # yield edges
         if node not in self._vis:
@@ -616,23 +614,6 @@ class TTRAggregate(TTR):
             if sum_r > r:
                 node, r = _node, sum_r
 
-        # print(
-        #     self.p.get('0x8bea99d414c9c50beb456c3c971e8936b151cb39'),
-        #     self.r.get('0x8bea99d414c9c50beb456c3c971e8936b151cb39'),
-        # )
-        # print(
-        #     self.p.get('0x68fcec2c89e93bb95cf04bb4faea47dea1645cdb'),
-        #     self.r.get('0x68fcec2c89e93bb95cf04bb4faea47dea1645cdb'),
-        # )
-        # print(
-        #     self.p.get('0x0000000000000000000000000000000000000000'),
-        #     self.r.get('0x0000000000000000000000000000000000000000'),
-        # )
-        # print(
-        #     self.p.get('0x6fe59353d45f6f94d55af8586c6d093ce71f8515'),
-        #     self.r.get('0x6fe59353d45f6f94d55af8586c6d093ce71f8515'),
-        # )
-
         return dict(node=node, residual=r) if node is not None else None
 
     def _get_distributing_profit_v2(
@@ -755,9 +736,9 @@ class TTRAggregate(TTR):
         aggregated_edges = dict()
         for edge in edges:
             _hash = edge.get('hash')
-            aggregated_edge = TTRAggregate.AggregatedEdge(
+            aggregated_edge = TTRRedirect.AggregatedEdge(
                 _hash=_hash,
-                _profits=[TTRAggregate.AggregatedEdgeProfit(
+                _profits=[TTRRedirect.AggregatedEdgeProfit(
                     _address=edge.get('to') if edge.get('from') == node else edge.get('from'),
                     _value=-edge.get('value') if edge.get('from') == node else edge.get('value'),
                     _timestamp=edge.get('timeStamp'),

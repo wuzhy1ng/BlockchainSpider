@@ -1,5 +1,4 @@
 from BlockchainSpider.spiders.txs.eth.poison import TxsETHPoisonSpider
-from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
 
 
 class TxsPolygonPoisonSpider(TxsETHPoisonSpider):
@@ -8,4 +7,5 @@ class TxsPolygonPoisonSpider(TxsETHPoisonSpider):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.apikey_bucket = JsonAPIKeyBucket('polygon')
+        self.apikey_bucket = type(self.apikey_bucket)(net='polygon', kps=5)
+

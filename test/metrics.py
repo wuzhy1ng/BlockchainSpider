@@ -64,7 +64,7 @@ if __name__ == '__main__':
     assert args.in_dir is not None
 
     cases = list()
-    cases_path = './test/cases'
+    cases_path = './cases'
     for fn in os.listdir(cases_path):
         fn = os.path.join(cases_path, fn)
         with open(fn, 'r') as f:

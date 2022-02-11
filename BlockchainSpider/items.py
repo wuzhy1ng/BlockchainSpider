@@ -22,3 +22,7 @@ class ImportanceItem(scrapy.Item):
     source = scrapy.Field()
     importance = scrapy.Field()
     task_info = scrapy.Field()
+
+
+class CloseItem(scrapy.Item):
+    task_info = scrapy.Field()

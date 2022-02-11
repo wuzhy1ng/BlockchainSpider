@@ -1,5 +1,4 @@
 import argparse
-import csv
 import json
 import os
 import time
@@ -19,34 +18,13 @@ parameters = {
     },
     'appr': {
         'core': 'appr',
-        'epsilon': 1e-4,
+        'epsilon': 1e-3,
         'alpha': 0.15
     },
-    'ttr_base': {
+    'ttr': {
         'core': 'ttr',
-        'strategy': 'TTRBase',
-        'epsilon': 1e-4,
-        'alpha': 0.15,
-        'beta': 0.7,
-    },
-    'ttr_weight': {
-        'core': 'ttr',
-        'strategy': 'TTRWeight',
-        'epsilon': 1e-4,
-        'alpha': 0.15,
-        'beta': 0.7,
-    },
-    'ttr_time': {
-        'core': 'ttr',
-        'strategy': 'TTRTime',
-        'epsilon': 1e-4,
-        'alpha': 0.15,
-        'beta': 0.7,
-    },
-    'ttr_aggregate': {
-        'core': 'ttr',
-        'strategy': 'TTRAggregate',
-        'epsilon': 1e-4,
+        'strategy': 'TTRRedirect',
+        'epsilon': 1e-3,
         'alpha': 0.15,
         'beta': 0.7,
     },
@@ -77,7 +55,7 @@ if __name__ == '__main__':
 
     # load cases
     cases = list()
-    cases_path = './test/cases'
+    cases_path = './cases'
     for fn in os.listdir(cases_path):
         fn = os.path.join(cases_path, fn)
         with open(fn, 'r') as f:
@@ -97,25 +75,20 @@ if __name__ == '__main__':
 
     # start task for crawling raw data
     start = time.time()
-    params_key = list(params.keys())
-    params_value = [params[k] for k in params_key]
+    not_token_core = {'haircut', 'appr', 'ttr_base', 'ttr_weight', 'ttr_time'}
     for net, cases in net_cases.items():
-        with open('./tmp.csv', 'w', newline='') as f:
-            writer = csv.writer(f)
-            headers = ['source', 'types', 'start_blk', 'out']
-            headers.extend(params_key)
-            writer.writerow(headers)
-            for case in cases:
-                not_token_core = {'haircut', 'appr', 'ttr_base', 'ttr_weight', 'ttr_time'}
-                info = [
-                    case['source'][0]['address'],
-                    'external;internal;erc20' if core not in not_token_core else 'external;internal',
-                    case['blockAt'],
-                    os.path.join(args.out_dir, 'raw'),
-                ]
-                info.extend(params_value)
-                writer.writerow(info)
-        cmd = 'scrapy crawl txs.%s.%s -a file=./tmp.csv' % (net, core)
+        infos = list()
+        for case in cases:
+            infos.append({
+                'source': case['source'][0]['address'],
+                'types': 'external,internal,erc20' if core not in not_token_core else 'external,internal',
+                'start_blk': case['blockAt'],
+                'out': os.path.join(args.out_dir, 'raw'),
+                **params
+            })
+        with open('./tmp.json', 'w') as f:
+            json.dump(infos, f)
+        cmd = 'scrapy crawl txs.%s.%s -a file=./tmp.json' % (net, core)
         os.system(cmd)
 
     # save using time
@@ -130,7 +103,7 @@ if __name__ == '__main__':
     os.system(cmd)
 
     # local community discovery
-    phi = 1e-4
+    phi = 1e-3
     localcomm_methods = {'appr', 'ttr_base', 'ttr_weight', 'ttr_time', 'ttr_aggregate'}
     if args.method in localcomm_methods:
         cmd = 'python extract.py localcomm -i %s -o %s' % (

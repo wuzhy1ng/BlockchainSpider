@@ -1,9 +1,9 @@
-import csv
 import json
 
 import scrapy
+from scrapy.utils.misc import load_object
 
-from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
+from BlockchainSpider import settings
 from BlockchainSpider.utils.url import QueryURLBuilder
 
 
@@ -32,8 +32,10 @@ class TxsETHSpider(scrapy.Spider):
         ).split(';')
         self.info['out_fields'] = self.out_fields
 
-        # apikey bucket
-        self.apikey_bucket = JsonAPIKeyBucket('eth')
+        # load apikey bucket class
+        apikey_bucket = getattr(settings, 'APIKEYS_BUCKET', None)
+        assert apikey_bucket is not None
+        self.apikey_bucket = load_object(apikey_bucket)(net='eth', kps=5)
 
         # tx types
         self.txs_types = kwargs.get('types', 'external').split(';')
@@ -65,25 +67,22 @@ class TxsETHSpider(scrapy.Spider):
 
         self.max_retry = 2
 
-    def load_task_info_from_csv(self, fn: str):
+    def load_task_info_from_json(self, fn: str):
         infos = list()
         with open(fn, 'r') as f:
-            reader = csv.reader(f)
-            fields = next(reader)
-            for row in reader:
-                item = {fields[i]: row[i] for i in range(len(row))}
-
-                assert item.get('source') is not None
+            data = json.load(f)
+            assert isinstance(data, list)
+            for item in data:
                 item['out_dir'] = item.get('out', './data')
                 item['out_fields'] = item.get(
                     'fields',
-                    'id;hash;from;to;value;timeStamp;blockNumber;tokenSymbol;contractAddress'
-                ).split(';')
-                item['txs_types'] = item.get('types', 'external').split(';')
+                    'id,hash,from,to,value,timeStamp,blockNumber,tokenSymbol,contractAddress'
+                ).split(',')
+                item['txs_types'] = item.get('types', 'external').split(',')
                 item['start_blk'] = int(item.get('start_blk', 0))
                 item['end_blk'] = int(item.get('end_blk', 99999999))
-                item['auto_page'] = bool(True if item.get('auto_page', 'False') == 'True' else False)
-                item['symbols'] = item.get('symbols').split(';') if item.get('symbols') else None
+                item['auto_page'] = item.get('auto_page', False)
+                item['symbols'] = item.get('symbols').split(',') if item.get('symbols') else None
 
                 infos.append(item)
         return infos

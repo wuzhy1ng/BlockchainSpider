@@ -1,5 +1,4 @@
 from BlockchainSpider.spiders.txs.eth.bfs import TxsETHBFSSpider
-from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
 
 
 class TxsHecoBFSSpider(TxsETHBFSSpider):
@@ -8,4 +7,5 @@ class TxsHecoBFSSpider(TxsETHBFSSpider):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.apikey_bucket = JsonAPIKeyBucket('heco')
+        self.apikey_bucket = type(self.apikey_bucket)(net='heco', kps=5)
+

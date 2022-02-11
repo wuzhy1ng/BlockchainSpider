@@ -9,7 +9,7 @@ import csv
 import json
 import os
 
-from BlockchainSpider.items import LabelItem, TxItem, ImportanceItem
+from BlockchainSpider.items import LabelItem, TxItem, ImportanceItem, CloseItem
 
 
 class LabelsPipeline:
@@ -22,7 +22,10 @@ class LabelsPipeline:
 
         # init file from filename
         if self.file is None:
-            self.file = open(spider.out_filename, 'w')
+            fn = os.path.join(spider.out_dir, spider.name)
+            if not os.path.exists(spider.out_dir):
+                os.makedirs(spider.out_dir)
+            self.file = open(fn, 'w')
 
         # write item
         json.dump({**item}, self.file)
@@ -40,6 +43,14 @@ class TxsPipeline:
         self.out_dir = None
 
     def process_item(self, item, spider):
+        if isinstance(item, CloseItem):
+            info = item['task_info']
+            key = '{}_{}'.format(item['source'], info['out_dir'])
+            file = self.file_map.get(key)
+            if file is not None:
+                file.close()
+            return item
+
         if not isinstance(item, TxItem):
             return item
 

@@ -1,5 +1,4 @@
 import logging
-import time
 
 from BlockchainSpider.items import TxItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
@@ -20,7 +19,7 @@ class TxsETHBFSSpider(TxsETHSpider):
     def start_requests(self):
         # load source nodes
         if self.filename is not None:
-            infos = self.load_task_info_from_csv(self.filename)
+            infos = self.load_task_info_from_json(self.filename)
             for i, info in enumerate(infos):
                 self.task_map[i] = AsyncTask(
                     strategy=BFS(

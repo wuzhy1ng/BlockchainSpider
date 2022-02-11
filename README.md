@@ -80,7 +80,7 @@ You can find the label data on `./data/labels.ofac`, each row of this file is a 
             {
                 "id_type":"Email Address",
                 "id_number":"info@forwarderz.com"
-            }, ...
+            }
         ]
     }
 }

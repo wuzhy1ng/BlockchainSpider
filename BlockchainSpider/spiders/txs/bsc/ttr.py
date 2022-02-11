@@ -1,5 +1,4 @@
 from BlockchainSpider.spiders.txs.eth.ttr import TxsETHTTRSpider
-from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
 
 
 class TxsBSCTTRSpider(TxsETHTTRSpider):
@@ -8,4 +7,4 @@ class TxsBSCTTRSpider(TxsETHTTRSpider):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.apikey_bucket = JsonAPIKeyBucket('bsc')
+        self.apikey_bucket = type(self.apikey_bucket)(net='bsc', kps=5)

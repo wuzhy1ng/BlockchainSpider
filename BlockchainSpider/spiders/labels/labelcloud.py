@@ -1,4 +1,3 @@
-import os
 import re
 from urllib.parse import urlsplit, urljoin, urlencode
 
@@ -9,8 +8,8 @@ from selenium.webdriver.support.wait import WebDriverWait
 from BlockchainSpider.items import LabelItem
 
 
-class LabelsEtherscanSpider(scrapy.Spider):
-    name = 'labels.etherscan'
+class LabelsCloudSpider(scrapy.Spider):
+    name = 'labels.labelcloud'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -20,7 +19,8 @@ class LabelsEtherscanSpider(scrapy.Spider):
         self.url_label_cloud = 'https://cn.etherscan.com/labelcloud'
         self.page_size = 100
 
-        self.out_filename = kwargs.get('out', os.path.join('./data', self.name))
+        self.out_dir = kwargs.get('out', './data')
+
         self.label_names = kwargs.get('labels', None)
         if self.label_names is not None:
             self.label_names = self.label_names.split(',')
