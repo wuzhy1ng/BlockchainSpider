@@ -1,5 +1,4 @@
 from BlockchainSpider.spiders.txs.eth.haircut import TxsETHHaircutSpider
-from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
 
 
 class TxsHecoHaircutSpider(TxsETHHaircutSpider):
@@ -8,4 +7,4 @@ class TxsHecoHaircutSpider(TxsETHHaircutSpider):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.apikey_bucket = JsonAPIKeyBucket('heco')
+        self.apikey_bucket = type(self.apikey_bucket)(net='heco', kps=5)

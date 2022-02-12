@@ -2,9 +2,10 @@ import csv
 import json
 
 import scrapy
+from scrapy.utils.misc import load_object
 
+from BlockchainSpider import settings
 from BlockchainSpider.items import LabelItem
-from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
 
 
 class LabelsContractETHSpider(scrapy.Spider):
@@ -14,11 +15,17 @@ class LabelsContractETHSpider(scrapy.Spider):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.out_filename = kwargs.get('out', self.name)
+        # self.out_filename = kwargs.get('out', os.path.join('./data', self.name))
+        self.out_dir = kwargs.get('out', './data')
         self.start_block = kwargs.get('start_blk', '0')
         self.end_block = kwargs.get('end_blk', None)
         self.contracts_file = kwargs.get('file', None)
-        self.apikey_bucket = JsonAPIKeyBucket('eth')
+
+        # load apikey bucket class
+        apikey_bucket = getattr(settings, 'APIKEYS_BUCKET', None)
+        assert apikey_bucket is not None
+        self.apikey_bucket = load_object(apikey_bucket)(net='eth', kps=5)
+
         self.base_ui_url = 'https://cn.etherscan.com'
         self.base_api_url = 'https://api-cn.etherscan.com/api'
 

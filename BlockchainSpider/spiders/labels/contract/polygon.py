@@ -1,5 +1,4 @@
 from BlockchainSpider.spiders.labels.contract.eth import LabelsContractETHSpider
-from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
 
 
 class LabelsContractPOLYSpider(LabelsContractETHSpider):
@@ -11,4 +10,4 @@ class LabelsContractPOLYSpider(LabelsContractETHSpider):
 
         self.base_ui_url = 'https://polygonscan.com/'
         self.base_api_url = 'https://api.polygonscan.com/api'
-        self.apikey_bucket = JsonAPIKeyBucket('polygon')
+        self.apikey_bucket = type(self.apikey_bucket)(net='bsc', kps=5)

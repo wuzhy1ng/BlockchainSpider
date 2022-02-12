@@ -86,7 +86,7 @@ ITEM_PIPELINES = {
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
 # HTTPCACHE_ENABLED = True
 HTTPCACHE_EXPIRATION_SECS = 0
-HTTPCACHE_DIR = 'D:\\cache'
+HTTPCACHE_DIR = './cache'
 HTTPCACHE_IGNORE_HTTP_CODES = []
 HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 HTTPCACHE_GZIP = True
@@ -94,5 +94,22 @@ HTTPCACHE_GZIP = True
 # Log configure
 LOG_LEVEL = 'INFO'
 
+# The response size (in bytes) that downloader will start to warn.
+DOWNLOAD_WARNSIZE = 33554432 * 2
+
 # APIKey configure
-APIKEYS_JSON_FILENAME = './apikeys.json'
+APIKEYS_BUCKET = 'BlockchainSpider.utils.apikey.StaticAPIKeyBucket'
+APIKEYS = {
+    "eth": [
+        "7MM6JYY49WZBXSYFDPYQ3V7V3EMZWE4KJK"
+    ],
+    "bsc": [
+        "NYYFYM2GM9FPCFETAMHHBXN67X7PU46EB9"
+    ],
+    "polygon": [
+        "7BTFI86WFGAAD91X2AGSF7YWBWC3M4R39S"
+    ],
+    "heco": [
+        "7SMM4F12EQRRGKYCN2VK6I48R7M8CFNE8R"
+    ]
+}

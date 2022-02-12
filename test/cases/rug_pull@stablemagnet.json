@@ -1,7 +1,7 @@
 {
   "name": "StableMagnet Rug Pull",
   "net": "bsc",
-  "blockAt": 8554843,
+  "blockAt": 8551765,
   "reporter": "REKT",
   "url": "https://rekt.news/stablemagnet-rekt/",
   "source": [
@@ -15,11 +15,8 @@
       "address": "0x8894e0a0c962cb723c1976a4421c95949be2d4e3",
       "label": "Binance: Hot Wallet"
     },{
-      "address": "0xe5daac909a3205f99d370bc2b32b1810a4912a07",
-      "label": "Tether changed to DAI"
-    },{
-      "address": "0x55d398326f99059ff775485246999027b3197955",
-      "label": "BUSD-T Stablecoin"
+      "address": "0x2bac04457e5de654cf1600b803e714c2c3fb96d7",
+      "label": "Send BUSD to Binance"
     }
   ]
 }

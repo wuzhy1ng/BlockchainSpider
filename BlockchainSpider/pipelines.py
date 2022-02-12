@@ -9,7 +9,7 @@ import csv
 import json
 import os
 
-from BlockchainSpider.items import LabelItem, TxItem, ImportanceItem
+from BlockchainSpider.items import LabelItem, TxItem, ImportanceItem, CloseItem
 
 
 class LabelsPipeline:
@@ -22,7 +22,10 @@ class LabelsPipeline:
 
         # init file from filename
         if self.file is None:
-            self.file = open(spider.out_filename, 'w')
+            fn = os.path.join(spider.out_dir, spider.name)
+            if not os.path.exists(spider.out_dir):
+                os.makedirs(spider.out_dir)
+            self.file = open(fn, 'w')
 
         # write item
         json.dump({**item}, self.file)
@@ -40,24 +43,36 @@ class TxsPipeline:
         self.out_dir = None
 
     def process_item(self, item, spider):
+        if isinstance(item, CloseItem):
+            info = item['task_info']
+            key = '{}_{}'.format(item['source'], info['out_dir'])
+            file = self.file_map.get(key)
+            if file is not None:
+                file.close()
+            return item
+
         if not isinstance(item, TxItem):
             return item
 
+        # load task info
+        info = item['task_info']
+        out_dir = info['out_dir']
+        fields = info['out_fields']
+
         # create output dir
-        if self.out_dir is None:
-            if not os.path.exists(spider.out_dir):
-                os.makedirs(spider.out_dir)
-            self.out_dir = spider.out_dir
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
 
         # init file
-        if self.file_map.get(item['source']) is None:
-            fn = os.path.join(self.out_dir, '%s.csv' % item['source'])
-            self.file_map[item['source']] = open(fn, 'w', newline='', encoding='utf-8')
-            csv.writer(self.file_map[item['source']]).writerow(spider.out_fields)
+        key = '{}_{}'.format(item['source'], out_dir)
+        if self.file_map.get(key) is None:
+            fn = os.path.join(out_dir, '%s.csv' % item['source'])
+            self.file_map[key] = open(fn, 'w', newline='', encoding='utf-8')
+            csv.writer(self.file_map[key]).writerow(fields)
 
         # write item
-        row = [item['tx'].get(field, '') for field in spider.out_fields]
-        csv.writer(self.file_map[item['source']]).writerow(row)
+        row = [item['tx'].get(field, '') for field in fields]
+        csv.writer(self.file_map[key]).writerow(row)
 
         return item
 
@@ -75,14 +90,16 @@ class ImportancePipeline:
         if not isinstance(item, ImportanceItem):
             return item
 
+        # load task info
+        info = item['task_info']
+        out_dir = os.path.join(info['out_dir'], 'importance')
+
         # create output dir
-        if self.out_dir is None:
-            self.out_dir = os.path.join(spider.out_dir, 'importance')
-            if not os.path.exists(self.out_dir):
-                os.makedirs(self.out_dir)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
 
         # write item
-        fn = os.path.join(self.out_dir, '%s.csv' % item['source'])
+        fn = os.path.join(out_dir, '%s.csv' % item['source'])
         with open(fn, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(['node', 'importance'])

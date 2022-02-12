@@ -50,7 +50,7 @@ class TxsBTCSpider(scrapy.Spider):
             txs.append(TxItem(
                 source=kwargs['source'],
                 tx={
-                    'id': data['hash'],
+                    'id': '{}_{}'.format(data['hash'], tx.get('age', 0)),
                     'hash': data['hash'],
                     'from': tx['prev_hash'],
                     'to': data['hash'],
@@ -72,7 +72,7 @@ class TxsBTCSpider(scrapy.Spider):
             txs.append(TxItem(
                 source=kwargs['source'],
                 tx={
-                    'id': data['hash'],
+                    'id': '{}_{}'.format(data['hash'], tx.get('age', 0)),
                     'hash': data['hash'],
                     'from': data['hash'],
                     'to': spent_by if spent_by else '',

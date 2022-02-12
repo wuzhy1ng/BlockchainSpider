@@ -14,6 +14,8 @@ class APPR(PushPopModel):
         self.r = {self.source: 1}
         self.p = dict()
 
+        self._vis = set()
+
     def push(self, node, edges: list, **kwargs):
         r_node = self.r.get(node, 0)
         if r_node == 0:
@@ -35,6 +37,11 @@ class APPR(PushPopModel):
         for neighbour in neighbours:
             self.r[neighbour] = self.r.get(neighbour, 0) + inc
 
+        # yield edges
+        if node not in self._vis:
+            self._vis.add(node)
+            yield from edges
+
     def pop(self):
         node, r = None, self.epsilon
         for _node, _r in self.r.items():
@@ -42,10 +49,3 @@ class APPR(PushPopModel):
                 node, r = _node, _r
 
         return dict(node=node, residual=r) if node is not None else None
-
-        # r_nodes = list(self.r.items())
-        # r_nodes.sort(key=lambda x: x[1])
-        # while len(r_nodes) > 0:
-        #     node, r = r_nodes.pop()
-        #     if r > self.epsilon:
-        #         return dict(node=node, residual=r)

@@ -41,8 +41,13 @@ class TTRBase(TTR):
 
         # push过程
         self._self_push(node, r)
-        yield from self._forward_push(node, edges, r)
-        yield from self._backward_push(node, edges, r)
+        self._forward_push(node, edges, r)
+        self._backward_push(node, edges, r)
+
+        # yield edges
+        if node not in self._vis:
+            self._vis.add(node)
+            yield from edges
 
     def _self_push(self, node, r):
         self.p[node] = self.p.get(node, 0) + self.alpha * r
@@ -57,7 +62,6 @@ class TTRBase(TTR):
         for e in out_edges:
             inc = (1 - self.alpha) * self.beta * r / out_edges_cnt if out_edges_cnt > 0 else 0
             self.r[e['to']] = self.r.get(e['to'], 0) + inc
-            yield e
 
     def _backward_push(self, node, edges: list, r):
         in_edges = list()
@@ -69,14 +73,12 @@ class TTRBase(TTR):
         for e in in_edges:
             inc = (1 - self.alpha) * (1 - self.beta) * r / in_edges_cnt if in_edges_cnt > 0 else 0
             self.r[e['from']] = self.r.get(e['from'], 0) + inc
-            yield e
 
     def pop(self):
         node, r = None, self.epsilon
         for _node, _r in self.r.items():
             if _r > r:
                 node, r = _node, _r
-
         return dict(node=node, residual=r) if node is not None else None
 
 
@@ -100,8 +102,13 @@ class TTRWeight(TTR):
 
         # push过程
         self._self_push(node, r)
-        yield from self._forward_push(node, edges, r)
-        yield from self._backward_push(node, edges, r)
+        self._forward_push(node, edges, r)
+        self._backward_push(node, edges, r)
+
+        # yield edges
+        if node not in self._vis:
+            self._vis.add(node)
+            yield from edges
 
     def _self_push(self, node, r):
         self.p[node] = self.p.get(node, 0) + self.alpha * r
@@ -116,7 +123,7 @@ class TTRWeight(TTR):
         for e in out_edges:
             inc = (1 - self.alpha) * self.beta * (e['value'] / out_sum) * r if out_sum > 0 else 0
             self.r[e['to']] = self.r.get(e['to'], 0) + inc
-            yield e
+            # yield e
 
     def _backward_push(self, node, edges: list, r):
         in_sum = 0
@@ -128,14 +135,13 @@ class TTRWeight(TTR):
         for e in in_edges:
             inc = (1 - self.alpha) * (1 - self.beta) * (e['value'] / in_sum) * r if in_sum > 0 else 0
             self.r[e['from']] = self.r.get(e['from'], 0) + inc
-            yield e
+            # yield e
 
     def pop(self):
         node, r = None, self.epsilon
         for _node, _r in self.r.items():
             if _r > r:
                 node, r = _node, _r
-
         return dict(node=node, residual=r) if node is not None else None
 
 
@@ -155,8 +161,12 @@ class TTRTime(TTR):
 
         # 当更新的是源节点时
         if node == self.source and self.source not in self._vis:
+            self._vis.add(self.source)
+
+            # first self push
             self.p[self.source] = self.alpha
 
+            # first forward and backward push
             out_sum = sum([e['value'] if e['from'] == self.source else 0 for e in edges])
             in_sum = sum([e['value'] if e['to'] == self.source else 0 for e in edges])
             for e in edges:
@@ -175,7 +185,6 @@ class TTRTime(TTR):
                 # self.p[self.source] += (1 - self.alpha) * (1 - self.beta)
                 self.r[self.source][sys.maxsize] = (1 - self.alpha) * (1 - self.beta)
 
-            self._vis.add(self.source)
             return
 
         # 拷贝一份residual vector，原有的清空
@@ -184,8 +193,13 @@ class TTRTime(TTR):
 
         # push过程
         self._self_push(node, r)
-        yield from self._forward_push(node, edges, r)
-        yield from self._backward_push(node, edges, r)
+        self._forward_push(node, edges, r)
+        self._backward_push(node, edges, r)
+
+        # yield edges
+        if node not in self._vis:
+            self._vis.add(node)
+            yield from edges
 
     def _self_push(self, node, r: dict):
         sum_r = 0
@@ -235,10 +249,6 @@ class TTRTime(TTR):
             inc = (1 - self.alpha) * self.beta * e['value'] * d
             self.r[e['to']][e['timeStamp']] = self.r[e['to']].get(e['timeStamp'], 0) + inc
 
-            # 返回权重传播的输出边
-            if inc > 0:
-                yield e
-
         # 当流动权重碎片缺失输出边时将回流到自身
         while j < len(r_node):
             self.r[node][r_node[j][0]] = self.r[node].get(r_node[j][0], 0) + \
@@ -287,10 +297,6 @@ class TTRTime(TTR):
             inc = (1 - self.alpha) * (1 - self.beta) * e['value'] * d
             self.r[e['from']][e['timeStamp']] = self.r[e['from']].get(e['timeStamp'], 0) + inc
 
-            # 返回权重传播的输入边
-            if inc > 0:
-                yield e
-
         # 当流动权重碎片缺失输入边时将回流到自身
         while j >= 0:
             self.r[node][r_node[j][0]] = self.r[node].get(r_node[j][0], 0) + \
@@ -309,14 +315,14 @@ class TTRTime(TTR):
         return dict(node=node, residual=r) if node is not None else None
 
 
-class TTRAggregate(TTR):
-    name = 'TTRAggregate'
+class TTRRedirect(TTR):
+    name = 'TTRRedirect'
 
     def __init__(self, source, alpha: float = 0.15, beta: float = 0.8, epsilon=1e-5):
         super().__init__(source, alpha, beta, epsilon)
         self.p = dict()
         self.r = dict()
-        self._is_start = False
+        self._vis = set()
 
     def push(self, node, edges: list, **kwargs):
         start = time.time()
@@ -326,8 +332,8 @@ class TTRAggregate(TTR):
             self.r[node] = list()
 
         # push on first time
-        if not self._is_start:
-            self._is_start = True
+        if node == self.source and node not in self._vis:
+            self._vis.add(self.source)
 
             # calc value of each symbol
             in_sum = dict()
@@ -339,9 +345,11 @@ class TTRAggregate(TTR):
                     in_sum[e.get('symbol')] = in_sum.get(e.get('symbol'), 0) + e.get('value', 0)
                 elif e.get('from') == self.source:
                     out_sum[e.get('symbol')] = out_sum.get(e.get('symbol'), 0) + e.get('value', 0)
+
             # first self push
             self.p[self.source] = self.alpha * len(symbols)
 
+            # first forward and backward push
             for e in edges:
                 if e.get('from') == self.source and out_sum.get(e.get('symbol'), 0) != 0:
                     if self.r.get(e.get('to')) is None:
@@ -363,6 +371,7 @@ class TTRAggregate(TTR):
                             timestamp=e.get('timeStamp'),
                             symbol=e.get('symbol')
                         ))
+
             for symbol in symbols:
                 if out_sum.get(symbol, 0) == 0:
                     self.r[self.source].append(dict(
@@ -383,8 +392,6 @@ class TTRAggregate(TTR):
         r.sort(key=lambda x: x.get('timestamp', 0))
         self.r[node] = list()
 
-        print('------ local push residual chip:', len(r))
-
         # aggregate edges
         agg_es = self._get_aggregated_edges(node, edges)
         agg_es.sort(key=lambda x: x.get_timestamp())
@@ -394,9 +401,21 @@ class TTRAggregate(TTR):
         self._forward_push(node, agg_es, r)
         self._backward_push(node, agg_es, r)
 
-        print('------ local push using time:', time.time() - start)
+        # marge chips
+        for node, chips in self.r.items():
+            _chips = dict()
+            for chip in chips:
+                key = (chip.get('symbol'), chip.get('timestamp'))
+                if _chips.get(key) is None:
+                    _chips[key] = chip
+                    continue
+                _chips[key]['value'] += chip.get('value', 0)
+            self.r[node] = [v for v in _chips.values()]
 
-        yield from edges
+        # yield edges
+        if node not in self._vis:
+            self._vis.add(node)
+            yield from edges
 
     def _self_push(self, node, r: list):
         sum_r = 0
@@ -421,6 +440,27 @@ class TTRAggregate(TTR):
                 j -= 1
             W[str(c)] = sum_w.get(c.get('symbol'), 0)
 
+        # construct index for distributing profit
+        symbol_agg_es = dict()
+        symbol_agg_es_idx = dict()
+        for i, e in enumerate(aggregated_edges):
+            for profit in e.get_output_profits():
+                if symbol_agg_es.get(profit.symbol) is None:
+                    symbol_agg_es[profit.symbol] = list()
+                    symbol_agg_es_idx[profit.symbol] = list()
+                symbol_agg_es[profit.symbol].append(e)
+                symbol_agg_es_idx[profit.symbol].append(i)
+        distributing_index = dict()
+        for symbol in symbol_agg_es.keys():
+            es_idx = symbol_agg_es_idx[symbol]
+            index = [0 for _ in range(len(aggregated_edges))]
+            j = 0
+            for i in range(len(index)):
+                if j < len(es_idx) and es_idx[j] <= i:
+                    j += 1 if j < len(es_idx) else 0
+                index[i] = j
+            distributing_index[symbol] = index
+
         # push residual to neighbors
         j = 0
         d = dict()
@@ -433,7 +473,7 @@ class TTRAggregate(TTR):
             while j < len(r) and e.get_timestamp() > r[j].get('timestamp', 0):
                 c = r[j]
                 symbol = c.get('symbol')
-                inc_d = (c.get('value', 0) / W[str(c)]) if W[str(c)] > 0 else 0
+                inc_d = (c.get('value', 0) / W[str(c)]) if W[str(c)] != 0 else 0
                 d[symbol] = d.get(symbol, 0) + inc_d
                 j += 1
 
@@ -442,11 +482,14 @@ class TTRAggregate(TTR):
                 if inc == 0:
                     continue
 
-                distributing_profits = self._get_distributing_profit(
+                distributing_profits = self._get_distributing_profit_v2(
                     direction=-1,
                     symbol=profit.symbol,
                     index=i,
-                    aggregated_edges=aggregated_edges
+                    aggregated_edges=aggregated_edges,
+                    distributing_index=distributing_index,
+                    symbol_agg_es_idx=symbol_agg_es_idx,
+                    chip_value=inc
                 )
                 for dp in distributing_profits:
                     if self.r.get(dp.address) is None:
@@ -488,6 +531,27 @@ class TTRAggregate(TTR):
                 j += 1
             W[i] = sum_w.get(c.get('symbol'), 0)
 
+        # construct index for distributing profit
+        symbol_agg_es = dict()
+        symbol_agg_es_idx = dict()
+        for i, e in enumerate(aggregated_edges):
+            for profit in e.get_output_profits():
+                if symbol_agg_es.get(profit.symbol) is None:
+                    symbol_agg_es[profit.symbol] = list()
+                    symbol_agg_es_idx[profit.symbol] = list()
+                symbol_agg_es[profit.symbol].append(e)
+                symbol_agg_es_idx[profit.symbol].append(i)
+        distributing_index = dict()
+        for symbol in symbol_agg_es.keys():
+            es_idx = symbol_agg_es_idx[symbol]
+            index = [0 for _ in range(len(aggregated_edges))]
+            j = len(es_idx) - 1
+            for i in range(len(index) - 1, -1, -1):
+                if j > 0 and es_idx[j] >= i:
+                    j -= 1 if j > 0 else 0
+                index[i] = j
+            distributing_index[symbol] = index
+
         # push residual to neighbors
         j = len(r) - 1
         d = dict()
@@ -500,7 +564,7 @@ class TTRAggregate(TTR):
             while j >= 0 and e.get_timestamp() < r[j].get('timestamp', 0):
                 c = r[j]
                 symbol = c.get('symbol')
-                inc_d = (c.get('value', 0) / W[j]) if W[j] > 0 else 0
+                inc_d = (c.get('value', 0) / W[j]) if W[j] != 0 else 0
                 d[symbol] = d.get(symbol, 0) + inc_d
                 j -= 1
 
@@ -509,11 +573,14 @@ class TTRAggregate(TTR):
                 if inc == 0:
                     continue
 
-                distributing_profits = self._get_distributing_profit(
+                distributing_profits = self._get_distributing_profit_v2(
                     direction=1,
                     symbol=profit.symbol,
                     index=i,
-                    aggregated_edges=aggregated_edges
+                    aggregated_edges=aggregated_edges,
+                    distributing_index=distributing_index,
+                    symbol_agg_es_idx=symbol_agg_es_idx,
+                    chip_value=inc
                 )
                 for dp in distributing_profits:
                     if self.r.get(dp.address) is None:
@@ -546,7 +613,64 @@ class TTRAggregate(TTR):
                 sum_r += chip.get('value', 0)
             if sum_r > r:
                 node, r = _node, sum_r
+
         return dict(node=node, residual=r) if node is not None else None
+
+    def _get_distributing_profit_v2(
+            self,
+            direction: int,
+            symbol: str,
+            index: int,
+            aggregated_edges: list,
+            distributing_index: dict,
+            symbol_agg_es_idx: dict,
+            chip_value: float,
+    ) -> list:
+        """
+
+        :param direction: 1 means input and -1 means output
+        :param index: current aggregated edge index
+        :param aggregated_edges:
+        :return: a list of profit
+        """
+        rlt = list()
+
+        stack = list()
+        stack.append((direction, symbol, index))
+        vis = set()
+        while len(stack) > 0:
+            args = stack.pop()
+            if args in vis:
+                continue
+            vis.add(args)
+
+            direction, symbol, index = args
+            cur_e = aggregated_edges[index]
+            no_reverse_profits = [profit for profit in cur_e.profits if profit.value * direction > 0]
+            reverse_profits = [profit for profit in cur_e.profits if profit.value * direction < 0]
+
+            if len(stack) > 0 and chip_value / len(stack) < self.epsilon:
+                return [profit for profit in no_reverse_profits if profit.symbol == symbol]
+
+            if len(reverse_profits) == 1:
+                profit = reverse_profits[0]
+
+                _symbol_agg_es_idx = symbol_agg_es_idx.get(profit.symbol)
+                _distributing_index = distributing_index.get(profit.symbol)
+                if _symbol_agg_es_idx is None or _distributing_index is None:
+                    continue
+
+                if direction < 0:
+                    indices = _symbol_agg_es_idx[_distributing_index[index]:]
+                else:
+                    indices = _symbol_agg_es_idx[:_distributing_index[index]]
+
+                for _index in indices:
+                    stack.append((direction, profit.symbol, _index))
+            else:
+                rlt.extend([profit for profit in no_reverse_profits if profit.symbol == symbol])
+
+        return rlt
 
     def _get_swapped_aggregate_edge_indices(
             self,
@@ -593,19 +717,13 @@ class TTRAggregate(TTR):
             cur_e = aggregated_edges[index]
             no_reverse_profits = [profit for profit in cur_e.profits if profit.value * direction > 0]
             reverse_profits = [profit for profit in cur_e.profits if profit.value * direction < 0]
-            if len(reverse_profits) == 0:
-                rlt.extend([profit for profit in no_reverse_profits if profit.symbol == symbol])
-            elif len(reverse_profits) == 1:
+            if len(reverse_profits) == 1:
                 profit = reverse_profits[0]
                 indices = self._get_swapped_aggregate_edge_indices(direction, profit, index, aggregated_edges)
                 for _index in indices:
                     stack.append((direction, symbol, _index))
             else:
                 rlt.extend([profit for profit in no_reverse_profits if profit.symbol == symbol])
-                for profit in reverse_profits:
-                    indices = self._get_swapped_aggregate_edge_indices(direction, profit, index, aggregated_edges)
-                    for _index in indices:
-                        stack.append((direction, symbol, _index))
 
         return rlt
 
@@ -618,9 +736,9 @@ class TTRAggregate(TTR):
         aggregated_edges = dict()
         for edge in edges:
             _hash = edge.get('hash')
-            aggregated_edge = TTRAggregate.AggregatedEdge(
+            aggregated_edge = TTRRedirect.AggregatedEdge(
                 _hash=_hash,
-                _profits=[TTRAggregate.AggregatedEdgeProfit(
+                _profits=[TTRRedirect.AggregatedEdgeProfit(
                     _address=edge.get('to') if edge.get('from') == node else edge.get('from'),
                     _value=-edge.get('value') if edge.get('from') == node else edge.get('value'),
                     _timestamp=edge.get('timeStamp'),
@@ -657,14 +775,15 @@ class TTRAggregate(TTR):
             # 2. according to symbol to classify profit and aggregate
             aggregated_profits = dict()
             for profit in self.profits + aggregated_edge.profits:
-                _profit = aggregated_profits.get(profit.symbol)
+                key = (profit.symbol, profit.address)
+                _profit = aggregated_profits.get(key)
                 if _profit is None:
-                    if profit.value > 0:
-                        aggregated_profits[profit.symbol] = profit
+                    if profit.value != 0:
+                        aggregated_profits[key] = profit
                     continue
 
                 if _profit.value + profit.value == 0:
-                    del aggregated_profits[profit.symbol]
+                    del aggregated_profits[key]
                     continue
 
                 sgn = 1 if _profit.value > 0 else -1
@@ -673,7 +792,7 @@ class TTRAggregate(TTR):
                 if sgn < 0:
                     _profit = profit
                 _profit.value = aggregated_value
-                aggregated_profits[profit.symbol] = _profit
+                aggregated_profits[key] = _profit
             self.profits = [v for v in aggregated_profits.values()]
 
             return self

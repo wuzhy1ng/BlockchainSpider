@@ -1,4 +1,5 @@
 import json
+import os
 from urllib.parse import urlparse
 
 import scrapy
@@ -13,7 +14,7 @@ class LabelsTokenSnifferSpider(scrapy.Spider):
         super().__init__(**kwargs)
         self.domain_url = 'https://tokensniffer.com'
 
-        self.out_filename = kwargs.get('out', self.name)
+        self.out_dir = kwargs.get('out', './data')
 
     def start_requests(self):
         request_paths = [

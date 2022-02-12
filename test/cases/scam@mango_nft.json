@@ -1,0 +1,19 @@
+{
+  "name": "MANGO NFT Phish Scam",
+  "net": "bsc",
+  "blockAt": 1018704,
+  "reporter": "Bscscan",
+  "url": "https://bscscan.com/address/0xec5be9824a1b35c7e7b0abf5d1c669dba06d2ccc",
+  "source": [
+    {
+      "address": "0xec5be9824a1b35c7e7b0abf5d1c669dba06d2ccc",
+      "label": "Phish / Hack"
+    }
+  ],
+  "target": [
+    {
+      "address": "0x631fc1ea2270e98fbd9d92658ece0f5a269aa161",
+      "label": "Binance: Hot Wallet"
+    }
+  ]
+}

@@ -1,5 +1,4 @@
 import json
-import random
 import time
 
 from twisted.internet.defer import DeferredLock
@@ -37,12 +36,20 @@ class APIKeyBucket:
 
 
 class StaticAPIKeyBucket(APIKeyBucket):
-    def __init__(self, apikeys: list, kps: int = 5):
+    def __init__(self, net: str, kps: int = 5):
+        apikeys = getattr(settings, 'APIKEYS', None)
+        assert isinstance(apikeys, dict)
+
+        apikeys = apikeys.get(net, list())
         assert len(apikeys) > 0
         super().__init__(apikeys, kps)
 
+        self._index = 0
+
     def get_apikey(self) -> str:
-        return random.choice(self.apikeys)
+        key = self.apikeys[self._index]
+        self._index = (self._index + 1) % len(self.apikeys)
+        return key
 
 
 class JsonAPIKeyBucket(APIKeyBucket):
@@ -59,6 +66,9 @@ class JsonAPIKeyBucket(APIKeyBucket):
         assert len(apikeys) > 0
         super().__init__(apikeys, kps)
 
+        self._index = 0
+
     def get_apikey(self) -> str:
-        key = random.choice(self.apikeys)
+        key = self.apikeys[self._index]
+        self._index = (self._index + 1) % len(self.apikeys)
         return key

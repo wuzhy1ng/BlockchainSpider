@@ -1,5 +1,4 @@
 from BlockchainSpider.spiders.labels.contract.eth import LabelsContractETHSpider
-from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
 
 
 class LabelsContractBSCSpider(LabelsContractETHSpider):
@@ -11,4 +10,4 @@ class LabelsContractBSCSpider(LabelsContractETHSpider):
 
         self.base_ui_url = 'https://bscscan.com'
         self.base_api_url = 'https://api.bscscan.com/api'
-        self.apikey_bucket = JsonAPIKeyBucket('bsc')
+        self.apikey_bucket = type(self.apikey_bucket)(net='bsc', kps=5)

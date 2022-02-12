@@ -13,7 +13,7 @@ class LabelsCryptoScamDBSpider(scrapy.Spider):
         super().__init__(**kwargs)
         self.url_api_addressses = 'https://api.cryptoscamdb.org/v1/addresses'
 
-        self.out_filename = kwargs.get('out', self.name)
+        self.out_dir = kwargs.get('out', './data')
 
     def start_requests(self):
         yield scrapy.Request(
