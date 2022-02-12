@@ -28,6 +28,13 @@ parameters = {
         'alpha': 0.15,
         'beta': 0.7,
     },
+    'ttr_time': {
+        'core': 'ttr',
+        'strategy': 'TTRTime',
+        'epsilon': 1e-3,
+        'alpha': 0.15,
+        'beta': 0.7,
+    }
 }
 
 if __name__ == '__main__':

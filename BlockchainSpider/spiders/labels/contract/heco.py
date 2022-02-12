@@ -1,5 +1,4 @@
 from BlockchainSpider.spiders.labels.contract.eth import LabelsContractETHSpider
-from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
 
 
 class LabelsContractHECOSpider(LabelsContractETHSpider):
@@ -11,4 +10,4 @@ class LabelsContractHECOSpider(LabelsContractETHSpider):
 
         self.base_ui_url = 'https://hecoinfo.com/'
         self.base_api_url = 'https://api.hecoinfo.com/api'
-        self.apikey_bucket = JsonAPIKeyBucket('heco')
+        self.apikey_bucket = type(self.apikey_bucket)(net='bsc', kps=5)

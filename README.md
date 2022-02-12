@@ -9,6 +9,8 @@ Blockchain spiders aim to collect data of public chains, including:
 - **Block data**: the blocks on chains (TODO)
 - ...
 
+For more info in detail, see our [documentation](https://870167019.gitbook.io/blockchainspider/).
+
 
 
 ## 🚀Getting Started
@@ -90,15 +92,9 @@ You can find the label data on `./data/labels.ofac`, each row of this file is a 
 
 
 
-## 📖Document
+## 🔬About TRacer
 
-For more usage and configuration information, consult the [documentation](https://870167019.gitbook.io/blockchainspider/).
-
-
-
-## 🔬Experiments
-
-We designed the experimental code for different subgraph sampling strategies.
+We designed the experimental code in our paper.
 
 Please execute the code in `./test` to reproduce the experimental results.
 
@@ -106,16 +102,4 @@ Please execute the code in `./test` to reproduce the experimental results.
 - `compare.py`: Comparative experiment.
 - `metrics.py`: Export evaluation metrics.
 
-
-
-## 📌Citation
-
-```
-@article{wu2022transaction,
-  title={Transaction Tracking on Blockchain Trading Systems using Personalized PageRank},
-  author={Wu, Zhiying and Liu, Jieli and Wu, Jiajing and Zheng, Zibin},
-  journal={arXiv preprint arXiv:2201.05757},
-  year={2022}
-}
-```
-
+For more information, please refer to `./test/README.md`

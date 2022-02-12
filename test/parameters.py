@@ -37,7 +37,7 @@ if __name__ == '__main__':
     epsilons = [0.1, 0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001, 0.00005]
     epsilons.reverse()
     for epsilon in epsilons:
-        start = time.time()
+        out_dir = os.path.join(args.out_dir, 'epsilon_%s' % str(epsilon))
         for net, cases in net_cases.items():
             infos = list()
             for case in cases:
@@ -45,7 +45,7 @@ if __name__ == '__main__':
                     'source': case['source'][0]['address'],
                     'types': 'external,internal,erc20',
                     'start_blk': case['blockAt'],
-                    'out': os.path.join(args.out_dir, 'epsilon_%s' % str(epsilon)),
+                    'out': out_dir,
                     'epsilon': epsilon,
                     'alpha': 0.15,
                     'beta': 0.7
@@ -55,7 +55,3 @@ if __name__ == '__main__':
                 json.dump(infos, f)
             cmd = 'scrapy crawl txs.%s.ttr -a file=./tmp.json' % net
             os.system(cmd)
-
-        using_time.append(time.time() - start)
-
-    print([{'epsilon': epsilons[i], 'using time': using_time[i]} for i in range(len(epsilons))])
