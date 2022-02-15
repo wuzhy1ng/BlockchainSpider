@@ -94,9 +94,20 @@ You can find the label data on `./data/labels.ofac`, each row of this file is a 
 
 ## 🔬About TRacer
 
-We designed the experimental code in our paper.
+Please cite our [paper](https://arxiv.org/abs/2201.05757) (and the respective papers of the methods used) if you use this code in your own work:
 
-Please execute the code in `./test` to reproduce the experimental results.
+```latex
+@misc{wu2022tracer,
+      title={TRacer: Scalable Graph-based Transaction Tracing for Account-based Blockchain Trading Systems}, 
+      author={Zhiying Wu and Jieli Liu and Jiajing Wu and Zibin Zheng},
+      year={2022},
+      eprint={2201.05757},
+      archivePrefix={arXiv},
+      primaryClass={cs.CR}
+}
+```
+
+Please execute the code in `./test` to reproduce the experimental results in the paper.
 
 - `parameters.py`: Parameter sensitivity experiment.
 - `compare.py`: Comparative experiment.
