@@ -65,8 +65,9 @@ DOWNLOADER_MIDDLEWARES = {
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
     'BlockchainSpider.pipelines.LabelsPipeline': 300,
-    'BlockchainSpider.pipelines.TxsPipeline': 301,
+    'BlockchainSpider.pipelines.SubgraphTxsPipeline': 301,
     'BlockchainSpider.pipelines.ImportancePipeline': 302,
+    'BlockchainSpider.pipelines.BlockPipeline': 303,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -86,7 +87,7 @@ ITEM_PIPELINES = {
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
 # HTTPCACHE_ENABLED = True
 HTTPCACHE_EXPIRATION_SECS = 0
-HTTPCACHE_DIR = './cache'
+HTTPCACHE_DIR = r'C:\Users\yuanqi\Desktop\tmp\cache'
 HTTPCACHE_IGNORE_HTTP_CODES = []
 HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 HTTPCACHE_GZIP = True

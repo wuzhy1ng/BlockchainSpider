@@ -1,6 +1,6 @@
 import logging
 
-from BlockchainSpider.items import TxItem, ImportanceItem, CloseItem
+from BlockchainSpider.items import SubgraphTxItem, ImportanceItem, CloseItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.strategies import APPR
 from BlockchainSpider.tasks import SyncTask
@@ -117,7 +117,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
                 node=kwargs['address'],
                 edges=txs,
         ):
-            yield TxItem(source=task.info['source'], tx=tx, task_info=task.info)
+            yield SubgraphTxItem(source=task.info['source'], tx=tx, task_info=task.info)
 
         # next address request
         if len(txs) < 10000 or task.info['auto_page'] is False:

@@ -9,7 +9,7 @@ import csv
 import json
 import os
 
-from BlockchainSpider.items import LabelItem, TxItem, ImportanceItem, CloseItem
+from BlockchainSpider.items import LabelItem, SubgraphTxItem, ImportanceItem, BlockMetaItem, BlockTxItem, CloseItem
 
 
 class LabelsPipeline:
@@ -37,7 +37,7 @@ class LabelsPipeline:
             self.file.close()
 
 
-class TxsPipeline:
+class SubgraphTxsPipeline:
     def __init__(self):
         self.file_map = dict()
         self.out_dir = None
@@ -51,7 +51,7 @@ class TxsPipeline:
                 file.close()
             return item
 
-        if not isinstance(item, TxItem):
+        if not isinstance(item, SubgraphTxItem):
             return item
 
         # load task info
@@ -106,4 +106,27 @@ class ImportancePipeline:
             for k, v in item['importance'].items():
                 writer.writerow([k, v])
 
+        return item
+
+
+class BlockPipeline:
+    def __init__(self):
+        self.files = dict()
+
+    def process_item(self, item, spider):
+        if not isinstance(item, BlockMetaItem) and not isinstance(item, BlockTxItem):
+            return item
+
+        # init file
+        suffix = 'meta' if isinstance(item, BlockMetaItem) else item.get('tx_type')
+        if self.files.get(suffix) is None:
+            fn = os.path.join(spider.out_dir, '%s.%s' % (spider.name, suffix))
+            if not os.path.exists(spider.out_dir):
+                os.makedirs(spider.out_dir)
+            self.files[suffix] = open(fn, 'w')
+
+        # write item
+        file = self.files[suffix]
+        json.dump(item['info'], file)
+        file.write('\n')
         return item

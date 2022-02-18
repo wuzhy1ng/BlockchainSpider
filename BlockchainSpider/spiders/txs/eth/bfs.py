@@ -1,6 +1,6 @@
 import logging
 
-from BlockchainSpider.items import TxItem
+from BlockchainSpider.items import SubgraphTxItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.strategies import BFS
 from BlockchainSpider.tasks import AsyncTask
@@ -86,7 +86,7 @@ class TxsETHBFSSpider(TxsETHSpider):
 
         # save tx
         for tx in txs:
-            yield TxItem(source=task.info['source'], tx=tx, task_info=task.info)
+            yield SubgraphTxItem(source=task.info['source'], tx=tx, task_info=task.info)
 
         # push data to task
         task.push(

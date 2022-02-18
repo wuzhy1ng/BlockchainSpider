@@ -3,7 +3,7 @@ import json
 import logging
 import time
 
-from BlockchainSpider.items import TxItem, ImportanceItem
+from BlockchainSpider.items import SubgraphTxItem, ImportanceItem
 from BlockchainSpider.spiders.txs.btc._meta import TxsBTCSpider
 from BlockchainSpider import strategies
 from BlockchainSpider.tasks import SyncTask
@@ -89,7 +89,7 @@ class TxsBTCTTRSpider(TxsBTCSpider):
                 edges=[item['tx'] for item in in_txs + out_txs if item['tx']['to'] != ''],
                 wait_key=kwargs['wait_key']
         ):
-            yield TxItem(source=kwargs['source'], tx=tx)
+            yield SubgraphTxItem(source=kwargs['source'], tx=tx)
 
         # next requests
         item = task.pop()

@@ -1,7 +1,7 @@
 import logging
 
 from BlockchainSpider import strategies
-from BlockchainSpider.items import TxItem, ImportanceItem, CloseItem
+from BlockchainSpider.items import SubgraphTxItem, ImportanceItem, CloseItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.tasks import SyncTask
 
@@ -122,7 +122,7 @@ class TxsETHTTRSpider(TxsETHSpider):
                 node=kwargs['address'],
                 edges=txs,
         ):
-            yield TxItem(source=task.info['source'], tx=tx, task_info=task.info)
+            yield SubgraphTxItem(source=task.info['source'], tx=tx, task_info=task.info)
 
         # save ttr
         yield ImportanceItem(

@@ -1,6 +1,6 @@
 import logging
 
-from BlockchainSpider.items import TxItem, ImportanceItem
+from BlockchainSpider.items import SubgraphTxItem, ImportanceItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.strategies import Haircut
 from BlockchainSpider.tasks import SyncTask
@@ -104,7 +104,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
 
         # save tx
         for tx in txs:
-            yield TxItem(source=task.info['source'], tx=tx, task_info=task.info)
+            yield SubgraphTxItem(source=task.info['source'], tx=tx, task_info=task.info)
 
         # save pollution
         yield ImportanceItem(

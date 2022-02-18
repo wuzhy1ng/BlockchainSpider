@@ -2,7 +2,7 @@ import datetime
 
 import scrapy
 
-from BlockchainSpider.items import TxItem
+from BlockchainSpider.items import SubgraphTxItem
 from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
 from BlockchainSpider.utils.url import RouterURLBuiler, QueryURLBuilder
 
@@ -47,7 +47,7 @@ class TxsBTCSpider(scrapy.Spider):
     def parse_input_txs(self, data: dict, **kwargs) -> list:
         txs = list()
         for tx in data['inputs']:
-            txs.append(TxItem(
+            txs.append(SubgraphTxItem(
                 source=kwargs['source'],
                 tx={
                     'id': '{}_{}'.format(data['hash'], tx.get('age', 0)),
@@ -69,7 +69,7 @@ class TxsBTCSpider(scrapy.Spider):
         txs = list()
         for tx in data['outputs']:
             spent_by = tx.get('spent_by')
-            txs.append(TxItem(
+            txs.append(SubgraphTxItem(
                 source=kwargs['source'],
                 tx={
                     'id': '{}_{}'.format(data['hash'], tx.get('age', 0)),

@@ -28,8 +28,8 @@ class TxsETHSpider(scrapy.Spider):
         # output fields
         self.out_fields = kwargs.get(
             'fields',
-            'id;hash;from;to;value;timeStamp;blockNumber;tokenSymbol;contractAddress'
-        ).split(';')
+            'id,hash,from,to,value,timeStamp,blockNumber,tokenSymbol,contractAddress'
+        ).split(',')
         self.info['out_fields'] = self.out_fields
 
         # load apikey bucket class
@@ -38,7 +38,7 @@ class TxsETHSpider(scrapy.Spider):
         self.apikey_bucket = load_object(apikey_bucket)(net='eth', kps=5)
 
         # tx types
-        self.txs_types = kwargs.get('types', 'external').split(';')
+        self.txs_types = kwargs.get('types', 'external').split(',')
         self.txs_req_getter = {
             'external': self.get_external_txs_request,
             'internal': self.get_internal_txs_request,
@@ -62,7 +62,7 @@ class TxsETHSpider(scrapy.Spider):
 
         # restrict token symbol
         self.symbols = kwargs.get('symbols', None)
-        self.symbols = set(self.symbols.split(';')) if self.symbols else self.symbols
+        self.symbols = set(self.symbols.split(',')) if self.symbols else self.symbols
         self.info['symbols'] = self.symbols
 
         self.max_retry = 2
