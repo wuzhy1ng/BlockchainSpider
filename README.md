@@ -129,6 +129,10 @@ Each row of those files is a JSON object just like this:
 }
 ```
 
+## ❗Important tips
+If you want to get the best performance of Blockchainspider, 
+please read the settings of [APIKeys](https://870167019.gitbook.io/blockchainspider/settings/apikeys) and [Cache](https://870167019.gitbook.io/blockchainspider/settings/cache).
+
 ## 🔬About TRacer
 
 Please cite our [paper](https://arxiv.org/abs/2201.05757) (and the respective papers of the methods used) if you use this code in your own work:
