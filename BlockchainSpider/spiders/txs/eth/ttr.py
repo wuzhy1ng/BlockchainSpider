@@ -174,4 +174,4 @@ class TxsETHTTRSpider(TxsETHSpider):
         yield from self._proess_response(response, self.get_erc20_txs_request, **kwargs)
 
     def parse_erc721_txs(self, response, **kwargs):
-        pass
+        yield from self._proess_response(response, self.get_erc721_txs_request, **kwargs)
