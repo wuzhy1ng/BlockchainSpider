@@ -1,3 +1,4 @@
+import logging
 import re
 from urllib.parse import urlsplit, urljoin, urlencode
 
@@ -16,7 +17,17 @@ class LabelsCloudSpider(scrapy.Spider):
         self.driver_options = webdriver.ChromeOptions()
         # self.driver_options.binary_location = '/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev'
 
-        self.url_label_cloud = 'https://cn.etherscan.com/labelcloud'
+        self.site = kwargs.get('site', 'etherscan')
+        self._allow_site = {
+            'etherscan': 'https://cn.etherscan.com',
+            'bscscan': 'https://bscscan.com',
+            'polygonscan': 'https://polygonscan.com',
+            'hecoinfo': 'https://hecoinfo.com'
+        }
+        assert self.site in self._allow_site.keys()
+
+        self.url_site = self._allow_site[self.site]
+        self.url_label_cloud = self.url_site + '/labelcloud'
         self.page_size = 100
 
         self.out_dir = kwargs.get('out', './data')
@@ -28,7 +39,7 @@ class LabelsCloudSpider(scrapy.Spider):
     def start_requests(self):
         # open selenium to login in
         driver = webdriver.Chrome(options=self.driver_options)
-        driver.get('https://cn.etherscan.com/login')
+        driver.get(self.url_site + '/login')
         WebDriverWait(
             driver=driver,
             timeout=300,
@@ -90,7 +101,6 @@ class LabelsCloudSpider(scrapy.Spider):
             for tab in tab_anchors:
                 total = tab.xpath('text()').get()
                 total = int(re.search(r'\d+', total).group()) if re.search(r'\d+', total) else self.page_size
-                # size = total if total < self.page_size else self.page_size
                 start = 0
                 subcatid = tab.attrib.get('val', 0)
 
@@ -135,11 +145,18 @@ class LabelsCloudSpider(scrapy.Spider):
                 start += self.page_size
 
     def parse_labels(self, response, **kwargs):
-        self.log('Crawled url: ' + response.url)
+        self.log(
+            message='Extracting items from: ' + response.url,
+            level=logging.INFO
+        )
         label = kwargs.get('label')
 
-        info_headers = response.xpath('//thead/tr/th/text()').getall()
-        info_headers = [re.sub(r'\s*', '', header) for header in info_headers]
+        info_headers = list()
+        for header in response.xpath('//thead/tr/th').extract():
+            header = re.sub('<.*?>', '', header)
+            header = re.sub(r'\s*', '', header)
+            info_headers.append(header)
+
         for row in response.xpath('//tbody/tr'):
             info = dict(url=response.url)
             for i, td in enumerate(row.xpath('./td').extract()):
