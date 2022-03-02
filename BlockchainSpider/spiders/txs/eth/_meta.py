@@ -199,12 +199,14 @@ class TxsETHSpider(scrapy.Spider):
             for tx in data['result']:
                 if tx['from'] == '' or tx['to'] == '':
                     continue
-                tx['value'] = int(tx['value'])
+                tx['value'] = int(tx.get('value', 1))
                 tx['timeStamp'] = int(tx['timeStamp'])
 
                 if self.symbols and tx.get('tokenSymbol', 'native') not in self.symbols:
                     continue
                 tx['symbol'] = '{}_{}'.format(tx.get('tokenSymbol', 'native'), tx.get('contractAddress'))
+                if tx.get('tokenID') is not None:
+                    tx['symbol'] = '{}_{}'.format(tx['symbol'], tx['tokenID'])
 
                 tx['id'] = '{}_{}_{}'.format(tx.get('hash'), tx.get('traceId'), tx['symbol'])
                 txs.append(tx)
