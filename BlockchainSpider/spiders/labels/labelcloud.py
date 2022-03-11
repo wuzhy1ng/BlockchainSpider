@@ -35,6 +35,8 @@ class LabelsCloudSpider(scrapy.Spider):
         self.label_names = kwargs.get('labels', None)
         if self.label_names is not None:
             self.label_names = self.label_names.split(',')
+        self.label_categories = kwargs.get('categories', 'accounts')
+        self.label_categories = self.label_categories.split(',')
 
     def start_requests(self):
         # open selenium to login in
@@ -63,9 +65,19 @@ class LabelsCloudSpider(scrapy.Spider):
         )
 
     def parse_label_cloud(self, response, **kwargs):
-        root_url = '%s://%s' % (urlsplit(response.url).scheme, urlsplit(response.url).netloc)
+        def _in_categories(category: str, categories: list) -> bool:
+            for _c in categories:
+                if category.lower().find(_c) >= 0:
+                    return True
+            return False
 
+        root_url = '%s://%s' % (urlsplit(response.url).scheme, urlsplit(response.url).netloc)
         for a in response.xpath('//div[contains(@class,"dropdown-menu")]//a'):
+            category = a.extract()
+            category = re.sub('<.*?>', '', category)
+            if not _in_categories(category, self.label_categories):
+                continue
+
             href = a.xpath('@href').get()
             size = a.xpath('text()').get()
             size = re.sub('<.*?>', '', size)
