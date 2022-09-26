@@ -12,7 +12,7 @@ Different methods have different implementations in graph expansion and extracti
 | APPR    | APPR transaction subgraph spider    | Deduplicate and Local community extractor |
 | TTR     | TTR transaction subgraph spider     | Deduplicate and Local community extractor |
 
-
+Some cases will be published after the paper is published.
 
 ### Q2: How can I reproduce the relationship among epsilon, recall, and the number of nodes?
 
