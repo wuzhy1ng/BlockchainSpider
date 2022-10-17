@@ -24,9 +24,7 @@ git clone https://github.com/wuzhy1ng/BlockchainSpider.git
 And then install the dependencies:
 
 ```shell
-pip install scrapy
-pip install selenium
-pip install networkx
+pip install -r requirements.txt
 ```
 
 For more information, please refer to the document in `./docs/html/index.html`.

@@ -1,0 +1,9 @@
+aiohttp==3.8.1
+bitcoin==1.1.42
+networkx==2.6.2
+numpy==1.21.2
+scipy==1.8.0
+Scrapy==2.6.0
+selenium==3.141.0
+summa==1.2.0
+web3==5.28.0
