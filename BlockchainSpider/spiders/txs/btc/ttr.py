@@ -6,7 +6,7 @@ import time
 from BlockchainSpider.items import SubgraphTxItem, ImportanceItem
 from BlockchainSpider.spiders.txs.btc._meta import TxsBTCSpider
 from BlockchainSpider import strategies
-from BlockchainSpider.tasks import SyncTask
+from BlockchainSpider.tasks import SyncSubgraphTask
 
 
 class TxsBTCTTRSpider(TxsBTCSpider):
@@ -33,7 +33,7 @@ class TxsBTCTTRSpider(TxsBTCSpider):
             with open(self.filename, 'r') as f:
                 for row in csv.reader(f):
                     source_nodes.add(row[0])
-                    self.task_map[row[0]] = SyncTask(
+                    self.task_map[row[0]] = SyncSubgraphTask(
                         strategy=self.strategy_cls(
                             source=self.source,
                             alpha=self.alpha,
@@ -44,7 +44,7 @@ class TxsBTCTTRSpider(TxsBTCSpider):
                     )
         elif self.source is not None:
             source_nodes.add(self.source)
-            self.task_map[self.source] = SyncTask(
+            self.task_map[self.source] = SyncSubgraphTask(
                 strategy=self.strategy_cls(
                     source=self.source,
                     alpha=self.alpha,

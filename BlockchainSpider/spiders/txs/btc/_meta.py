@@ -3,7 +3,7 @@ import datetime
 import scrapy
 
 from BlockchainSpider.items import SubgraphTxItem
-from BlockchainSpider.utils.apikey import JsonAPIKeyBucket
+from BlockchainSpider.utils.bucket import JsonAPIKeyBucket
 from BlockchainSpider.utils.url import RouterURLBuiler, QueryURLBuilder
 
 

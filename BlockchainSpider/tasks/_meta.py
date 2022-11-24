@@ -1,4 +1,4 @@
-class Task:
+class SubgraphTask:
     def __init__(self, strategy, **kwargs):
         self.strategy = strategy
         self.info = kwargs
@@ -14,3 +14,10 @@ class Task:
         self.is_closed = True
         self.strategy = None
 
+
+class MotifCounterTask:
+    def __init__(self, strategy):
+        self.strategy = strategy
+
+    def count(self, edges: list, **kwargs):
+        raise NotImplementedError()

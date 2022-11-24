@@ -2,12 +2,20 @@ import json
 import logging
 
 import scrapy
+from web3 import Web3
 
-from BlockchainSpider.items import LabelItem
+from BlockchainSpider import settings
+from BlockchainSpider.items import LabelReportItem, LabelAddressItem
 
 
 class LabelsCryptoScamDBSpider(scrapy.Spider):
     name = 'labels.cryptoscamdb'
+    custom_settings = {
+        'ITEM_PIPELINES': {
+            'BlockchainSpider.pipelines.LabelsPipeline': 299,
+            **getattr(settings, 'ITEM_PIPELINES', dict())
+        }
+    }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -32,8 +40,18 @@ class LabelsCryptoScamDBSpider(scrapy.Spider):
 
         for items in data['result'].values():
             for item in items:
-                yield LabelItem(
-                    net='',
-                    label=item.get('type', ''),
-                    info=item,
+                labels = list()
+                if item.get('category'): labels.append(item.get('category'))
+                if item.get('subcategory'): labels.append(item.get('subcategory'))
+                if item.get('type'): labels.append(item.get('type'))
+                yield LabelReportItem(
+                    labels=labels,
+                    urls=[item['url']] if item.get('url') else list(),
+                    addresses=[{**LabelAddressItem(
+                        net='ETH' if Web3.isAddress(item.get('address')) else '',
+                        address=item.get('address').lower(),
+                    )}],
+                    transactions=list(),
+                    description=item,
+                    reporter=item.get('reporter'),
                 )

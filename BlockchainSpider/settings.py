@@ -6,6 +6,7 @@
 #     https://docs.scrapy.org/en/latest/topics/settings.html
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+from scrapy.utils.reactor import install_reactor
 
 BOT_NAME = 'BlockchainSpider'
 
@@ -52,7 +53,7 @@ DEFAULT_REQUEST_HEADERS = {
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-    'BlockchainSpider.middlewares.TxsCacheMiddleware': 901,
+    'BlockchainSpider.middlewares.RequestCacheMiddleware': 901,
 }
 
 # Enable or disable extensions
@@ -64,10 +65,6 @@ DOWNLOADER_MIDDLEWARES = {
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'BlockchainSpider.pipelines.LabelsPipeline': 300,
-    'BlockchainSpider.pipelines.SubgraphTxsPipeline': 301,
-    'BlockchainSpider.pipelines.ImportancePipeline': 302,
-    'BlockchainSpider.pipelines.BlockPipeline': 303,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -85,12 +82,16 @@ ITEM_PIPELINES = {
 
 # Enable and configure HTTP caching (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
-# HTTPCACHE_ENABLED = True
+HTTPCACHE_ENABLED = True
 HTTPCACHE_EXPIRATION_SECS = 0
 HTTPCACHE_DIR = './cache'
 HTTPCACHE_IGNORE_HTTP_CODES = []
 HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 HTTPCACHE_GZIP = True
+
+# Enable asyncio
+TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
+install_reactor('twisted.internet.asyncioreactor.AsyncioSelectorReactor')
 
 # Log configure
 LOG_LEVEL = 'INFO'
@@ -99,7 +100,7 @@ LOG_LEVEL = 'INFO'
 DOWNLOAD_WARNSIZE = 33554432 * 2
 
 # APIKey configure
-APIKEYS_BUCKET = 'BlockchainSpider.utils.apikey.StaticAPIKeyBucket'
+APIKEYS_BUCKET = 'BlockchainSpider.utils.bucket.StaticAPIKeyBucket'
 APIKEYS = {
     "eth": [
         "7MM6JYY49WZBXSYFDPYQ3V7V3EMZWE4KJK"

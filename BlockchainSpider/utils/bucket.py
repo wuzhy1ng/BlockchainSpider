@@ -1,4 +1,5 @@
 import json
+import sys
 import time
 
 from twisted.internet.defer import DeferredLock
@@ -7,7 +8,7 @@ from BlockchainSpider import settings
 
 
 class APIKeyBucket:
-    def __init__(self, apikeys: list, kps: int):
+    def __init__(self, apikeys: [str], kps: int):
         self.apikeys = apikeys
         self.kps = kps
 
@@ -72,3 +73,46 @@ class JsonAPIKeyBucket(APIKeyBucket):
         key = self.apikeys[self._index]
         self._index = (self._index + 1) % len(self.apikeys)
         return key
+
+
+class ProvidersBucket:
+    def __init__(self, providers: [str], qps: int):
+        self.providers = providers
+        self.qps = qps
+
+        self._last_get_time = [0 for _ in range(len(self.providers))]
+        self._get_interval = 1 / (len(self.providers) * qps)
+        self._lock = DeferredLock()
+
+    def get(self) -> str:
+        # get lock
+        self._lock.acquire()
+
+        # choose a provider
+        idx, last_get_time = 0, sys.maxsize
+        for _idx, _last_get_time in enumerate(self._last_get_time):
+            if _last_get_time < last_get_time:
+                last_get_time = _last_get_time
+                idx = _idx
+
+        # get provider
+        now = time.time()
+        duration = now - last_get_time
+        if duration < self._get_interval:
+            time.sleep(self._get_interval - duration)
+        self._last_get_time[idx] = time.time()
+        provider = self.providers[idx]
+
+        # release lock and return provider
+        self._lock.release()
+        return provider
+
+
+class StaticProvidersBucket(ProvidersBucket):
+    def __init__(self, net: str, kps: int = 5):
+        providers = getattr(settings, 'PROVIDERS', None)
+        assert isinstance(providers, dict)
+
+        providers = providers.get(net, list())
+        assert len(providers) > 0
+        super().__init__(providers, kps)

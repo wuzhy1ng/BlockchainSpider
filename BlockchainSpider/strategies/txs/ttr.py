@@ -5,7 +5,12 @@ from BlockchainSpider.strategies import PushPopModel
 
 
 class TTR(PushPopModel):
-    def __init__(self, source, alpha: float = 0.15, beta: float = 0.8, epsilon: float = 1e-5):
+    def __init__(
+            self,
+            source, alpha: float = 0.15,
+            beta: float = 0.8,
+            epsilon: float = 1e-5,
+    ):
         super().__init__(source)
         self.alpha = alpha
         self.beta = beta
@@ -17,29 +22,32 @@ class TTR(PushPopModel):
     def pop(self):
         raise NotImplementedError()
 
-    def generate(self, func_get_data_with_kwargs, **kwargs):
-        raise NotImplementedError()
-
 
 class TTRBase(TTR):
     name = 'TTRBase'
 
-    def __init__(self, source, alpha: float = 0.15, beta: float = 0.8, epsilon=1e-5):
+    def __init__(
+            self,
+            source,
+            alpha: float = 0.15,
+            beta: float = 0.8,
+            epsilon: float = 1e-5,
+    ):
         super().__init__(source, alpha, beta, epsilon)
         self.p = dict()
         self.r = {source: 1.0}
         self._vis = set()
 
     def push(self, node, edges: list, **kwargs):
-        # residual vector空值判定
+        # init residual vector
         if self.r.get(node) is None:
             self.r[node] = 0
 
-        # 拷贝一份residual vector，原有的清空
+        # copy residual vector and clear old value
         r = self.r[node]
         self.r[node] = 0
 
-        # push过程
+        # push
         self._self_push(node, r)
         self._forward_push(node, edges, r)
         self._backward_push(node, edges, r)

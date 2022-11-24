@@ -3,7 +3,7 @@ import logging
 from BlockchainSpider.items import SubgraphTxItem, ImportanceItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.strategies import Haircut
-from BlockchainSpider.tasks import SyncTask
+from BlockchainSpider.tasks import SyncSubgraphTask
 
 
 class TxsETHHaircutSpider(TxsETHSpider):
@@ -21,7 +21,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
         if self.filename is not None:
             infos = self.load_task_info_from_json(self.filename)
             for i, info in enumerate(infos):
-                self.task_map[i] = SyncTask(
+                self.task_map[i] = SyncSubgraphTask(
                     strategy=Haircut(
                         source=info['source'],
                         min_weight=float(info.get('min_weight', 1e-3))
@@ -29,7 +29,7 @@ class TxsETHHaircutSpider(TxsETHSpider):
                     **info
                 )
         elif self.source is not None:
-            self.task_map[0] = SyncTask(
+            self.task_map[0] = SyncSubgraphTask(
                 strategy=Haircut(
                     source=self.source,
                     min_weight=self.min_weight

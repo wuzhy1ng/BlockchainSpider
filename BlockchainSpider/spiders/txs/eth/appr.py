@@ -1,9 +1,9 @@
 import logging
 
-from BlockchainSpider.items import SubgraphTxItem, ImportanceItem, CloseItem
+from BlockchainSpider.items import SubgraphTxItem, ImportanceItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.strategies import APPR
-from BlockchainSpider.tasks import SyncTask
+from BlockchainSpider.tasks import SyncSubgraphTask
 
 
 class TxsETHAPPRSpider(TxsETHSpider):
@@ -22,7 +22,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
         if self.filename is not None:
             infos = self.load_task_info_from_json(self.filename)
             for i, info in enumerate(infos):
-                self.task_map[i] = SyncTask(
+                self.task_map[i] = SyncSubgraphTask(
                     strategy=APPR(
                         source=info['source'],
                         alpha=float(info.get('alpha', 0.15)),
@@ -31,7 +31,7 @@ class TxsETHAPPRSpider(TxsETHSpider):
                     **info
                 )
         elif self.source is not None:
-            self.task_map[0] = SyncTask(
+            self.task_map[0] = SyncSubgraphTask(
                 strategy=APPR(
                     source=self.source,
                     alpha=self.alpha,

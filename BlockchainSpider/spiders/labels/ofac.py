@@ -1,12 +1,17 @@
-import os
-
 import scrapy
 
-from BlockchainSpider.items import LabelItem
+from BlockchainSpider import settings
+from BlockchainSpider.items import LabelReportItem, LabelAddressItem
 
 
 class LabelsOFACSpider(scrapy.Spider):
     name = 'labels.ofac'
+    custom_settings = {
+        'ITEM_PIPELINES': {
+            'BlockchainSpider.pipelines.LabelsPipeline': 299,
+            **getattr(settings, 'ITEM_PIPELINES', dict())
+        }
+    }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -20,7 +25,7 @@ class LabelsOFACSpider(scrapy.Spider):
             method='GET',
         )
 
-    def parse(self, response, **kwargs):
+    def parse(self, response: scrapy.http.HtmlResponse, **kwargs):
         response.selector.register_namespace("sdn", "http://tempuri.org/sdnList.xsd")
         for entry in response.xpath("//sdn:sdnEntry"):
             if not self._has_address(entry):
@@ -47,16 +52,22 @@ class LabelsOFACSpider(scrapy.Spider):
                 id_type = identity.xpath('./sdn:idType/text()').get()
                 id_number = identity.xpath('./sdn:idNumber/text()').get()
                 if id_type.find('Digital Currency Address') >= 0:
-                    yield LabelItem(
-                        net=id_type.replace('Digital Currency Address -', '').strip(),
-                        label=sdn_type,
-                        info={
+                    net = id_type.replace('Digital Currency Address -', '').strip()
+                    yield LabelReportItem(
+                        labels=[sdn_type],
+                        urls=list(),
+                        addresses=[{**LabelAddressItem(
+                            net=net if net != 'XBT' else 'BTC',
+                            address=id_number,
+                        )}],
+                        transactions=list(),
+                        description={
                             'uid': uid,
-                            'address': id_number,
                             'first_name': first_name,
                             'last_name': last_name,
                             'identities': identities,
-                        }
+                        },
+                        reporter='OFAC',
                     )
 
     def _has_address(self, entry):

@@ -1,7 +1,7 @@
-from ._meta import Task
+from ._meta import SubgraphTask
 
 
-class AsyncTask(Task):
+class AsyncSubgraphTask(SubgraphTask):
     def push(self, node, edges: list, **kwargs):
         if self.is_closed:
             return

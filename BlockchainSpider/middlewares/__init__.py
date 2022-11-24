@@ -1,1 +1,3 @@
-from .txs_cache import TxsCacheMiddleware
+from .cache import RequestCacheMiddleware
+from .selenium import SeleniumMiddleware
+from .tor import TorMiddleware

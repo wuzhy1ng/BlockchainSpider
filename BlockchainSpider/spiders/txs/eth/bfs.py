@@ -3,7 +3,7 @@ import logging
 from BlockchainSpider.items import SubgraphTxItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
 from BlockchainSpider.strategies import BFS
-from BlockchainSpider.tasks import AsyncTask
+from BlockchainSpider.tasks import AsyncSubgraphTask
 
 
 class TxsETHBFSSpider(TxsETHSpider):
@@ -21,7 +21,7 @@ class TxsETHBFSSpider(TxsETHSpider):
         if self.filename is not None:
             infos = self.load_task_info_from_json(self.filename)
             for i, info in enumerate(infos):
-                self.task_map[i] = AsyncTask(
+                self.task_map[i] = AsyncSubgraphTask(
                     strategy=BFS(
                         source=info['source'],
                         depth=int(info.get('depth', 2)),
@@ -29,7 +29,7 @@ class TxsETHBFSSpider(TxsETHSpider):
                     **info
                 )
         elif self.source is not None:
-            self.task_map[0] = AsyncTask(
+            self.task_map[0] = AsyncSubgraphTask(
                 strategy=BFS(
                     source=self.source,
                     depth=self.depth,

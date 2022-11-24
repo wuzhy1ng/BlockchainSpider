@@ -6,20 +6,37 @@ import scrapy
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 
-from BlockchainSpider.items import LabelItem
+from BlockchainSpider import settings
+from BlockchainSpider.items import LabelAddressItem, LabelTransactionItem, LabelReportItem
 
 
 class LabelsCloudSpider(scrapy.Spider):
     name = 'labels.labelcloud'
+    custom_settings = {
+        'DOWNLOADER_MIDDLEWARES': {
+            'BlockchainSpider.middlewares.SeleniumMiddleware': 900,
+            **getattr(settings, 'DOWNLOADER_MIDDLEWARES', dict())
+        },
+        'ITEM_PIPELINES': {
+            'BlockchainSpider.pipelines.LabelsPipeline': 299,
+            **getattr(settings, 'ITEM_PIPELINES', dict())
+        }
+    }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.driver_options = webdriver.ChromeOptions()
-        # self.driver_options.binary_location = '/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev'
+        self.driver = webdriver.Chrome(options=self.driver_options)
 
         self.site = kwargs.get('site', 'etherscan')
+        self.site2net = {
+            'etherscan': 'eth',
+            'bscscan': 'bsc',
+            'polygonscan': 'polygon',
+            'hecoinfo': 'heco',
+        }
         self._allow_site = {
-            'etherscan': 'https://cn.etherscan.com',
+            'etherscan': 'https://etherscan.io',
             'bscscan': 'https://bscscan.com',
             'polygonscan': 'https://polygonscan.com',
             'hecoinfo': 'https://hecoinfo.com'
@@ -28,10 +45,9 @@ class LabelsCloudSpider(scrapy.Spider):
 
         self.url_site = self._allow_site[self.site]
         self.url_label_cloud = self.url_site + '/labelcloud'
-        self.page_size = 100
+        self.page_size = int(kwargs.get('size', 100))
 
         self.out_dir = kwargs.get('out', './data')
-
         self.label_names = kwargs.get('labels', None)
         if self.label_names is not None:
             self.label_names = self.label_names.split(',')
@@ -40,42 +56,32 @@ class LabelsCloudSpider(scrapy.Spider):
 
     def start_requests(self):
         # open selenium to login in
-        driver = webdriver.Chrome(options=self.driver_options)
-        driver.get(self.url_site + '/login')
+        self.driver.get(self.url_site + '/login')
         WebDriverWait(
-            driver=driver,
+            driver=self.driver,
             timeout=300,
         ).until(lambda d: d.current_url.find('myaccount') > 0)
-        raw_cookies = driver.get_cookies()
-        driver.quit()
-
-        # get cookies
-        session_cookie = dict()
-        for c in raw_cookies:
-            if c.get('name') == 'ASP.NET_SessionId':
-                session_cookie['ASP.NET_SessionId'] = c['value']
-                break
 
         # generate request for label cloud
         yield scrapy.Request(
             url=self.url_label_cloud,
             method='GET',
-            cookies=session_cookie,
+            cookies=self.driver.get_cookies(),
             callback=self.parse_label_cloud,
         )
 
     def parse_label_cloud(self, response, **kwargs):
-        def _in_categories(category: str, categories: list) -> bool:
+        def _get_categories(category: str, categories: list) -> str:
             for _c in categories:
                 if category.lower().find(_c) >= 0:
-                    return True
-            return False
+                    return _c
 
         root_url = '%s://%s' % (urlsplit(response.url).scheme, urlsplit(response.url).netloc)
         for a in response.xpath('//div[contains(@class,"dropdown-menu")]//a'):
             category = a.extract()
             category = re.sub('<.*?>', '', category)
-            if not _in_categories(category, self.label_categories):
+            category = _get_categories(category, self.label_categories)
+            if not category:
                 continue
 
             href = a.xpath('@href').get()
@@ -88,7 +94,7 @@ class LabelsCloudSpider(scrapy.Spider):
                 method='GET',
                 cookies=response.request.cookies,
                 callback=self.parse_label_navigation,
-                cb_kwargs=dict(size=size)
+                cb_kwargs=dict(size=size, category=category)
             )
             if self.label_names is None:
                 yield request
@@ -98,11 +104,7 @@ class LabelsCloudSpider(scrapy.Spider):
                         yield request
 
     def parse_label_navigation(self, response, **kwargs):
-        label = ','.join([
-            response.xpath('//h1/text()').get(),
-            response.xpath('//h1/span/text()').get()
-        ])
-
+        label = response.xpath('//h1/span/text()').get()
         base_url = urljoin(
             base='%s://%s' % (urlsplit(response.url).scheme, urlsplit(response.url).netloc),
             url=urlsplit(response.url).path,
@@ -131,7 +133,7 @@ class LabelsCloudSpider(scrapy.Spider):
                         cookies=response.request.cookies,
                         callback=self.parse_labels,
                         dont_filter=True,
-                        cb_kwargs={'label': label}
+                        cb_kwargs=dict(label=label, category=kwargs.get('category')),
                     )
                     start += self.page_size
         else:
@@ -152,13 +154,13 @@ class LabelsCloudSpider(scrapy.Spider):
                     cookies=response.request.cookies,
                     callback=self.parse_labels,
                     dont_filter=True,
-                    cb_kwargs={'label': label}
+                    cb_kwargs=dict(label=label, category=kwargs.get('category')),
                 )
                 start += self.page_size
 
     def parse_labels(self, response, **kwargs):
         self.log(
-            message='Extracting items from: ' + response.url,
+            message='Extracting items from ' + response.url,
             level=logging.INFO
         )
         label = kwargs.get('label')
@@ -173,8 +175,23 @@ class LabelsCloudSpider(scrapy.Spider):
             info = dict(url=response.url)
             for i, td in enumerate(row.xpath('./td').extract()):
                 info[info_headers[i]] = re.sub('<.*?>', '', td)
-            yield LabelItem(
-                net='eth',
-                label=label,
-                info=info,
+            addresses = list()
+            transactions = list()
+            if kwargs.get('category') == 'accounts' or kwargs.get('category') == 'tokens':
+                addresses.append({**LabelAddressItem(
+                    net=self.site2net[self.site],
+                    address=info.get('Address', info.get('ContractAddress')),
+                )})
+            if kwargs.get('category') == 'transactions':
+                transactions.append({**LabelTransactionItem(
+                    net=self.site2net[self.site],
+                    transaction_hash=info.get('TxnHash'),
+                )})
+            yield LabelReportItem(
+                labels=[label],
+                urls=list(),
+                addresses=addresses,
+                transactions=transactions,
+                description=info,
+                reporter=self.site,
             )

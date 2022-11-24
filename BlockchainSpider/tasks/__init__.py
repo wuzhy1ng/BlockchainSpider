@@ -1,2 +1,2 @@
-from .asynchronous import AsyncTask
-from .synchronize import SyncTask
+from .asynchronous import AsyncSubgraphTask
+from .synchronize import SyncSubgraphTask

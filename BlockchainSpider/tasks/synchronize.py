@@ -1,9 +1,9 @@
 from collections import Iterator
 
-from ._meta import Task
+from ._meta import SubgraphTask, MotifCounterTask
 
 
-class SyncTask(Task):
+class SyncSubgraphTask(SubgraphTask):
     def __init__(self, strategy, **kwargs):
         super().__init__(strategy, **kwargs)
         self._cache = list()
@@ -40,9 +40,7 @@ class SyncTask(Task):
     def is_locked(self):
         if self.is_closed:
             return
-
-        if self._mux < 0:
-            return True
+        return self._mux < 0
 
     def fuse(self, node, **kwargs):
         if self.is_closed:
@@ -58,3 +56,26 @@ class SyncTask(Task):
 
         item = self.strategy.pop()
         return item
+
+
+class SyncMotifCounterTask(MotifCounterTask):
+    def __init__(self, strategy):
+        super().__init__(strategy)
+        self._cache = list()
+        self._mux = 0
+
+    def count(self, edges: list, **kwargs):
+        self._mux += 1
+        self._cache.extend(edges)
+
+        if self.is_locked():
+            return
+        rlt = self.strategy.count(self._cache)
+        self._cache = list()
+        return rlt
+
+    def wait(self):
+        self._mux -= 1
+
+    def is_locked(self):
+        return self._mux < 0

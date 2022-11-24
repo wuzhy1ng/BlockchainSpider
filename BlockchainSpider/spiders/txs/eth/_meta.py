@@ -10,6 +10,12 @@ from BlockchainSpider.utils.url import QueryURLBuilder
 class TxsETHSpider(scrapy.Spider):
     # Target original url configure
     TXS_API_URL = 'https://api-cn.etherscan.com/api'
+    custom_settings = {
+        'ITEM_PIPELINES': {
+            'BlockchainSpider.pipelines.SubgraphTxsPipeline': 298,
+            'BlockchainSpider.pipelines.ImportancePipeline': 299,
+        }
+    }
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

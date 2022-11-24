@@ -1,17 +1,15 @@
-import hashlib
-import json
 import re
 import urllib.parse
 from collections.abc import Generator
 
 import scrapy
 from bitcoin import is_address as is_btc_address
-from web3 import Web3
 from summa.keywords import keywords
 from summa.summarizer import summarize
+from web3 import Web3
 
 from BlockchainSpider import settings
-from BlockchainSpider.items import LabelItem
+from BlockchainSpider.items import LabelReportItem, LabelAddressItem, LabelTransactionItem
 
 
 class LabelsWebSpider(scrapy.Spider):
@@ -123,68 +121,56 @@ class LabelsWebSpider(scrapy.Spider):
     ) -> Generator:
         # generate btc label item
         for addr in self._generate_btc_address(extract_text):
-            kws = keywords(summary_text, split=True, words=self.keywords)
-            info = {
-                'address': addr,
-                'keywords': kws,
-                'summary': summarize(summary_text, words=self.summary),
-                'url': url,
-            }
-            yield LabelItem(
-                _id=hashlib.sha256(json.dumps(info).encode()).hexdigest(),
-                net='BTC-Like',
-                category='address',
-                labels=kws,
-                info=info
+            yield LabelReportItem(
+                labels=keywords(summary_text, split=True, words=self.keywords),
+                urls=list(),
+                addresses=[{**LabelAddressItem(
+                    net='BTC-Like',
+                    address=addr,
+                )}],
+                transactions=list(),
+                description=summarize(summary_text, words=self.summary),
+                reporter=url,
             )
 
         # generate eth label item
         for addr in self._generate_eth_address(extract_text):
-            kws = keywords(summary_text, split=True, words=self.keywords)
-            info = {
-                'address': addr,
-                'keywords': kws,
-                'summary': summarize(summary_text, words=self.summary),
-                'url': url,
-            }
-            yield LabelItem(
-                _id=hashlib.sha256(json.dumps(info).encode()).hexdigest(),
-                net='ETH-Like',
-                category='address',
-                labels=kws,
-                info=info
+            yield LabelReportItem(
+                labels=keywords(summary_text, split=True, words=self.keywords),
+                urls=list(),
+                addresses=[{**LabelAddressItem(
+                    net='ETH-Like',
+                    address=addr,
+                )}],
+                transactions=list(),
+                description=summarize(summary_text, words=self.summary),
+                reporter=url,
             )
 
         # generate BTC transaction label item
         for txhash in self._generate_btc_transaction(extract_text):
-            kws = keywords(summary_text, split=True, words=self.keywords)
-            info = {
-                'transaction': txhash,
-                'keywords': kws,
-                'summary': summarize(summary_text, words=self.summary),
-                'url': url,
-            }
-            yield LabelItem(
-                _id=hashlib.sha256(json.dumps(info).encode()).hexdigest(),
-                net='BTC-Like',
-                category='transaction',
-                labels=kws,
-                info=info
+            yield LabelReportItem(
+                labels=keywords(summary_text, split=True, words=self.keywords),
+                urls=list(),
+                addresses=list(),
+                transactions=[{**LabelTransactionItem(
+                    net='BTC-Like',
+                    transaction_hash=txhash,
+                )}],
+                description=summarize(summary_text, words=self.summary),
+                reporter=url,
             )
 
         # generate ETH transaction label item
         for txhash in self._generate_eth_transaction(extract_text):
-            kws = keywords(summary_text, split=True, words=self.keywords)
-            info = {
-                'transaction': txhash,
-                'keywords': kws,
-                'summary': summarize(summary_text, words=self.summary),
-                'url': url,
-            }
-            yield LabelItem(
-                _id=hashlib.sha256(json.dumps(info).encode()).hexdigest(),
-                net='ETH-Like',
-                category='transaction',
-                labels=kws,
-                info=info
+            yield LabelReportItem(
+                labels=keywords(summary_text, split=True, words=self.keywords),
+                urls=list(),
+                addresses=list(),
+                transactions=[{**LabelTransactionItem(
+                    net='ETH-Like',
+                    transaction_hash=txhash,
+                )}],
+                description=summarize(summary_text, words=self.summary),
+                reporter=url,
             )

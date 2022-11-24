@@ -10,10 +10,7 @@ from urllib.parse import urlparse, parse_qs, urlencode
 from scrapy.downloadermiddlewares.httpcache import HttpCacheMiddleware
 from scrapy.exceptions import IgnoreRequest
 from scrapy.http import Request, Response
-from scrapy.settings import Settings
 from scrapy.spiders import Spider
-from scrapy.statscollectors import StatsCollector
-from scrapy.utils.misc import load_object
 
 
 def _decorator_ignore_request_apikey(func):
@@ -91,14 +88,7 @@ def _decorator_ignore_error_status_response(func):
     return wrapper
 
 
-class TxsCacheMiddleware(HttpCacheMiddleware):
-
-    def __init__(self, settings: Settings, stats: StatsCollector) -> None:
-        self.policy = load_object(settings['HTTPCACHE_POLICY'])(settings)
-        self.storage = load_object(settings['HTTPCACHE_STORAGE'])(settings)
-        self.ignore_missing = settings.getbool('HTTPCACHE_IGNORE_MISSING')
-        self.stats = stats
-
+class RequestCacheMiddleware(HttpCacheMiddleware):
     @_decorator_ignore_request_apikey
     def process_request(self, request, spider):
         if request.meta.get('dont_cache', False):

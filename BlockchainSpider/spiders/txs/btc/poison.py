@@ -4,7 +4,7 @@ import logging
 
 from BlockchainSpider.spiders.txs.btc._meta import TxsBTCSpider
 from BlockchainSpider.strategies import Poison
-from BlockchainSpider.tasks import AsyncTask
+from BlockchainSpider.tasks import AsyncSubgraphTask
 
 
 class TxsBTCBFSSpider(TxsBTCSpider):
@@ -24,13 +24,13 @@ class TxsBTCBFSSpider(TxsBTCSpider):
             with open(self.filename, 'r') as f:
                 for row in csv.reader(f):
                     source_nodes.add(row[0])
-                    self.task_map[row[0]] = AsyncTask(
+                    self.task_map[row[0]] = AsyncSubgraphTask(
                         strategy=Poison(source=row[0], depth=self.depth),
                         source=row[0],
                     )
         elif self.source is not None:
             source_nodes.add(self.source)
-            self.task_map[self.source] = AsyncTask(
+            self.task_map[self.source] = AsyncSubgraphTask(
                 strategy=Poison(source=self.source, depth=self.depth),
                 source=self.source,
             )

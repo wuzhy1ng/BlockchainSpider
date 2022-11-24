@@ -5,7 +5,7 @@ import time
 
 from BlockchainSpider.spiders.txs.btc._meta import TxsBTCSpider
 from BlockchainSpider.strategies import Haircut
-from BlockchainSpider.tasks import SyncTask
+from BlockchainSpider.tasks import SyncSubgraphTask
 
 
 class TxsBTCHaircutSpider(TxsBTCSpider):
@@ -25,13 +25,13 @@ class TxsBTCHaircutSpider(TxsBTCSpider):
             with open(self.filename, 'r') as f:
                 for row in csv.reader(f):
                     source_nodes.add(row[0])
-                    self.task_map[row[0]] = SyncTask(
+                    self.task_map[row[0]] = SyncSubgraphTask(
                         strategy=Haircut(source=row[0], min_weight=self.min_weight),
                         source=row[0],
                     )
         elif self.source is not None:
             source_nodes.add(self.source)
-            self.task_map[self.source] = SyncTask(
+            self.task_map[self.source] = SyncSubgraphTask(
                 strategy=Haircut(source=self.source, min_weight=self.min_weight),
                 source=self.source,
             )

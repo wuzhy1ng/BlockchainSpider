@@ -1,9 +1,9 @@
 import logging
 
 from BlockchainSpider import strategies
-from BlockchainSpider.items import SubgraphTxItem, ImportanceItem, CloseItem
+from BlockchainSpider.items import SubgraphTxItem, ImportanceItem
 from BlockchainSpider.spiders.txs.eth._meta import TxsETHSpider
-from BlockchainSpider.tasks import SyncTask
+from BlockchainSpider.tasks import SyncSubgraphTask
 
 
 class TxsETHTTRSpider(TxsETHSpider):
@@ -32,7 +32,7 @@ class TxsETHTTRSpider(TxsETHSpider):
                 assert strategy in TxsETHTTRSpider.allow_strategies
                 strategy = getattr(strategies, strategy)
 
-                self.task_map[i] = SyncTask(
+                self.task_map[i] = SyncSubgraphTask(
                     strategy=strategy(
                         source=info['source'],
                         alpha=float(info.get('alpha', 0.15)),
@@ -42,7 +42,7 @@ class TxsETHTTRSpider(TxsETHSpider):
                     **{k: v for k, v in info.items() if k != 'strategy'}
                 )
         elif self.source is not None:
-            self.task_map[0] = SyncTask(
+            self.task_map[0] = SyncSubgraphTask(
                 strategy=self.strategy_cls(
                     source=self.source,
                     alpha=self.alpha,
