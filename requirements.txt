@@ -1,5 +1,6 @@
 scrapy==2.7.0
 aiohttp
+aiohttp_socks
 bitcoin
 networkx
 numpy
