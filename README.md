@@ -27,8 +27,6 @@ And then install the dependencies:
 pip install -r requirements.txt
 ```
 
-For more information, please refer to the document in `./docs/html/index.html`.
-
 
 
 ### 🔍Crawl a transaction subgraph
