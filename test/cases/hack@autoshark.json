@@ -1,0 +1,23 @@
+{
+  "name": "AutoShark Hack",
+  "net": "bsc",
+  "blockAt": 12187368,
+  "reporter": "Peckshield",
+  "url": "https://twitter.com/peckshield/status/1455095236707774469?s=20",
+  "source": [
+    {
+      "address": "0xfcf6738cabd9ce27f908a480ecaea53219fc08f4",
+      "label": "Hacker"
+    }
+  ],
+  "target": [
+    {
+      "address": "0x371725dac6963d443c926a227ed256abd3fa03e6",
+      "label": "Gather fund to Tornado.Cash"
+    },
+    {
+      "address": "0x0000000000000000000000000000000000000000",
+      "label": "Cross Chain to ETH"
+    }
+  ]
+}

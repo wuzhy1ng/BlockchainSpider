@@ -1,0 +1,23 @@
+{
+  "name": "Lendf.Me Hack",
+  "net": "eth",
+  "blockAt": 9899666,
+  "reporter": "SlowMist",
+  "url": "https://hacked.slowmist.io/en/",
+  "source": [
+    {
+      "address": "0xa9bf70a420d364e923c74448d9d817d3f2a77822",
+      "label": "Hacker"
+    }
+  ],
+  "target": [
+    {
+      "address": "0x862ae9d72da6b0cf93c58fcbd70e5d1172b3e7a0",
+      "label": ""
+    },
+    {
+      "address": "0xa6a6783828ab3e4a9db54302bc01c4ca73f17efb",
+      "label": "Lendf.me Admin"
+    }
+  ]
+}

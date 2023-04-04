@@ -1,0 +1,31 @@
+{
+    "name": "Cryptopia Hack",
+    "net": "eth",
+    "blockAt": 7798053,
+    "reporter": "Peckshield",
+    "url": "https://trace.coinholmes.com",
+    "source": [
+      {
+        "address": "0xd4e79226f1e5a7a28abb58f4704e53cd364e8d11",
+        "label": "Cryptopia"
+      }
+    ],
+    "target": [
+      {
+        "address": "0x8d12a197cb00d4747a1fe03395095ce2a5cc6819",
+        "label": "EtherDelta"
+      },
+      {
+        "address": "0x621e2e9f1cdc03add35ab930b074f9419f294045",
+        "label": "EtherDelta"
+      },
+      {
+        "address": "0x7d90b19c1022396b525c64ba70a293c3142979b7",
+        "label": "EtherDelta"
+      },
+      {
+        "address": "0xc5883084a66ac9e08379256269c18345ccefe458",
+        "label": "EtherDelta"
+      }
+    ]
+  }

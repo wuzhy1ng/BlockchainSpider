@@ -1,0 +1,39 @@
+{
+  "name": "TokenStore Rug Pull",
+  "net": "eth",
+  "blockAt": 7992750,
+  "reporter": "Peckshield",
+  "url": "https://trace.coinholmes.com",
+  "source": [
+    {
+      "address": "0x068ac6ed5efc38a6266261b4486a8907fd7ea15f",
+      "label": "TokenStore"
+    }
+  ],
+  "target": [
+    {
+      "address": "0xf0d9fcb4fefdbd3e7929374b4632f8ad511bd7e3",
+      "label": "ZB"
+    },
+    {
+      "address": "0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be",
+      "label": "Binance"
+    },
+    {
+      "address": "0x876eabf441b2ee5b5b0554fd502a8e0600950cfa",
+      "label": "OKEx"
+    },
+    {
+      "address": "0x034f854b44d28e26386c1bc37ff9b20c6380b00d",
+      "label": "Huobi"
+    },
+    {
+      "address": "0xf775a9a0ad44807bc15936df0ee68902af1a0eee",
+      "label": "Huobi"
+    },
+    {
+      "address": "0x4b729cf402cfcffd057e254924b32241aedc1795",
+      "label": "Bit-Z"
+    }
+  ]
+}

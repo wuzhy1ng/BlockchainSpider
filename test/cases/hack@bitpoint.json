@@ -1,0 +1,23 @@
+{
+  "name": "Bitpoint Hack",
+  "net": "eth",
+  "blockAt": 8139592,
+  "reporter": "CoinDesk",
+  "url": "https://www.coindeskjapan.com/14385/",
+  "source": [
+    {
+      "address": "0x0e57edba0fccb1e388926193c873120cab961fee",
+      "label": "Hacker"
+    }
+  ],
+  "target": [
+    {
+      "address": "0xf5bec430576ff1b82e44ddb5a1c93f6f9d0884f3",
+      "label": "Yobit.net"
+    },
+    {
+      "address": "0x1503b6cb665fea9a128a56244df392e950593486",
+      "label": "Bitpoint Hacker 2"
+    }
+  ]
+}

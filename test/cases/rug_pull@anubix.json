@@ -1,0 +1,22 @@
+{
+  "name": "AnubixDAO Rug pull",
+  "net": "eth",
+  "blockAt": 13506456,
+  "reporter": "Wu Blockchain",
+  "url": "https://twitter.com/WuBlockchain/status/1454071627919106056",
+  "source": [
+    {
+      "address": "0x872254d530ae8983628cb1eaafc51f78d78c86d9",
+      "label": "AnubixDAO"
+    }
+  ],
+  "target": [
+    {
+      "address": "0x9fc53c75046900d1f58209f50f534852ae9f912a",
+      "label": "AnubisDAO Liquidity Rug 2"
+    },{
+      "address": "0xb1302743acf31f567e9020810523f5030942e211",
+      "label": "AnubisDAO Liquidity Rug 3"
+    }
+  ]
+}

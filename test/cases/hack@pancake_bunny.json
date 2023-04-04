@@ -1,0 +1,23 @@
+{
+  "name": "Pancake Bunny Hack",
+  "net": "bsc",
+  "blockAt": 7553676,
+  "reporter": "Pechshield",
+  "url": "https://peckshield.medium.com/pancakebunny-incident-root-cause-analysis-7099f413cc9b",
+  "source": [
+    {
+      "address": "0xa0acc61547f6bd066f7c9663c17a312b6ad7e187",
+      "label": "Hacker"
+    }
+  ],
+  "target": [
+    {
+      "address": "0x158c244b62058330f2c328c720b072d8db2c612f",
+      "label": "Bunny Finance Exploiter 2"
+    },
+    {
+      "address": "0x0000000000000000000000000000000000000000",
+      "label": "Cross Chain to ETH"
+    }
+  ]
+}

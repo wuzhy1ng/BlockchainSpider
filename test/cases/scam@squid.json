@@ -1,0 +1,19 @@
+{
+  "name": "SQUID Phish Scam",
+  "net": "bsc",
+  "blockAt": 12174452,
+  "reporter": "CoinDesk",
+  "url": "https://www.coindesk.com/markets/2021/11/01/squid-game-token-crashes-developers-say-theyve-left-the-project/",
+  "source": [
+    {
+      "address": "0xc84b0601906513c6c55ffd525f40c43d57aec240",
+      "label": "Squid Finance: Deployer"
+    }
+  ],
+  "target": [
+    {
+      "address": "0x8894e0a0c962cb723c1976a4421c95949be2d4e3",
+      "label": "Binance: Hot Wallet"
+    }
+  ]
+}

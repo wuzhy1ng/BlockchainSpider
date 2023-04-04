@@ -1,0 +1,22 @@
+{
+  "name": "Arbix Finance Rug Pull",
+  "net": "eth",
+  "blockAt": 13937336,
+  "reporter": "REKT",
+  "url": "https://rekt.news/zh/arbix-rekt/",
+  "source": [
+    {
+      "address": "0x4714a26e4e2e1334c80575332ec9eb043b61a2c4",
+      "label": "Arbix"
+    }
+  ],
+  "target": [
+    {
+      "address": "0x722122df12d4e14e13ac3b6895a86e84145b6967",
+      "label": "Tornado.Cash"
+    },{
+      "address": "0x2057cfb9fd11837d61b294d514c5bd03e5e7189a",
+      "label": "1inch.exchange"
+    }
+  ]
+}

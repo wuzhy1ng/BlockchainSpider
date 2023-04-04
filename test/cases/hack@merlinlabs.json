@@ -1,0 +1,19 @@
+{
+  "name": "Merlin Labs Hack",
+  "net": "bsc",
+  "blockAt": 8713133,
+  "reporter": "Certik",
+  "url": "https://www.certik.com/skytrace",
+  "source": [
+    {
+      "address": "0x2bada393e53d0373788d15fd98cb5fb1441645bd",
+      "label": "Hacker"
+    }
+  ],
+  "target": [
+    {
+      "address": "0x0000000000000000000000000000000000000000",
+      "label": "Cross Chain to ETH"
+    }
+  ]
+}

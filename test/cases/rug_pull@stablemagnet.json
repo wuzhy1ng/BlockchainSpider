@@ -1,0 +1,22 @@
+{
+  "name": "StableMagnet Rug Pull",
+  "net": "bsc",
+  "blockAt": 8551765,
+  "reporter": "REKT",
+  "url": "https://rekt.news/stablemagnet-rekt/",
+  "source": [
+    {
+      "address": "0xb89e9365cb5bacfcf4a4b0386dfad45c3b4d3258",
+      "label": "StableMagnet Swap Contract"
+    }
+  ],
+  "target": [
+    {
+      "address": "0x8894e0a0c962cb723c1976a4421c95949be2d4e3",
+      "label": "Binance: Hot Wallet"
+    },{
+      "address": "0x2bac04457e5de654cf1600b803e714c2c3fb96d7",
+      "label": "Send BUSD to Binance"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "Kucoin Hack",
+  "net": "eth",
+  "blockAt": 10933499,
+  "reporter": "Chainalysis",
+  "url": "https://blog.chainalysis.com/reports/kucoin-hack-2020-defi-uniswap/",
+  "source": [
+    {
+      "address": "0xeb31973e0febf3e3d7058234a5ebbae1ab4b8c23",
+      "label": "Hacker"
+    }
+  ],
+  "target": [
+    {
+      "address": "0x00600423c03ec4b46f9b8a28c66d42bdd1b19c36",
+      "label": "Aggregate Address@REKT"
+    },{
+      "address": "0xf519e276958c3ef2dffd9b6b2d87d26859526505",
+      "label": "Aggregate Address@REKT"
+    },{
+      "address": "0x905b63fff465b9ffbf41dea908ceb12478ec7601",
+      "label": "Tornado.Cash"
+    }
+  ]
+}
