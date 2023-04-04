@@ -34,7 +34,7 @@ class TxsETHSpider(scrapy.Spider):
         # output fields
         self.out_fields = kwargs.get(
             'fields',
-            'id,hash,from,to,value,timeStamp,blockNumber,tokenSymbol,contractAddress'
+            'id,hash,from,to,value,timeStamp,blockNumber,symbol,contractAddress'
         ).split(',')
         self.info['out_fields'] = self.out_fields
 
@@ -82,7 +82,7 @@ class TxsETHSpider(scrapy.Spider):
                 item['out_dir'] = item.get('out', './data')
                 item['out_fields'] = item.get(
                     'fields',
-                    'id,hash,from,to,value,timeStamp,blockNumber,tokenSymbol,contractAddress'
+                    'id,hash,from,to,value,timeStamp,blockNumber,symbol,contractAddress'
                 ).split(',')
                 item['txs_types'] = item.get('types', 'external').split(',')
                 item['start_blk'] = int(item.get('start_blk', 0))

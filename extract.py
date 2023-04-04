@@ -4,7 +4,8 @@ import extractors
 
 router = {
     'deduplicate': extractors.DeduplicateExtractor,
-    'localcomm': extractors.LocalCommunityExtractor
+    'localcomm': extractors.LocalCommunityExtractor,
+    'merge': extractors.MergeExtractor,
 }
 
 if __name__ == '__main__':

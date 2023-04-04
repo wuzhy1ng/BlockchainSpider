@@ -1,6 +1,7 @@
 scrapy==2.7.0
 aiohttp
 aiohttp_socks
+async_lru
 bitcoin
 networkx
 numpy
@@ -8,3 +9,4 @@ scipy
 selenium
 summa
 web3
+git+https://github.com/jaybaird/python-bloomfilter/

@@ -1,5 +1,3 @@
-![](http://120.78.210.226:8000/logo.jpg)
-
 # BlockchainSpider
 
 Blockchain spiders aim to collect data of public chains, including:
