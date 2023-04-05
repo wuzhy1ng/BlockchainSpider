@@ -75,7 +75,7 @@ class TxsETHSpider(scrapy.Spider):
 
     def load_task_info_from_json(self, fn: str):
         infos = list()
-        with open(fn, 'r') as f:
+        with open(fn, 'r', encoding='utf-8') as f:
             data = json.load(f)
             assert isinstance(data, list)
             for item in data:

@@ -95,18 +95,8 @@ class TxsETHBFSSpider(TxsETHSpider):
             cur_depth=kwargs['depth'],
         )
 
-        # next address request
-        if txs is None or len(txs) < 10000 or task.info['auto_page'] is False:
-            for item in task.pop():
-                yield from self.gen_txs_requests(
-                    address=item['node'],
-                    depth=item['depth'],
-                    startblock=task.info['start_blk'],
-                    endblock=task.info['end_blk'],
-                    task_id=tid,
-                )
         # next page request
-        else:
+        if task.info['auto_page'] and len(txs) > 0:
             yield func_next_page_request(
                 address=kwargs['address'],
                 **{
@@ -115,6 +105,17 @@ class TxsETHBFSSpider(TxsETHSpider):
                     'depth': kwargs['depth'],
                     'task_id': kwargs['task_id']
                 }
+            )
+            return
+
+        # next address request
+        for item in task.pop():
+            yield from self.gen_txs_requests(
+                address=item['node'],
+                depth=item['depth'],
+                startblock=task.info['start_blk'],
+                endblock=task.info['end_blk'],
+                task_id=tid,
             )
 
     def parse_external_txs(self, response, **kwargs):
