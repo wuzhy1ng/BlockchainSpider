@@ -111,13 +111,3 @@ class SyncMiddleware(LogMiddleware):
                 level=logging.INFO,
             )
             return SyncSignalItem(signal=value)
-
-        # generate item
-        # if self.request_parent[root_fingerprint] == 1:
-        #     del self.request_parent[root_fingerprint]
-        #     value = self.sync_items.pop(root_fingerprint)
-        #     self.log(
-        #         message="Synchronized block data to #{}.".format(value['block_number']),
-        #         level=logging.INFO,
-        #     )
-        #     return SyncSignalItem(signal=value)
