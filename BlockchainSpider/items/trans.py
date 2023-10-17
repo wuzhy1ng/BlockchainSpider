@@ -134,7 +134,7 @@ class TokenApprovalAllItem(scrapy.Item):
 
 
 class TokenMetadataItem(scrapy.Item):
-    address = scrapy.Field()  # str
+    contract_address = scrapy.Field()  # str
     name = scrapy.Field()  # str
     token_symbol = scrapy.Field()  # str
     decimals = scrapy.Field()  # int

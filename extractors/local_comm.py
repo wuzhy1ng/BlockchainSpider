@@ -1,7 +1,6 @@
 import argparse
 import csv
 import os
-import shutil
 
 import networkx as nx
 
@@ -33,8 +32,8 @@ class LocalCommunityExtractor(BaseExtractor):
             out_txs_fn = os.path.join(self.args.out_dir, fn)
             print('processing %s >> %s' % (in_txs_fn, out_txs_fn))
 
-            if os.path.isdir(in_txs_fn):
-                shutil.copytree(in_txs_fn, out_txs_fn)
+            if os.path.isdir(in_txs_fn) and not os.path.exists(out_txs_fn):
+                os.makedirs(out_txs_fn)
                 continue
 
             # load graph
@@ -47,11 +46,11 @@ class LocalCommunityExtractor(BaseExtractor):
                     g.add_edge(tx.get('from'), tx.get('to'))
 
             # load importance
-            p = dict()
+            p, importance_header = dict(), None
             in_importance_fn = os.path.join(self.args.in_dir, 'importance', fn)
             with open(in_importance_fn, 'r') as f:
                 reader = csv.reader(f)
-                _ = next(reader)
+                importance_header = next(reader)
                 for row in reader:
                     p[row[0]] = float(row[1])
 
@@ -59,8 +58,18 @@ class LocalCommunityExtractor(BaseExtractor):
             source = fn.split('.')[0]
             local_comm_nodes = self._local_comm(source, g, p)
 
+            # write node for output
+            with open(
+                    os.path.join(self.args.out_dir, 'importance', fn), 'w',
+                    newline='\n', encoding='utf-8'
+            ) as f:
+                out_writer = csv.writer(f)
+                out_writer.writerow(importance_header)
+                for node in local_comm_nodes:
+                    out_writer.writerow([node, p[node]])
+
             # write tx for output
-            out_file = open(out_txs_fn, 'w', newline='', encoding='utf-8')
+            out_file = open(out_txs_fn, 'w', newline='\n', encoding='utf-8')
             out_writer = csv.writer(out_file)
             with open(in_txs_fn, 'r', encoding='utf-8') as f:
                 reader = csv.reader(f)

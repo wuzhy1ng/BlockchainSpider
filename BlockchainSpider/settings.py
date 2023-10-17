@@ -20,7 +20,7 @@ NEWSPIDER_MODULE = 'BlockchainSpider.spiders'
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 16
+CONCURRENT_REQUESTS = 1.5
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
@@ -46,14 +46,14 @@ DEFAULT_REQUEST_HEADERS = {
 
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
-# SPIDER_MIDDLEWARES = {
-#    'BlockchainSpider.middlewares.BlockchainspiderSpiderMiddleware': 543,
-# }
+SPIDER_MIDDLEWARES = {
+   # 'contrib.mots.middlewares.MoTSMiddleware': 500,
+}
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-    'BlockchainSpider.middlewares.RequestCacheMiddleware': 901,
+    # 'BlockchainSpider.middlewares.RequestCacheMiddleware': 901,
 }
 
 # Enable or disable extensions
@@ -65,6 +65,7 @@ DOWNLOADER_MIDDLEWARES = {
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
+    # 'contrib.mots.pipelines.MoTSPipeline': 666,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -82,12 +83,12 @@ ITEM_PIPELINES = {
 
 # Enable and configure HTTP caching (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
-HTTPCACHE_ENABLED = True
-HTTPCACHE_EXPIRATION_SECS = 0
-HTTPCACHE_DIR = './cache'
-HTTPCACHE_IGNORE_HTTP_CODES = []
-HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
-HTTPCACHE_GZIP = True
+# HTTPCACHE_ENABLED = True
+# HTTPCACHE_EXPIRATION_SECS = 0
+# HTTPCACHE_DIR = './cache'
+# HTTPCACHE_IGNORE_HTTP_CODES = []
+# HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+# HTTPCACHE_GZIP = True
 
 # Enable asyncio
 TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
@@ -113,5 +114,13 @@ APIKEYS = {
     ],
     "heco": [
         "7SMM4F12EQRRGKYCN2VK6I48R7M8CFNE8R"
+    ]
+}
+
+PROVIDERS = {
+    'eth': [
+        "https://eth-mainnet.alchemyapi.io/v2/UOD8HE4CVqEiDY5E_9XbKDFqYZzJE3XP",
+        "https://eth-mainnet.alchemyapi.io/v2/AgKT8OzbNsYnul856tenwnsnL3Pm7WRB",
+        "https://eth-mainnet.alchemyapi.io/v2/gwlaWGMm1YWliQTvWtEHcjjfNXQ3W0lK",
     ]
 }

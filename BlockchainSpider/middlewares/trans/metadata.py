@@ -96,7 +96,7 @@ class MetadataMiddleware(LogMiddleware):
         )))
         data = await asyncio.gather(*tasks)
         return TokenMetadataItem(
-            address=item['contract_address'],
+            contract_address=item['contract_address'],
             name=data[0],
             token_symbol=data[1],
             decimals=data[2],

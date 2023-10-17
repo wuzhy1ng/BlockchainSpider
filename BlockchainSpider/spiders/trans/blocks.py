@@ -21,13 +21,6 @@ class Web3BlockTransactionSpider(scrapy.Spider):
             **getattr(settings, 'ITEM_PIPELINES', dict())
         },
         'SPIDER_MIDDLEWARES': {
-            # 'BlockchainSpider.middlewares.SyncMiddleware': 543,
-            # 'BlockchainSpider.middlewares.trans.ContractMiddleware': 542,
-            # 'BlockchainSpider.middlewares.trans.TokenMiddleware': 541,
-            # 'BlockchainSpider.middlewares.trans.MetadataMiddleware': 540,
-            # 'BlockchainSpider.middlewares.trans.TransactionReceiptMiddleware': 539,
-            # 'BlockchainSpider.middlewares.trans.TraceMiddleware': 538,
-            # 'BlockchainSpider.middlewares.trans.InterceptMiddleware': 537,
             'BlockchainSpider.middlewares.trans.InterceptMiddleware': 542,
             'BlockchainSpider.middlewares.trans.TransactionReceiptMiddleware': 541,
             'BlockchainSpider.middlewares.trans.TraceMiddleware': 540,
@@ -43,10 +36,13 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         super().__init__(**kwargs)
 
         # output dir and block range
-        self.out_dir = kwargs.get('out')
+        self.out_dir = kwargs.get('out', './data')
         self.start_block = int(kwargs.get('start_blk', '0'))
         self.end_block = int(kwargs['end_blk']) if kwargs.get('end_blk') else None
         self._block_cursor = self.start_block
+        self.blocks = [
+            int(blk) for blk in kwargs['blocks'].split(',')
+        ] if kwargs.get('blocks') else None
 
         # extract data types
         self.data_types = kwargs.get('types', 'meta,transaction').split(',')
@@ -83,7 +79,17 @@ class Web3BlockTransactionSpider(scrapy.Spider):
             level=logging.INFO,
         )
 
-        # generate the requests
+        # generate the requests for discrete blocks
+        if self.blocks is not None:
+            for i, blk in enumerate(self.blocks):
+                yield await self.get_request_eth_block_by_number(
+                    block_number=blk,
+                    priority=len(self.blocks) - i,
+                    cb_kwargs={'sync_item': {'block_number': blk}},
+                )
+            return
+
+        # generate the requests for continuous blocks
         if self.end_block is None:
             yield await self.get_request_eth_block_number()
             return

@@ -61,6 +61,6 @@ BlockchainSpider$ python extract.py deduplicate -i ./test/data/appr/raw -o ./tes
 BlockchainSpider$ python extract.py localcomm -i ./test/data/appr/deduplicate -o ./test/data/appr/localcomm
 BlockchainSpider$ python extract.py deduplicate -i ./test/data/ttr/raw -o ./test/data/ttr/deduplicate
 BlockchainSpider$ python extract.py localcomm -i ./test/data/ttr/deduplicate -o ./test/data/ttr/localcomm
-BlockchainSpider/test$ python rank_recall.py -i ./data/haircut/deduplicate,./data/appr/localcomm,./data/ttr/localcomm -l Haircut,APPR,TRacer
+BlockchainSpider/test$ python rank_recall.py -i ./data/haircut/deduplicate/importance,./data/appr/localcomm/importance,./data/ttr/localcomm/importance -l Haircut,APPR,TRacer
 ```
 

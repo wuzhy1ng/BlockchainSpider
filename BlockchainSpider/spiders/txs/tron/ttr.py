@@ -1,4 +1,5 @@
 import json
+import sys
 
 import scrapy
 
@@ -57,10 +58,9 @@ class TxsTRONTTRSpider(TxsETHTTRSpider):
     def get_erc20_txs_request(self, address: str, **kwargs):
         query_params = {
             'address': address,
-            'sort': '-timestamp',
-            'limit': 10000,
-            # 'start_timestamp': max(kwargs.get('startblock', self.start_blk), self.start_blk),
-            # 'end_timestamp': min(kwargs.get('endblock', self.end_blk), self.end_blk),
+            'limit': 50,
+            # 'start_timestamp': 0,
+            'end_timestamp': max(kwargs.get('startblock', 0), self.start_blk),
         }
         _ = self.apikey_bucket.get()
         if kwargs.get('retry') is not None:
@@ -104,4 +104,12 @@ class TxsTRONTTRSpider(TxsETHTTRSpider):
                 )
                 txs.append(tx)
         return txs
+
+    def get_max_blk(self, txs: list):
+        rlt = sys.maxsize
+        for tx in txs:
+            blk_num = int(tx.get('timestamp', sys.maxsize))
+            if blk_num < rlt:
+                rlt = blk_num
+        return rlt - 1000
 

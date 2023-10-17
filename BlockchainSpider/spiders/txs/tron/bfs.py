@@ -98,7 +98,11 @@ class TxsTRONBFSSpider(TxsETHBFSSpider):
                 if self.symbols and symbol not in self.symbols:
                     continue
                 tx['symbol'] = symbol
-                tx['id'] = '{}_{}_{}'.format(tx.get('hash'), tx.get('traceId'), tx['symbol'])
+                tx['hash'] = tx.get('hash', tx.get('transactionHash'))
+                tx['id'] = '{}_{}_{}'.format(
+                    tx.get('hash', tx.get('transactionHash')),
+                    tx.get('traceId'), tx['symbol']
+                )
                 txs.append(tx)
         return txs
 

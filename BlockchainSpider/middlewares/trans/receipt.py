@@ -22,6 +22,7 @@ class TransactionReceiptMiddleware(LogMiddleware):
             block_receipt_method = getattr(spider, 'block_receipt_method', '')
             if block_receipt_method == '':
                 self._is_checked = True
+                self.block_receipt_method = None
                 return
 
             # test rpc interface
@@ -44,6 +45,10 @@ class TransactionReceiptMiddleware(LogMiddleware):
                 )
                 self.block_receipt_method = None
             else:
+                self.log(
+                    message="Using `%s` for speeding up." % block_receipt_method,
+                    level=logging.INFO,
+                )
                 self.block_receipt_method = block_receipt_method
 
     async def process_spider_output(self, response, result, spider):
@@ -112,6 +117,17 @@ class TransactionReceiptMiddleware(LogMiddleware):
                 data=log.get('data', ''),
                 removed=log.get('removed', False),
             )
+        yield TransactionReceiptItem(
+            transaction_hash=result.get('transactionHash', ''),
+            transaction_index=hex_to_dec(result.get('transactionIndex')),
+            transaction_type=hex_to_dec(result.get('type')),
+            block_hash=result.get('blockHash', ''),
+            block_number=hex_to_dec(result.get('blockNumber')),
+            gas_used=hex_to_dec(result.get('gasUsed')),
+            effective_gas_price=hex_to_dec(result.get('effectiveGasPrice')),
+            created_contract=result['contractAddress'] if result.get('contractAddress') else '',
+            is_error=result.get('status') != '0x1',
+        )
 
     async def get_request_eth_block_receipt(
             self, block_number: int, priority: int, cb_kwargs: dict

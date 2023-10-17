@@ -1,5 +1,7 @@
+import asyncio
 import json
 import logging
+import time
 from typing import Iterator
 
 import scrapy
@@ -14,6 +16,8 @@ from BlockchainSpider.utils.web3 import hex_to_dec
 class TraceMiddleware(LogMiddleware):
     def __init__(self):
         self.provider_bucket = None
+        self._last_ts = 0
+        self._lock = asyncio.Lock()
 
     async def process_spider_output(self, response, result, spider):
         if self.provider_bucket is None:
@@ -32,6 +36,8 @@ class TraceMiddleware(LogMiddleware):
                     }
                 )
             if isinstance(spider, Web3TransactionSpider) and isinstance(item, TransactionItem):
+                if item.get('gas', 0) <= 21000:
+                    continue
                 yield await self.get_request_debug_transaction(
                     txhash=item['transaction_hash'],
                     priority=response.request.priority,
@@ -102,8 +108,16 @@ class TraceMiddleware(LogMiddleware):
     async def get_request_debug_trace_block(
             self, block_number: int, priority: int, cb_kwargs: dict
     ) -> scrapy.Request:
+        await self._lock.acquire()
+        delta = time.time() - self._last_ts
+        sleep_range = 3
+        if delta < sleep_range:
+            await asyncio.sleep(sleep_range - delta)
+        self._last_ts = time.time()
+        self._lock.release()
         return scrapy.Request(
-            url=await self.provider_bucket.get(),
+            # url=await self.provider_bucket.get(),
+            url='https://eth-mainnet.nodereal.io/v1/317f6d43dd4c4acea1fa00515cf02f90',
             method='POST',
             headers={'Content-Type': 'application/json'},
             body=json.dumps({
