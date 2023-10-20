@@ -5,7 +5,7 @@ from BlockchainSpider.items import SignItem
 
 
 class Sign4btyesSpider(scrapy.Spider):
-    name = 'signs.web3'
+    name = 'contracts.sign.web3'
     custom_settings = {
         'ITEM_PIPELINES': {
             'BlockchainSpider.pipelines.SignsPipeline': 299,
