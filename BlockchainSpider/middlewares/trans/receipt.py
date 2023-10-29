@@ -16,8 +16,12 @@ class TransactionReceiptMiddleware(LogMiddleware):
         self._is_checked = False
 
     async def _init_by_spider(self, spider):
-        if self.provider_bucket is None:
+        if getattr(spider, 'middleware_providers') and \
+                spider.middleware_providers.get(self.__class__.__name__):
+            self.provider_bucket = spider.middleware_providers[self.__class__.__name__]
+        else:
             self.provider_bucket = spider.provider_bucket
+
         if not self._is_checked:
             block_receipt_method = getattr(spider, 'block_receipt_method', '')
             if block_receipt_method == '':

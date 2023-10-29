@@ -21,7 +21,10 @@ class ContractMiddleware(LogMiddleware):
         )
 
     async def process_spider_output(self, response, result, spider):
-        if self.provider_bucket is None:
+        if getattr(spider, 'middleware_providers') and \
+                spider.middleware_providers.get(self.__class__.__name__):
+            self.provider_bucket = spider.middleware_providers[self.__class__.__name__]
+        else:
             self.provider_bucket = spider.provider_bucket
 
         # filter and process the result flow

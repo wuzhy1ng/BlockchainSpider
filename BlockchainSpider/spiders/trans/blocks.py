@@ -9,7 +9,6 @@ from BlockchainSpider import settings
 from BlockchainSpider.items import BlockItem, TransactionItem
 from BlockchainSpider.utils.bucket import AsyncItemBucket
 from BlockchainSpider.utils.decorator import log_debug_tracing
-from BlockchainSpider.utils.enum import ETHDataTypes
 from BlockchainSpider.utils.web3 import hex_to_dec
 
 
@@ -44,11 +43,6 @@ class Web3BlockTransactionSpider(scrapy.Spider):
             int(blk) for blk in kwargs['blocks'].split(',')
         ] if kwargs.get('blocks') else None
 
-        # extract data types
-        self.data_types = kwargs.get('types', 'meta,transaction').split(',')
-        for data_type in self.data_types:
-            assert ETHDataTypes.has(data_type)
-
         # block receipt method
         self.block_receipt_method = kwargs.get('block_receipt_method', 'eth_getBlockReceipts')
 
@@ -59,8 +53,32 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         assert kwargs.get('providers') is not None, "please input providers separated by commas!"
         self.provider_bucket = AsyncItemBucket(
             items=kwargs.get('providers').split(','),
-            qps=getattr(settings, 'CONCURRENT_REQUESTS', 1),
+            qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
         )
+
+        # provider settings for specific data
+        self.middleware_providers = {
+            'TransactionReceiptMiddleware': AsyncItemBucket(
+                items=kwargs['providers4receipt'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            ) if kwargs.get('providers4receipt') else None,
+            'TraceMiddleware': AsyncItemBucket(
+                items=kwargs['providers4trace'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            ) if kwargs.get('providers4trace') else None,
+            'TokenMiddleware': AsyncItemBucket(
+                items=kwargs['providers4token'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            ) if kwargs.get('providers4token') else None,
+            'MetadataMiddleware': AsyncItemBucket(
+                items=kwargs['providers4metadata'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            ) if kwargs.get('providers4metadata') else None,
+            'ContractMiddleware': AsyncItemBucket(
+                items=kwargs['providers4contract'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            ) if kwargs.get('providers4contract') else None,
+        }
 
     def start_requests(self):
         request = self.get_request_web3_client_version()
@@ -111,6 +129,11 @@ class Web3BlockTransactionSpider(scrapy.Spider):
             end_block = int(result, 16) + 1
             start_block, self._block_cursor = self._block_cursor, end_block
             for blk in range(start_block, end_block):
+                self.log(
+                    message='Try to fetch the new block '
+                            'with number: %d' % blk,
+                    level=logging.INFO,
+                )
                 yield await self.get_request_eth_block_by_number(
                     block_number=blk,
                     priority=end_block - blk,
@@ -126,10 +149,10 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         # next query of block number
         if self.end_block is not None:
             return
-        self.log(
-            message="Query the latest block number after 5 seconds...",
-            level=logging.INFO
-        )
+        # self.log(
+        #     message="Query the latest block number after 5 seconds...",
+        #     level=logging.INFO
+        # )
         await asyncio.sleep(5)
         yield await self.get_request_eth_block_number()
 
@@ -200,6 +223,7 @@ class Web3BlockTransactionSpider(scrapy.Spider):
                 "jsonrpc": "2.0"
             }),
             callback=self.parse_eth_block_number,
+            dont_filter=True,
         )
 
     async def get_request_eth_block_by_number(

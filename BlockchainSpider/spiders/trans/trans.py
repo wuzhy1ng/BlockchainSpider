@@ -48,6 +48,30 @@ class Web3TransactionSpider(scrapy.Spider):
             qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
         )
 
+        # provider settings for specific data
+        self.middleware_providers = {
+            'TransactionReceiptMiddleware': AsyncItemBucket(
+                items=kwargs['providers4receipt'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            ) if kwargs.get('providers4receipt') else None,
+            'TraceMiddleware': AsyncItemBucket(
+                items=kwargs['providers4trace'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            ) if kwargs.get('providers4trace') else None,
+            'TokenMiddleware': AsyncItemBucket(
+                items=kwargs['providers4token'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            ) if kwargs.get('providers4token') else None,
+            'MetadataMiddleware': AsyncItemBucket(
+                items=kwargs['providers4metadata'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            ) if kwargs.get('providers4metadata') else None,
+            'ContractMiddleware': AsyncItemBucket(
+                items=kwargs['providers4contract'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            ) if kwargs.get('providers4contract') else None,
+        }
+
         # set sync key
         self.sync_item_key = 'sync_item'
 
