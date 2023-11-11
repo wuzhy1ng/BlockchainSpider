@@ -102,8 +102,8 @@ class Web3BlockTransactionSpider(scrapy.Spider):
             for i, blk in enumerate(self.blocks):
                 yield await self.get_request_eth_block_by_number(
                     block_number=blk,
-                    priority=len(self.blocks) - i,
-                    cb_kwargs={'sync_item': {'block_number': blk}},
+                    priority=2 ** 32 - i,
+                    cb_kwargs={self.sync_item_key: {'block_number': blk}},
                 )
             return
 
@@ -115,8 +115,8 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         for blk in range(self.start_block, end_block):
             yield await self.get_request_eth_block_by_number(
                 block_number=blk,
-                priority=end_block - blk,
-                cb_kwargs={'sync_item': {'block_number': blk}},
+                priority=2 ** 32 - blk,
+                cb_kwargs={self.sync_item_key: {'block_number': blk}},
             )
 
     @log_debug_tracing
@@ -136,8 +136,8 @@ class Web3BlockTransactionSpider(scrapy.Spider):
                 )
                 yield await self.get_request_eth_block_by_number(
                     block_number=blk,
-                    priority=end_block - blk,
-                    cb_kwargs={'block_number': blk},
+                    priority=2 ** 32 - blk,
+                    cb_kwargs={self.sync_item_key: {'block_number': blk}},
                 )
         else:
             self.log(
@@ -149,10 +149,6 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         # next query of block number
         if self.end_block is not None:
             return
-        # self.log(
-        #     message="Query the latest block number after 5 seconds...",
-        #     level=logging.INFO
-        # )
         await asyncio.sleep(5)
         yield await self.get_request_eth_block_number()
 
