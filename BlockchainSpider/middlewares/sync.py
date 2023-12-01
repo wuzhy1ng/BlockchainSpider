@@ -97,17 +97,23 @@ class SyncMiddleware(LogMiddleware):
             return
 
         # release signal when response
+        value = None
         if not isinstance(grandpa_fingerprint, bytes):
             self.request_parent[parent_fingerprint] -= 1
-            return
+            if self.request_parent[parent_fingerprint] == 0:
+                del self.request_parent[parent_fingerprint]
+                value = self.sync_items.pop(parent_fingerprint)
+        else:
+            self.request_parent[grandpa_fingerprint] -= 1
+            del self.request_parent[parent_fingerprint]
+            if self.request_parent[grandpa_fingerprint] == 0:
+                del self.request_parent[grandpa_fingerprint]
+                value = self.sync_items.pop(grandpa_fingerprint)
 
-        self.request_parent[grandpa_fingerprint] -= 1
-        del self.request_parent[parent_fingerprint]
-        if self.request_parent[grandpa_fingerprint] == 0:
-            del self.request_parent[grandpa_fingerprint]
-            value = self.sync_items.pop(grandpa_fingerprint)
-            self.log(
-                message="Synchronized: {}".format(value),
-                level=logging.INFO,
-            )
-            return SyncSignalItem(signal=value)
+        if value is None:
+            return
+        self.log(
+            message="Synchronized: {}".format(value),
+            level=logging.INFO,
+        )
+        return SyncSignalItem(signal=value)

@@ -17,19 +17,37 @@ class Web3BlockTransactionSpider(scrapy.Spider):
     custom_settings = {
         'ITEM_PIPELINES': {
             'BlockchainSpider.pipelines.TransPipeline': 299,
-            **getattr(settings, 'ITEM_PIPELINES', dict())
-        },
+        } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
+        else getattr(settings, 'ITEM_PIPELINES', dict()),
         'SPIDER_MIDDLEWARES': {
             'BlockchainSpider.middlewares.trans.InterceptMiddleware': 542,
+            'BlockchainSpider.middlewares.SyncMiddleware': 536,
+            **getattr(settings, 'SPIDER_MIDDLEWARES', dict())
+        },
+    }
+
+    @classmethod
+    def from_crawler(cls, crawler, *args, **kwargs):
+        spider = super().from_crawler(crawler, *args, **kwargs)
+        available_middlewares = {
             'BlockchainSpider.middlewares.trans.TransactionReceiptMiddleware': 541,
             'BlockchainSpider.middlewares.trans.TraceMiddleware': 540,
             'BlockchainSpider.middlewares.trans.TokenMiddleware': 539,
             'BlockchainSpider.middlewares.trans.MetadataMiddleware': 538,
             'BlockchainSpider.middlewares.trans.ContractMiddleware': 537,
-            'BlockchainSpider.middlewares.SyncMiddleware': 536,
-            **getattr(settings, 'SPIDER_MIDDLEWARES', dict())
-        },
-    }
+        }
+        middlewares = kwargs.get('enable')
+        if middlewares is not None:
+            spider_middlewares = spider.settings.getdict('SPIDER_MIDDLEWARES')
+            for middleware in middlewares.split(','):
+                assert middleware in available_middlewares
+                spider_middlewares[middleware] = available_middlewares[middleware]
+            spider.settings.set(
+                name='SPIDER_MIDDLEWARES',
+                value=spider_middlewares,
+                priority=spider.settings.attributes['SPIDER_MIDDLEWARES'].priority,
+            )
+        return spider
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

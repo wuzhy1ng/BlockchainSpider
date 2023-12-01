@@ -147,6 +147,6 @@ class NFTMetadataItem(scrapy.Item):
     block_number = scrapy.Field()  # str
     timestamp = scrapy.Field()  # int
     contract_address = scrapy.Field()  # str
-    token_id = scrapy.Field()  # [int]
+    token_id = scrapy.Field()  # int
     uri = scrapy.Field()  # str
     data = scrapy.Field()  # str
