@@ -146,12 +146,12 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         if result is not None:
             end_block = int(result, 16) + 1
             start_block, self._block_cursor = self._block_cursor, end_block
-            for blk in range(start_block, end_block):
+            if end_block - start_block > 0:
                 self.log(
-                    message='Try to fetch the new block '
-                            'with number: %d' % blk,
+                    message='Try to fetch the new block to: #%d' % end_block,
                     level=logging.INFO,
                 )
+            for blk in range(start_block, end_block):
                 yield await self.get_request_eth_block_by_number(
                     block_number=blk,
                     priority=2 ** 32 - blk,

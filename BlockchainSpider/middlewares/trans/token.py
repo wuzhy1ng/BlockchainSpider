@@ -27,6 +27,8 @@ class TokenMiddleware(LogMiddleware):
             yield item
             if not isinstance(item, EventLogItem):
                 continue
+            if not isinstance(item['topics'], list) or len(item['topics']) < 1:
+                continue
 
             # extract the erc20 and erc721 token transfers
             if item['topics'][0] == ERC20_TRANSFER_TOPIC:

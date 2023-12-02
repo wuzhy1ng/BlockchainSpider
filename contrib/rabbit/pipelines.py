@@ -18,6 +18,7 @@ class RabbitMQPipeline:
             durable=True,
         )
         self._exchange = asyncio.get_event_loop().run_until_complete(task)
+        self._routing_prefix = spider.__dict__.get('rabbit_routing_prefix')
 
     async def process_item(self, item, spider):
         body = json.dumps(dict(item))
@@ -25,11 +26,12 @@ class RabbitMQPipeline:
             body=body.encode(),
             delivery_mode=aio_pika.DeliveryMode.NOT_PERSISTENT,
         )
-        mq_routing_key = item.__class__.__name__
+        routing_key = '%s.%s' % (self._routing_prefix, item.__class__.__name__)
         await self._exchange.publish(
             message=message,
-            routing_key=mq_routing_key,
+            routing_key=routing_key,
         )
 
     def close_spider(self, spider):
-        self._conn.close()
+        task = self._conn.close()
+        asyncio.get_event_loop().run_until_complete(task)
