@@ -9,7 +9,7 @@ class RabbitMQPipeline:
         print('Building connection to RabbitMQ: {}'.format(
             spider.__dict__.get('rabbit_uri')
         ))
-        task = aio_pika.connect(spider.__dict__.get('rabbit_uri'))
+        task = aio_pika.connect_robust(spider.__dict__.get('rabbit_uri'))
         self._conn = asyncio.get_event_loop().run_until_complete(task)
         task = self._conn.channel()
         self._chan = asyncio.get_event_loop().run_until_complete(task)
