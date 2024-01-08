@@ -35,6 +35,7 @@ class Web3BlockTransactionSpider(scrapy.Spider):
             'BlockchainSpider.middlewares.trans.TokenMiddleware': 539,
             'BlockchainSpider.middlewares.trans.MetadataMiddleware': 538,
             'BlockchainSpider.middlewares.trans.ContractMiddleware': 537,
+            'BlockchainSpider.middlewares.trans.DCFGMiddleware': 536,
         }
         middlewares = kwargs.get('enable')
         if middlewares is not None:
@@ -71,31 +72,35 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         assert kwargs.get('providers') is not None, "please input providers separated by commas!"
         self.provider_bucket = AsyncItemBucket(
             items=kwargs.get('providers').split(','),
-            qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
         )
 
         # provider settings for specific data
         self.middleware_providers = {
             'TransactionReceiptMiddleware': AsyncItemBucket(
                 items=kwargs['providers4receipt'].split(','),
-                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
             ) if kwargs.get('providers4receipt') else None,
             'TraceMiddleware': AsyncItemBucket(
                 items=kwargs['providers4trace'].split(','),
-                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
             ) if kwargs.get('providers4trace') else None,
             'TokenMiddleware': AsyncItemBucket(
                 items=kwargs['providers4token'].split(','),
-                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
             ) if kwargs.get('providers4token') else None,
             'MetadataMiddleware': AsyncItemBucket(
                 items=kwargs['providers4metadata'].split(','),
-                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
             ) if kwargs.get('providers4metadata') else None,
             'ContractMiddleware': AsyncItemBucket(
                 items=kwargs['providers4contract'].split(','),
-                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
             ) if kwargs.get('providers4contract') else None,
+            'DCFGMiddleware': AsyncItemBucket(
+                items=kwargs['providers4dcfg'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
+            ) if kwargs.get('providers4dcfg') else None,
         }
 
     def start_requests(self):
