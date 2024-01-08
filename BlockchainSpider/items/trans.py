@@ -133,7 +133,7 @@ class TokenApprovalAllItem(scrapy.Item):
     approved = scrapy.Field()  # bool
 
 
-class TokenMetadataItem(scrapy.Item):
+class TokenPropertyItem(scrapy.Item):
     contract_address = scrapy.Field()  # str
     name = scrapy.Field()  # str
     token_symbol = scrapy.Field()  # str
@@ -150,3 +150,21 @@ class NFTMetadataItem(scrapy.Item):
     token_id = scrapy.Field()  # int
     uri = scrapy.Field()  # str
     data = scrapy.Field()  # str
+
+
+class DCFGBlock(scrapy.Item):
+    contract_address = scrapy.Field()  # str
+    start_pc = scrapy.Field()  # int
+    operations = scrapy.Field()  # [str]
+
+
+class DCFGEdge(scrapy.Item):
+    transaction_hash = scrapy.Field()  # str
+    address_from = scrapy.Field()  # str
+    start_pc_from = scrapy.Field()  # int
+    address_to = scrapy.Field()  # str
+    start_pc_to = scrapy.Field()  # int
+    flow_type = scrapy.Field()  # str
+    value = scrapy.Field()  # int
+    gas = scrapy.Field()  # int
+    selector = scrapy.Field()  # str

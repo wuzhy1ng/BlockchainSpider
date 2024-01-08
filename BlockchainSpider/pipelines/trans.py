@@ -3,8 +3,8 @@ import os
 
 from BlockchainSpider.items.trans import TransactionItem, EventLogItem, TraceItem, ContractItem, \
     Token721TransferItem, Token20TransferItem, Token1155TransferItem, TokenApprovalItem, TokenApprovalAllItem, \
-    TokenMetadataItem, NFTMetadataItem, TransactionReceiptItem
-
+    TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGBlock, DCFGEdge
+from BlockchainSpider.items.sync import SyncSignalItem
 
 class TransPipeline:
     def __init__(self):
@@ -20,7 +20,8 @@ class TransPipeline:
             EventLogItem, TraceItem, ContractItem,
             Token721TransferItem, Token20TransferItem, Token1155TransferItem,
             TokenApprovalItem, TokenApprovalAllItem,
-            TokenMetadataItem, NFTMetadataItem,
+            TokenPropertyItem, NFTMetadataItem,
+            DCFGBlock, DCFGEdge, SyncSignalItem,
         ]]):
             return item
 

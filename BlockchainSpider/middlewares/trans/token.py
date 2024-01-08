@@ -1,19 +1,29 @@
+import asyncio
 from typing import Union
 
+from pybloom import ScalableBloomFilter
+
 from BlockchainSpider import settings
-from BlockchainSpider.items import EventLogItem, Token1155TransferItem, TokenApprovalAllItem
+from BlockchainSpider.items import EventLogItem, Token1155TransferItem, TokenApprovalAllItem, TokenPropertyItem
 from BlockchainSpider.items import Token721TransferItem, Token20TransferItem, TokenApprovalItem
 from BlockchainSpider.middlewares._meta import LogMiddleware
 from BlockchainSpider.utils.token import ERC20_TRANSFER_TOPIC, is_token721_contract, ERC721_TRANSFER_TOPIC, \
     ERC1155_SINGLE_TRANSFER_TOPIC, ERC1155_BATCH_TRANSFER_TOPIC, TOKEN_APPROVE_TOPIC, \
     TOKEN_APPROVE_ALL_TOPIC
 from BlockchainSpider.utils.web3 import split_to_words, word_to_address, hex_to_dec
+from BlockchainSpider.utils.token import get_token_name, get_token_symbol, get_token_decimals, \
+    get_token_total_supply
 
 
 class TokenMiddleware(LogMiddleware):
     def __init__(self):
         self.provider_bucket = None
         self.timeout = getattr(settings, 'DOWNLOAD_TIMEOUT', 120)
+        self.bloom4property = ScalableBloomFilter(
+            initial_capacity=1024,
+            error_rate=1e-4,
+            mode=ScalableBloomFilter.SMALL_SET_GROWTH,
+        )
 
     async def process_spider_output(self, response, result, spider):
         if getattr(spider, 'middleware_providers') and \
@@ -30,29 +40,76 @@ class TokenMiddleware(LogMiddleware):
             if not isinstance(item['topics'], list) or len(item['topics']) < 1:
                 continue
 
-            # extract the erc20 and erc721 token transfers
-            if item['topics'][0] == ERC20_TRANSFER_TOPIC:
-                if await is_token721_contract(
-                        address=item['address'],
-                        provider_bucket=self.provider_bucket,
-                        timeout=self.timeout,
-                ):
-                    yield self.parse_token721_transfer_item(log=item)
-                    continue
-                yield self.parse_token20_transfer_item(log=item)
+            # extract token action and property
+            token_action_item = await self.parse_token_action_item(item)
+            if token_action_item is None:
+                continue
+            yield token_action_item
+            if token_action_item['contract_address'] in self.bloom4property:
+                continue
+            self.bloom4property.add(token_action_item['contract_address'])
+            yield await self.parse_token_property_item(token_action_item)
 
-            # extract the erc1155 token transfers
-            if item['topics'][0] == ERC1155_SINGLE_TRANSFER_TOPIC or \
-                    item['topics'][0] == ERC1155_BATCH_TRANSFER_TOPIC:
-                yield self.parse_token1155_transfer_item(log=item)
+    async def parse_token_action_item(self, log: EventLogItem) -> Union[
+        Token20TransferItem, Token721TransferItem, Token1155TransferItem,
+        TokenApprovalItem, TokenApprovalAllItem, None
+    ]:
+        # extract the erc20 and erc721 token transfers
+        if log['topics'][0] == ERC20_TRANSFER_TOPIC:
+            if await is_token721_contract(
+                    address=log['address'],
+                    provider_bucket=self.provider_bucket,
+                    timeout=self.timeout,
+            ):
+                return self.parse_token721_transfer_item(log=log)
+            return self.parse_token20_transfer_item(log=log)
 
-            # extract the token approve
-            if item['topics'][0] == TOKEN_APPROVE_TOPIC:
-                yield self.parse_token_approve_item(log=item)
+        # extract the erc1155 token transfers
+        if log['topics'][0] == ERC1155_SINGLE_TRANSFER_TOPIC or \
+                log['topics'][0] == ERC1155_BATCH_TRANSFER_TOPIC:
+            return self.parse_token1155_transfer_item(log=log)
 
-            # extract the token approve all
-            if item['topics'][0] == TOKEN_APPROVE_ALL_TOPIC:
-                yield self.parse_token_approve_all_item(log=item)
+        # extract the token approve
+        if log['topics'][0] == TOKEN_APPROVE_TOPIC:
+            return self.parse_token_approve_item(log=log)
+
+        # extract the token approve all
+        if log['topics'][0] == TOKEN_APPROVE_ALL_TOPIC:
+            return self.parse_token_approve_all_item(log=log)
+
+    async def parse_token_property_item(self, item: Union[
+        Token20TransferItem, Token721TransferItem, Token1155TransferItem,
+        TokenApprovalItem, TokenApprovalAllItem
+    ]) -> TokenPropertyItem:
+        tasks = list()
+        tasks.append(asyncio.create_task(get_token_name(
+            address=item['contract_address'],
+            provider_bucket=self.provider_bucket,
+            timeout=self.timeout,
+        )))
+        tasks.append(asyncio.create_task(get_token_symbol(
+            address=item['contract_address'],
+            provider_bucket=self.provider_bucket,
+            timeout=self.timeout,
+        )))
+        tasks.append(asyncio.create_task(get_token_decimals(
+            address=item['contract_address'],
+            provider_bucket=self.provider_bucket,
+            timeout=self.timeout,
+        )))
+        tasks.append(asyncio.create_task(get_token_total_supply(
+            address=item['contract_address'],
+            provider_bucket=self.provider_bucket,
+            timeout=self.timeout,
+        )))
+        data = await asyncio.gather(*tasks)
+        return TokenPropertyItem(
+            contract_address=item['contract_address'],
+            name=data[0],
+            token_symbol=data[1],
+            decimals=data[2],
+            total_supply=data[3],
+        )
 
     def parse_token721_transfer_item(self, log: EventLogItem) -> Union[Token721TransferItem, None]:
         # load log topics

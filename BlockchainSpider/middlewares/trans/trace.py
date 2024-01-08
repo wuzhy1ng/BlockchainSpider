@@ -55,12 +55,6 @@ class TraceMiddleware(LogMiddleware):
     async def parse_debug_trace_block(self, response: scrapy.http.Response, **kwargs):
         data = json.loads(response.text)
         data = data.get('result')
-        if response is None:
-            self.log(
-                message="debug_traceBlockByNumber is not available.",
-                level=logging.WARNING,
-            )
-            return
 
         # parse trance item (skip the first call)
         transaction_hashes = kwargs['transaction_hashes']
@@ -119,8 +113,7 @@ class TraceMiddleware(LogMiddleware):
         self._last_ts = time.time()
         self._lock.release()
         return scrapy.Request(
-            # url=await self.provider_bucket.get(),
-            url='https://eth-mainnet.nodereal.io/v1/317f6d43dd4c4acea1fa00515cf02f90',
+            url=await self.provider_bucket.get(),
             method='POST',
             headers={'Content-Type': 'application/json'},
             body=json.dumps({

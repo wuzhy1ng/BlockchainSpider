@@ -35,6 +35,7 @@ class Web3TransactionSpider(scrapy.Spider):
             'BlockchainSpider.middlewares.trans.TokenMiddleware': 539,
             'BlockchainSpider.middlewares.trans.MetadataMiddleware': 538,
             'BlockchainSpider.middlewares.trans.ContractMiddleware': 537,
+            'BlockchainSpider.middlewares.trans.DCFGMiddleware': 536,
         }
         middlewares = kwargs.get('enable')
         if middlewares is not None:
@@ -88,6 +89,10 @@ class Web3TransactionSpider(scrapy.Spider):
                 items=kwargs['providers4contract'].split(','),
                 qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
             ) if kwargs.get('providers4contract') else None,
+            'DCFGMiddleware': AsyncItemBucket(
+                items=kwargs['providers4dcfg'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 3),
+            ) if kwargs.get('providers4dcfg') else None,
         }
 
         # set sync key

@@ -1,4 +1,3 @@
-import asyncio
 import json
 import re
 from typing import Union
@@ -8,13 +7,10 @@ from pybloom import ScalableBloomFilter
 from scrapy import Request
 
 from BlockchainSpider import settings
-from BlockchainSpider.items import EventLogItem
-from BlockchainSpider.items import TokenMetadataItem, Token20TransferItem, Token721TransferItem, \
+from BlockchainSpider.items import Token721TransferItem, \
     Token1155TransferItem, NFTMetadataItem
 from BlockchainSpider.middlewares._meta import LogMiddleware
 from BlockchainSpider.utils.decorator import log_debug_tracing
-from BlockchainSpider.utils.token import get_token_name, get_token_symbol, get_token_decimals, \
-    get_token_total_supply
 from BlockchainSpider.utils.web3 import web3_json_rpc, parse_bytes_data
 
 
@@ -38,15 +34,11 @@ class MetadataMiddleware(LogMiddleware):
         # filter and process the result flow
         async for item in result:
             yield item
-
-            # extract the token metadata
             if any([
-                isinstance(item, Token20TransferItem),
                 isinstance(item, Token721TransferItem),
                 isinstance(item, Token1155TransferItem),
             ]) and item['contract_address'] not in self.bloom4metadata:
                 self.bloom4metadata.add(item['contract_address'])
-                yield await self.parse_token_metadata_item(item=item)
 
             # extract the erc721 nft metadata
             if isinstance(item, Token721TransferItem):
@@ -74,37 +66,6 @@ class MetadataMiddleware(LogMiddleware):
                         token_id=item['token_ids'][i],
                         cb_kwargs={'item_token1155_transfer': item, 'index': i},
                     )
-
-    async def parse_token_metadata_item(self, item: EventLogItem) -> TokenMetadataItem:
-        tasks = list()
-        tasks.append(asyncio.create_task(get_token_name(
-            address=item['contract_address'],
-            provider_bucket=self.provider_bucket,
-            timeout=self.timeout,
-        )))
-        tasks.append(asyncio.create_task(get_token_symbol(
-            address=item['contract_address'],
-            provider_bucket=self.provider_bucket,
-            timeout=self.timeout,
-        )))
-        tasks.append(asyncio.create_task(get_token_decimals(
-            address=item['contract_address'],
-            provider_bucket=self.provider_bucket,
-            timeout=self.timeout,
-        )))
-        tasks.append(asyncio.create_task(get_token_total_supply(
-            address=item['contract_address'],
-            provider_bucket=self.provider_bucket,
-            timeout=self.timeout,
-        )))
-        data = await asyncio.gather(*tasks)
-        return TokenMetadataItem(
-            contract_address=item['contract_address'],
-            name=data[0],
-            token_symbol=data[1],
-            decimals=data[2],
-            total_supply=data[3],
-        )
 
     @log_debug_tracing
     def parse_nft721_metadata_item(self, response: scrapy.http.Response, **kwargs):
