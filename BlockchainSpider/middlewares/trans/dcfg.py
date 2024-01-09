@@ -148,12 +148,6 @@ class DCFGMiddleware(TraceMiddleware):
     async def parse_debug_trace_block(self, response: scrapy.http.Response, **kwargs):
         data = json.loads(response.text)
         data = data.get('result')
-        if response is None:
-            self.log(
-                message="debug_traceBlockByNumber is not available.",
-                level=logging.WARNING,
-            )
-            return
 
         # parse trance item
         for result in data:
@@ -194,6 +188,7 @@ class DCFGMiddleware(TraceMiddleware):
                 value=int(edge.get('value', 0)),
                 gas=int(edge.get('gas', 0)),
                 selector=edge.get('selector', '0x'),
+                index=edge.get('index', 0),
             )
 
     async def get_request_debug_trace_block(
@@ -207,8 +202,7 @@ class DCFGMiddleware(TraceMiddleware):
         self._last_ts = time.time()
         self._lock.release()
         return scrapy.Request(
-            # url=await self.provider_bucket.get(),
-            url='https://eth-mainnet.nodereal.io/v1/317f6d43dd4c4acea1fa00515cf02f90',
+            url=await self.provider_bucket.get(),
             method='POST',
             headers={'Content-Type': 'application/json'},
             body=json.dumps({

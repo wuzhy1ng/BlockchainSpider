@@ -168,3 +168,4 @@ class DCFGEdge(scrapy.Item):
     value = scrapy.Field()  # int
     gas = scrapy.Field()  # int
     selector = scrapy.Field()  # str
+    index = scrapy.Field()  # int
