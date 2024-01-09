@@ -11,7 +11,7 @@ from BlockchainSpider.items import DCFGBlock, DCFGEdge
 from BlockchainSpider.middlewares.trans import TraceMiddleware
 from BlockchainSpider.utils.decorator import log_debug_tracing
 
-js_tracer = """tracer = {
+js_tracer = """{
     blocks: {},
     edges: [],
     context: {
@@ -107,7 +107,7 @@ js_tracer = """tracer = {
             let addr_pc = bid.split('#');
             blocks.push({
                 'contract_address': addr_pc[0],
-                'start_pc': addr_pc[1],
+                'start_pc': Number(addr_pc[1]),
                 'operations': ops,
             });
         }
@@ -117,13 +117,14 @@ js_tracer = """tracer = {
             let addr_pc_to = edge['to'].split('#');
             edges.push({
                 'address_from': addr_pc_from[0],
-                'start_pc_from': addr_pc_from[1],
+                'start_pc_from': Number(addr_pc_from[1]),
                 'address_to': addr_pc_to[0],
-                'start_pc_to': addr_pc_to[1],
+                'start_pc_to': Number(addr_pc_to[1]),
                 'flow_type': edge['type'],
                 'value': edge['value'],
                 'gas': edge['gas'],
                 'selector': edge['selector'],
+                'index': edge['index'],
             });
         }
         return {
