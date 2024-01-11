@@ -1,7 +1,4 @@
-import asyncio
 import json
-import logging
-import time
 from typing import Dict, Union
 
 import scrapy
@@ -150,7 +147,10 @@ class DCFGMiddleware(TraceMiddleware):
         data = data.get('result')
 
         # parse trance item
-        for result in data:
+        transaction_hashes = kwargs['transaction_hashes']
+        for i, result in enumerate(data):
+            result = result['result']
+            kwargs['transaction_hash'] = transaction_hashes[i]
             for item in self.parse_dcfg_items(result, **kwargs):
                 yield item
 
@@ -194,13 +194,6 @@ class DCFGMiddleware(TraceMiddleware):
     async def get_request_debug_trace_block(
             self, block_number: int, priority: int, cb_kwargs: dict
     ) -> scrapy.Request:
-        await self._lock.acquire()
-        delta = time.time() - self._last_ts
-        sleep_range = 3
-        if delta < sleep_range:
-            await asyncio.sleep(sleep_range - delta)
-        self._last_ts = time.time()
-        self._lock.release()
         return scrapy.Request(
             url=await self.provider_bucket.get(),
             method='POST',

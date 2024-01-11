@@ -1,7 +1,5 @@
 import asyncio
 import json
-import logging
-import time
 from typing import Iterator
 
 import scrapy
@@ -105,13 +103,6 @@ class TraceMiddleware(LogMiddleware):
     async def get_request_debug_trace_block(
             self, block_number: int, priority: int, cb_kwargs: dict
     ) -> scrapy.Request:
-        await self._lock.acquire()
-        delta = time.time() - self._last_ts
-        sleep_range = 3
-        if delta < sleep_range:
-            await asyncio.sleep(sleep_range - delta)
-        self._last_ts = time.time()
-        self._lock.release()
         return scrapy.Request(
             url=await self.provider_bucket.get(),
             method='POST',
