@@ -29,6 +29,8 @@ async def web3_json_rpc(tx_obj: dict, provider: str, timeout: int):
             data=json.dumps(tx_obj),
         )
         data = await rsp.read()
+        data = data.decode()
+        data = json.loads(data)
     except:
         traceback.print_exc()
         return
@@ -36,8 +38,6 @@ async def web3_json_rpc(tx_obj: dict, provider: str, timeout: int):
         await client.close()
 
     # parse response
-    data = data.decode()
-    data = json.loads(data)
     return data.get('result')
 
 

@@ -1,5 +1,9 @@
 import scrapy
 
 
+class SyncDataItem(scrapy.Item):
+    data = scrapy.Field()  # dict
+
+
 class SyncSignalItem(scrapy.Item):
-    signal = scrapy.Field()  # dict
+    is_add_lock = scrapy.Field()  # bool

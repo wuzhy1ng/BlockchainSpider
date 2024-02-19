@@ -1,36 +1,39 @@
-import asyncio
-from typing import Union
+import json
+import traceback
+from typing import Union, List
 
-from pybloom import ScalableBloomFilter
+import scrapy
+from web3 import Web3
 
 from BlockchainSpider import settings
 from BlockchainSpider.items import EventLogItem, Token1155TransferItem, TokenApprovalAllItem, TokenPropertyItem
 from BlockchainSpider.items import Token721TransferItem, Token20TransferItem, TokenApprovalItem
 from BlockchainSpider.middlewares._meta import LogMiddleware
-from BlockchainSpider.utils.token import ERC20_TRANSFER_TOPIC, is_token721_contract, ERC721_TRANSFER_TOPIC, \
+from BlockchainSpider.utils.cache import LRUCache
+from BlockchainSpider.utils.decorator import log_debug_tracing
+from BlockchainSpider.utils.token import ERC20_TRANSFER_TOPIC, ERC721_TRANSFER_TOPIC, \
     ERC1155_SINGLE_TRANSFER_TOPIC, ERC1155_BATCH_TRANSFER_TOPIC, TOKEN_APPROVE_TOPIC, \
     TOKEN_APPROVE_ALL_TOPIC
-from BlockchainSpider.utils.web3 import split_to_words, word_to_address, hex_to_dec
-from BlockchainSpider.utils.token import get_token_name, get_token_symbol, get_token_decimals, \
-    get_token_total_supply
+from BlockchainSpider.utils.web3 import split_to_words, word_to_address, hex_to_dec, parse_bytes_data
 
 
-class TokenMiddleware(LogMiddleware):
+class TokenTransferMiddleware(LogMiddleware):
     def __init__(self):
         self.provider_bucket = None
-        self.timeout = getattr(settings, 'DOWNLOAD_TIMEOUT', 120)
-        self.bloom4property = ScalableBloomFilter(
-            initial_capacity=1024,
-            error_rate=1e-4,
-            mode=ScalableBloomFilter.SMALL_SET_GROWTH,
-        )
+        self._cache_is_token721 = LRUCache(getattr(settings, 'MIDDLE_CACHE_SIZE', 2 ** 16))
+        self._waiting_ctx = dict()  # addr -> logs
 
-    async def process_spider_output(self, response, result, spider):
+    def _init_by_spider(self, spider):
+        if self.provider_bucket is not None:
+            return
         if getattr(spider, 'middleware_providers') and \
                 spider.middleware_providers.get(self.__class__.__name__):
             self.provider_bucket = spider.middleware_providers[self.__class__.__name__]
         else:
             self.provider_bucket = spider.provider_bucket
+
+    async def process_spider_output(self, response, result, spider):
+        self._init_by_spider(spider)
 
         # filter and process the result flow
         async for item in result:
@@ -40,76 +43,46 @@ class TokenMiddleware(LogMiddleware):
             if not isinstance(item['topics'], list) or len(item['topics']) < 1:
                 continue
 
-            # extract token action and property
-            token_action_item = await self.parse_token_action_item(item)
-            if token_action_item is None:
+            # extract token action
+            log = item
+            if not isinstance(log['topics'], list) or len(log['topics']) == 0:
                 continue
-            yield token_action_item
-            if token_action_item['contract_address'] in self.bloom4property:
+
+            # extract the erc20 and erc721 token transfers
+            if log['topics'][0] == ERC20_TRANSFER_TOPIC:
+                cached_is_token721 = self._cache_is_token721.get(log['address'])
+                if cached_is_token721 is not None:
+                    yield self.parse_token721_transfer_item(log=log) \
+                        if cached_is_token721 is True \
+                        else self.parse_token20_transfer_item(log=log)
+                    continue
+                logs = self._waiting_ctx.get(log['address'])
+                if isinstance(logs, list):
+                    logs.append(log)
+                    continue
+                self._waiting_ctx[log['address']] = [log]
+                yield await self.get_request_is_token721(
+                    contract_address=log['address'],
+                    priority=response.request.priority,
+                    cb_kwargs={'contract_address': log['address']},
+                )
                 continue
-            self.bloom4property.add(token_action_item['contract_address'])
-            yield await self.parse_token_property_item(token_action_item)
 
-    async def parse_token_action_item(self, log: EventLogItem) -> Union[
-        Token20TransferItem, Token721TransferItem, Token1155TransferItem,
-        TokenApprovalItem, TokenApprovalAllItem, None
-    ]:
-        # extract the erc20 and erc721 token transfers
-        if log['topics'][0] == ERC20_TRANSFER_TOPIC:
-            if await is_token721_contract(
-                    address=log['address'],
-                    provider_bucket=self.provider_bucket,
-                    timeout=self.timeout,
-            ):
-                return self.parse_token721_transfer_item(log=log)
-            return self.parse_token20_transfer_item(log=log)
+            # extract the erc1155 token transfers
+            if log['topics'][0] == ERC1155_SINGLE_TRANSFER_TOPIC or \
+                    log['topics'][0] == ERC1155_BATCH_TRANSFER_TOPIC:
+                yield self.parse_token1155_transfer_item(log=log)
+                continue
 
-        # extract the erc1155 token transfers
-        if log['topics'][0] == ERC1155_SINGLE_TRANSFER_TOPIC or \
-                log['topics'][0] == ERC1155_BATCH_TRANSFER_TOPIC:
-            return self.parse_token1155_transfer_item(log=log)
+            # extract the token approve
+            if log['topics'][0] == TOKEN_APPROVE_TOPIC:
+                yield self.parse_token_approve_item(log=log)
+                continue
 
-        # extract the token approve
-        if log['topics'][0] == TOKEN_APPROVE_TOPIC:
-            return self.parse_token_approve_item(log=log)
-
-        # extract the token approve all
-        if log['topics'][0] == TOKEN_APPROVE_ALL_TOPIC:
-            return self.parse_token_approve_all_item(log=log)
-
-    async def parse_token_property_item(self, item: Union[
-        Token20TransferItem, Token721TransferItem, Token1155TransferItem,
-        TokenApprovalItem, TokenApprovalAllItem
-    ]) -> TokenPropertyItem:
-        tasks = list()
-        tasks.append(asyncio.create_task(get_token_name(
-            address=item['contract_address'],
-            provider_bucket=self.provider_bucket,
-            timeout=self.timeout,
-        )))
-        tasks.append(asyncio.create_task(get_token_symbol(
-            address=item['contract_address'],
-            provider_bucket=self.provider_bucket,
-            timeout=self.timeout,
-        )))
-        tasks.append(asyncio.create_task(get_token_decimals(
-            address=item['contract_address'],
-            provider_bucket=self.provider_bucket,
-            timeout=self.timeout,
-        )))
-        tasks.append(asyncio.create_task(get_token_total_supply(
-            address=item['contract_address'],
-            provider_bucket=self.provider_bucket,
-            timeout=self.timeout,
-        )))
-        data = await asyncio.gather(*tasks)
-        return TokenPropertyItem(
-            contract_address=item['contract_address'],
-            name=data[0],
-            token_symbol=data[1],
-            decimals=data[2],
-            total_supply=data[3],
-        )
+            # extract the token approve all
+            if log['topics'][0] == TOKEN_APPROVE_ALL_TOPIC:
+                yield self.parse_token_approve_all_item(log=log)
+                continue
 
     def parse_token721_transfer_item(self, log: EventLogItem) -> Union[Token721TransferItem, None]:
         # load log topics
@@ -265,4 +238,224 @@ class TokenMiddleware(LogMiddleware):
             address_from=word_to_address(topics_with_data[1]),
             address_to=word_to_address(topics_with_data[2]),
             approved=bool(hex_to_dec(topics_with_data[3])),
+        )
+
+    @log_debug_tracing
+    def parse_is_token721(self, response: scrapy.http.Response, **kwargs):
+        is_token721 = False
+        try:
+            data = json.loads(response.text)
+            if data.get('result') is not None:
+                result = parse_bytes_data(data['result'], ['bool', ])
+                if result is not None and len(result) > 0 and result[0] is True:
+                    is_token721 = True
+
+            # set the cache
+            self._cache_is_token721.set(kwargs['contract_address'], is_token721)
+
+            # process waiting items
+            logs = self._waiting_ctx.pop(kwargs['contract_address'])
+            for log in logs:
+                yield self.parse_token721_transfer_item(log=log) \
+                    if is_token721 is True \
+                    else self.parse_token20_transfer_item(log=log)
+        except:
+            traceback.print_exc()
+
+    @log_debug_tracing
+    def errback_parse_is_token721(self, failure):
+        kwargs = failure.request.cb_kwargs
+
+        # process waiting items
+        logs = self._waiting_ctx.pop(kwargs['contract_address'])
+        for log in logs:
+            yield self.parse_token20_transfer_item(log=log)
+
+    async def get_request_is_token721(
+            self, contract_address: str, priority: int, cb_kwargs: dict
+    ) -> Union[scrapy.Request, None]:
+        # detect ERC721, return if contract is ERC721
+        # see https://ethereum.stackexchange.com/questions/44880/erc-165-query-on-erc-721-implementation
+        return scrapy.Request(
+            url=await self.provider_bucket.get(),
+            method='POST',
+            headers={'Content-Type': 'application/json'},
+            body=json.dumps({
+                "jsonrpc": "2.0",
+                "method": "eth_call",
+                "params": [{
+                    'to': contract_address,
+                    "data": "0x01ffc9a780ac58cd00000000000000000000000000000000000000000000000000000000",
+                }, 'latest'
+                ],
+                "id": 1
+            }),
+            priority=priority,
+            callback=self.parse_is_token721,
+            errback=self.errback_parse_is_token721,
+            cb_kwargs=cb_kwargs,
+        )
+
+
+class TokenPropertyMiddleware(LogMiddleware):
+    def __init__(self):
+        self.provider_bucket = None
+        self._cache_property = LRUCache(getattr(settings, 'MIDDLE_CACHE_SIZE', 2 ** 16))
+        self._waiting_ctx = dict()  # addr -> token transfers
+
+    def _init_by_spider(self, spider):
+        if self.provider_bucket is not None:
+            return
+        if getattr(spider, 'middleware_providers') and \
+                spider.middleware_providers.get(self.__class__.__name__):
+            self.provider_bucket = spider.middleware_providers[self.__class__.__name__]
+        else:
+            self.provider_bucket = spider.provider_bucket
+
+    async def process_spider_output(self, response, result, spider):
+        self._init_by_spider(spider)
+
+        # filter and process the result flow
+        async for item in result:
+            yield item
+            if not any([
+                isinstance(item, Token20TransferItem),
+                isinstance(item, Token721TransferItem),
+                isinstance(item, Token721TransferItem),
+                isinstance(item, Token1155TransferItem),
+                isinstance(item, TokenApprovalItem),
+                isinstance(item, TokenApprovalAllItem)
+            ]):
+                continue
+
+            # generate item if cached
+            contract_address = item['contract_address']
+            cached_property = self._cache_property.get(contract_address)
+            if cached_property is not None:
+                yield TokenPropertyItem(
+                    contract_address=contract_address,
+                    name=cached_property.get('name', ''),
+                    token_symbol=cached_property.get('token_symbol', ''),
+                    decimals=cached_property.get('token_symbol', -1),
+                    total_supply=cached_property.get('total_supply', -1),
+                    cb_kwargs={'token_action_item': item},
+                )
+                continue
+
+            # add items waiting for processing
+            if isinstance(self._waiting_ctx.get(contract_address), list):
+                self._waiting_ctx[contract_address].append(item)
+                continue
+            self._waiting_ctx[contract_address] = [item]
+
+            # generate requests for fetching property
+            request_kwargs = [
+                {'property_key': 'name', 'func': 'name()', 'return_type': ["string", ]},
+                {'property_key': 'token_symbol', 'func': 'symbol()', 'return_type': ["string", ]},
+                {'property_key': 'token_symbol', 'func': 'symbol()', 'return_type': ["bytes32", ]},
+                {'property_key': 'token_symbol', 'func': 'SYMBOL()', 'return_type': ["string", ]},
+                {'property_key': 'token_symbol', 'func': 'SYMBOL()', 'return_type': ["bytes32", ]},
+                {'property_key': 'decimals', 'func': 'decimals()', 'return_type': ["uint8", ]},
+                {'property_key': 'decimals', 'func': 'DECIMALS()', 'return_type': ["uint8", ]},
+                {'property_key': 'total_supply', 'func': 'totalSupply()', 'return_type': ["uint256", ]},
+            ]
+            token_property = {'semaphore': -len(request_kwargs)}
+            for kwargs in request_kwargs:
+                yield await self.get_request_token_property(
+                    contract_address=contract_address,
+                    priority=response.request.priority,
+                    cb_kwargs={
+                        'contract_address': contract_address,
+                        'token_action_item': item,
+                        'token_property': token_property,
+                    },
+                    **kwargs
+                )
+
+    @log_debug_tracing
+    async def parse_token_property(self, response: scrapy.http.Response, **kwargs):
+        return_type = kwargs['return_type']
+        try:
+            result = json.loads(response.text)
+            result = result.get('result')
+            result = parse_bytes_data(result, return_type)
+            if result is not None:
+                result = result[0] if not isinstance(result[0], bytes) else result[0].decode()
+                result = result.replace('\0', '') if isinstance(result, str) else result
+                property_key = kwargs['property_key']
+                property_value = kwargs['token_property'].get(property_key)
+                if property_value is None or result > property_value:
+                    kwargs['token_property'][property_key] = result
+
+            # check the property is available or not
+            kwargs['token_property']['semaphore'] += 1
+            if kwargs['token_property']['semaphore'] < 0:
+                return
+            self._cache_property.set(kwargs['contract_address'], kwargs['token_property'])
+
+            # generate items
+            token_action_items = self._waiting_ctx.pop(kwargs['contract_address'])
+            token_property = kwargs['token_property']
+            for item in token_action_items:
+                yield TokenPropertyItem(
+                    contract_address=kwargs['contract_address'],
+                    name=token_property.get('name', ''),
+                    token_symbol=token_property.get('token_symbol', ''),
+                    decimals=token_property.get('decimals', -1),
+                    total_supply=token_property.get('total_supply', -1),
+                    cb_kwargs={'token_action_item': item},
+                )
+        except:
+            traceback.print_exc()
+
+    @log_debug_tracing
+    def errback_parse_token_property(self, failure):
+        kwargs = failure.request.cb_kwargs
+        try:
+            kwargs['token_property']['semaphore'] += 1
+            if kwargs['token_property']['semaphore'] < 0:
+                return
+            self._cache_property.set(kwargs['contract_address'], kwargs['token_property'])
+
+            # generate items
+            token_action_items = self._waiting_ctx.pop(kwargs['contract_address'])
+            token_property = kwargs['token_property']
+            for item in token_action_items:
+                yield TokenPropertyItem(
+                    contract_address=kwargs['contract_address'],
+                    name=token_property.get('name', ''),
+                    token_symbol=token_property.get('token_symbol', ''),
+                    decimals=token_property.get('decimals', -1),
+                    total_supply=token_property.get('total_supply', -1),
+                    cb_kwargs={'token_action_item': item},
+                )
+        except:
+            pass
+
+    async def get_request_token_property(
+            self, contract_address: str, priority: int,
+            property_key: str, func: str, return_type: List, cb_kwargs: dict,
+    ) -> Union[scrapy.Request, None]:
+        # generate request
+        return scrapy.Request(
+            url=await self.provider_bucket.get(),
+            method='POST',
+            headers={'Content-Type': 'application/json'},
+            body=json.dumps({
+                "jsonrpc": "2.0",
+                "method": "eth_call",
+                "params": [
+                    {'to': contract_address, "data": Web3.keccak(text=func).hex()[:2 + 8]},
+                    'latest'
+                ],
+                "id": 1
+            }),
+            priority=priority,
+            callback=self.parse_token_property,
+            errback=self.errback_parse_token_property,
+            cb_kwargs={
+                'property_key': property_key,
+                'return_type': return_type,
+                **cb_kwargs,
+            },
         )

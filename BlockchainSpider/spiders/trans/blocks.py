@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 import time
@@ -17,11 +16,11 @@ class Web3BlockTransactionSpider(scrapy.Spider):
     custom_settings = {
         'ITEM_PIPELINES': {
             'BlockchainSpider.pipelines.TransPipeline': 299,
+            'BlockchainSpider.pipelines.TransBloomFilterPipeline': 298,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
         else getattr(settings, 'ITEM_PIPELINES', dict()),
         'SPIDER_MIDDLEWARES': {
-            'BlockchainSpider.middlewares.trans.InterceptMiddleware': 542,
-            'BlockchainSpider.middlewares.SyncMiddleware': 536,
+            'BlockchainSpider.middlewares.SyncMiddleware': 534,
             **getattr(settings, 'SPIDER_MIDDLEWARES', dict())
         },
     }
@@ -32,10 +31,11 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         available_middlewares = {
             'BlockchainSpider.middlewares.trans.TransactionReceiptMiddleware': 541,
             'BlockchainSpider.middlewares.trans.TraceMiddleware': 540,
-            'BlockchainSpider.middlewares.trans.TokenMiddleware': 539,
-            'BlockchainSpider.middlewares.trans.MetadataMiddleware': 538,
-            'BlockchainSpider.middlewares.trans.ContractMiddleware': 537,
-            'BlockchainSpider.middlewares.trans.DCFGMiddleware': 536,
+            'BlockchainSpider.middlewares.trans.TokenTransferMiddleware': 539,
+            'BlockchainSpider.middlewares.trans.TokenPropertyMiddleware': 538,
+            'BlockchainSpider.middlewares.trans.MetadataMiddleware': 537,
+            'BlockchainSpider.middlewares.trans.ContractMiddleware': 536,
+            'BlockchainSpider.middlewares.trans.DCFGMiddleware': 535,
         }
         middlewares = kwargs.get('enable')
         if middlewares is not None:
@@ -85,10 +85,14 @@ class Web3BlockTransactionSpider(scrapy.Spider):
                 items=kwargs['providers4trace'].split(','),
                 qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
             ) if kwargs.get('providers4trace') else None,
-            'TokenMiddleware': AsyncItemBucket(
-                items=kwargs['providers4token'].split(','),
+            'TokenTransferMiddleware': AsyncItemBucket(
+                items=kwargs['providers4token_transfer'].split(','),
                 qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
-            ) if kwargs.get('providers4token') else None,
+            ) if kwargs.get('providers4token_transfer') else None,
+            'TokenPropertyMiddleware': AsyncItemBucket(
+                items=kwargs['providers4token_property'].split(','),
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
+            ) if kwargs.get('providers4token_property') else None,
             'MetadataMiddleware': AsyncItemBucket(
                 items=kwargs['providers4metadata'].split(','),
                 qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
@@ -172,7 +176,6 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         # next query of block number
         if self.end_block is not None:
             return
-        await asyncio.sleep(5)
         yield await self.get_request_eth_block_number()
 
     @log_debug_tracing
@@ -242,6 +245,7 @@ class Web3BlockTransactionSpider(scrapy.Spider):
                 "jsonrpc": "2.0"
             }),
             callback=self.parse_eth_block_number,
+            priority=0,
             dont_filter=True,
         )
 

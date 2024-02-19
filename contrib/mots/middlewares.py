@@ -1,9 +1,8 @@
 import networkx as nx
 import numpy as np
-import scrapy
 from scipy.sparse import lil_matrix
 
-from BlockchainSpider.items import SyncSignalItem
+from BlockchainSpider.items import SyncDataItem, BlockItem
 from BlockchainSpider.items import TransactionItem, TraceItem, Token721TransferItem, Token20TransferItem, \
     Token1155TransferItem
 from BlockchainSpider.middlewares._meta import LogMiddleware
@@ -12,60 +11,45 @@ from contrib.mots.items import MotifTransactionRepresentationItem
 
 class MoTSMiddleware(LogMiddleware):
     def __init__(self):
-        self.request_parent = dict()
-        self.signal_key = None
-        self.signal2items = dict()
+        self.block2txhashes = dict()
+        self.txhash2edges = dict()
 
     async def process_spider_output(self, response, result, spider):
-        key = getattr(spider, 'sync_item_key')
-        if key is None:
-            async for item in result:
-                yield item
-            return
-
-        # scan pipeline
         async for item in result:
             yield item
-
-            # init cache
-            if isinstance(item, scrapy.Request):
-                signal = item.cb_kwargs.get(key)
-                if signal is None:
-                    continue
-                self.signal_key = list(signal.keys())[0]
-                self.signal2items[signal[self.signal_key]] = list()
+            if isinstance(item, BlockItem):
+                self.block2txhashes[item['block_number']] = item['transaction_hashes']
                 continue
 
-            # generate items
-            if isinstance(item, SyncSignalItem):
-                signal_value = item['signal'][self.signal_key]
-                items = self.signal2items.pop(signal_value)
-                txhash2edges = dict()
-                for item in items:
-                    txhash = item.get('transaction_hash')
-                    if not txhash2edges.get(txhash):
-                        txhash2edges[txhash] = list()
-                    txhash2edges[txhash].append({
-                        'address_from': item.get('address_from'),
-                        'address_to': item.get('address_to'),
-                    })
-                for txhash, edges in txhash2edges.items():
-                    motif_vec = HighOrderMotifCounter(motif_size=4).count(edges)
-                    yield MotifTransactionRepresentationItem(
-                        transaction_hash=txhash,
-                        vector=[motif_vec[i] for i in range(1, 16 + 1)]
-                    )
-                continue
-
-            # add cache
-            if not any([isinstance(item, t) for t in [
+            if any([isinstance(item, t) for t in [
                 TransactionItem, TraceItem,
                 Token721TransferItem, Token20TransferItem,
                 Token1155TransferItem,
             ]]):
+                txhash = item['transaction_hash']
+                if self.txhash2edges.get(txhash) is None:
+                    self.txhash2edges[txhash] = list()
+                self.txhash2edges[txhash].append({
+                    'address_from': item['address_from'],
+                    'address_to': item['address_to'],
+                })
+
+            if isinstance(item, SyncDataItem):
+                txhash2edges = dict()
+                if item['data'].get('block_number'):
+                    block_number = item['data']['block_number']
+                    for txhash in self.block2txhashes[block_number]:
+                        txhash2edges[txhash] = self.txhash2edges[txhash]
+                else:
+                    transaction_hash = item['data']['transaction_hash']
+                    txhash2edges[transaction_hash] = self.txhash2edges.pop(transaction_hash, [])
+                for txhash, edges in txhash2edges.items():
+                    motif_vec = HighOrderMotifCounter(motif_size=4).count(edges)
+                    yield MotifTransactionRepresentationItem(
+                        transaction_hash=txhash,
+                        **{'M%d' % i: val for i, val in motif_vec.items()},
+                    )
                 continue
-            signal_value = item[self.signal_key]
-            self.signal2items[signal_value].append(item)
 
 
 class HighOrderMotifCounter:

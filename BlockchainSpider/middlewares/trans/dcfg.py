@@ -4,7 +4,7 @@ from typing import Dict, Union
 import scrapy
 from pybloom import ScalableBloomFilter
 
-from BlockchainSpider.items import DCFGBlock, DCFGEdge
+from BlockchainSpider.items import DCFGBlockItem, DCFGEdgeItem
 from BlockchainSpider.middlewares.trans import TraceMiddleware
 from BlockchainSpider.utils.decorator import log_debug_tracing
 
@@ -135,18 +135,13 @@ js_tracer = """{
 class DCFGMiddleware(TraceMiddleware):
     def __init__(self):
         super().__init__()
-        self.bloom4blockid = ScalableBloomFilter(
-            initial_capacity=1024,
-            error_rate=1e-4,
-            mode=ScalableBloomFilter.SMALL_SET_GROWTH,
-        )
 
     @log_debug_tracing
     async def parse_debug_trace_block(self, response: scrapy.http.Response, **kwargs):
         data = json.loads(response.text)
         data = data.get('result')
 
-        # parse trance item
+        # parse trace item
         transaction_hashes = kwargs['transaction_hashes']
         for i, result in enumerate(data):
             result = result['result']
@@ -163,22 +158,16 @@ class DCFGMiddleware(TraceMiddleware):
         for item in self.parse_dcfg_items(result, **kwargs):
             yield item
 
-    def parse_dcfg_items(self, result: Dict, **kwargs) -> Union[DCFGBlock, DCFGEdge]:
+    def parse_dcfg_items(self, result: Dict, **kwargs) -> Union[DCFGBlockItem, DCFGEdgeItem]:
         for block in result['blocks']:
-            block_id = '{}#{}'.format(
-                block['contract_address'],
-                block['start_pc']
-            )
-            if block_id in self.bloom4blockid:
-                continue
-            self.bloom4blockid.add(block_id)
-            yield DCFGBlock(
+            yield DCFGBlockItem(
                 contract_address=block['contract_address'],
                 start_pc=block['start_pc'],
                 operations=block['operations'],
+                cb_kwargs={'transaction_hash': kwargs['transaction_hash']}
             )
         for edge in result['edges']:
-            yield DCFGEdge(
+            yield DCFGEdgeItem(
                 transaction_hash=kwargs['transaction_hash'],
                 address_from=edge['address_from'],
                 start_pc_from=edge['start_pc_from'],

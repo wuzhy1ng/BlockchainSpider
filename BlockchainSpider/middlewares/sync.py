@@ -5,7 +5,7 @@ from typing import Callable, Generator, AsyncGenerator, Union
 import scrapy
 from scrapy.utils.request import fingerprint
 
-from BlockchainSpider.items.sync import SyncSignalItem
+from BlockchainSpider.items.sync import SyncDataItem
 from BlockchainSpider.middlewares._meta import LogMiddleware
 
 
@@ -90,7 +90,7 @@ class SyncMiddleware(LogMiddleware):
 
         return new_errback
 
-    async def _release_sync_item(self, finished_request: scrapy.Request) -> Union[SyncSignalItem, None]:
+    async def _release_sync_item(self, finished_request: scrapy.Request) -> Union[SyncDataItem, None]:
         parent_fingerprint = fingerprint(finished_request)
         grandpa_fingerprint = self.request_parent.get(parent_fingerprint)
         if grandpa_fingerprint is None:
@@ -116,4 +116,4 @@ class SyncMiddleware(LogMiddleware):
             message="Synchronized: {}".format(value),
             level=logging.INFO,
         )
-        return SyncSignalItem(signal=value)
+        return SyncDataItem(data=value)

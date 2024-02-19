@@ -1,4 +1,3 @@
-import asyncio
 import json
 from typing import Iterator
 
@@ -14,16 +13,18 @@ from BlockchainSpider.utils.web3 import hex_to_dec
 class TraceMiddleware(LogMiddleware):
     def __init__(self):
         self.provider_bucket = None
-        self._last_ts = 0
-        self._lock = asyncio.Lock()
 
-    async def process_spider_output(self, response, result, spider):
+    def _init_by_spider(self, spider):
+        if self.provider_bucket is not None:
+            return
         if getattr(spider, 'middleware_providers') and \
                 spider.middleware_providers.get(self.__class__.__name__):
             self.provider_bucket = spider.middleware_providers[self.__class__.__name__]
         else:
             self.provider_bucket = spider.provider_bucket
 
+    async def process_spider_output(self, response, result, spider):
+        self._init_by_spider(spider)
         async for item in result:
             yield item
             if isinstance(item, BlockItem):

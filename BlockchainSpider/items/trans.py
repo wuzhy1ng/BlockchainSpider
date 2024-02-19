@@ -1,7 +1,9 @@
 import scrapy
 
+from BlockchainSpider.items.defs import ContextualItem
 
-class BlockItem(scrapy.Item):
+
+class BlockItem(ContextualItem):
     block_hash = scrapy.Field()  # str
     block_number = scrapy.Field()  # int
     parent_hash = scrapy.Field()  # str
@@ -18,7 +20,7 @@ class BlockItem(scrapy.Item):
     nonce = scrapy.Field()  # int
 
 
-class TransactionItem(scrapy.Item):
+class TransactionItem(ContextualItem):
     transaction_hash = scrapy.Field()  # str
     transaction_index = scrapy.Field()  # int
     block_hash = scrapy.Field()  # str
@@ -33,7 +35,7 @@ class TransactionItem(scrapy.Item):
     input = scrapy.Field()  # str
 
 
-class TransactionReceiptItem(scrapy.Item):
+class TransactionReceiptItem(ContextualItem):
     transaction_hash = scrapy.Field()  # str
     transaction_index = scrapy.Field()  # int
     transaction_type = scrapy.Field()  # int
@@ -45,7 +47,7 @@ class TransactionReceiptItem(scrapy.Item):
     is_error = scrapy.Field()  # bool
 
 
-class EventLogItem(scrapy.Item):
+class EventLogItem(ContextualItem):
     transaction_hash = scrapy.Field()  # str
     log_index = scrapy.Field()  # int
     block_number = scrapy.Field()  # str
@@ -56,7 +58,7 @@ class EventLogItem(scrapy.Item):
     removed = scrapy.Field()  # bool
 
 
-class TraceItem(scrapy.Item):
+class TraceItem(ContextualItem):
     transaction_hash = scrapy.Field()  # str
     trace_type = scrapy.Field()  # str
     trace_id = scrapy.Field()  # str
@@ -71,12 +73,12 @@ class TraceItem(scrapy.Item):
     output = scrapy.Field()  # str
 
 
-class ContractItem(scrapy.Item):
+class ContractItem(ContextualItem):
     address = scrapy.Field()  # str
     code = scrapy.Field()  # str
 
 
-class Token20TransferItem(scrapy.Item):
+class Token20TransferItem(ContextualItem):
     transaction_hash = scrapy.Field()  # str
     log_index = scrapy.Field()  # int
     block_number = scrapy.Field()  # int
@@ -87,7 +89,7 @@ class Token20TransferItem(scrapy.Item):
     value = scrapy.Field()  # int
 
 
-class Token721TransferItem(scrapy.Item):
+class Token721TransferItem(ContextualItem):
     transaction_hash = scrapy.Field()  # str
     log_index = scrapy.Field()  # str
     block_number = scrapy.Field()  # int
@@ -98,7 +100,7 @@ class Token721TransferItem(scrapy.Item):
     token_id = scrapy.Field()  # int
 
 
-class Token1155TransferItem(scrapy.Item):
+class Token1155TransferItem(ContextualItem):
     transaction_hash = scrapy.Field()  # str
     log_index = scrapy.Field()  # int
     block_number = scrapy.Field()  # str
@@ -111,7 +113,7 @@ class Token1155TransferItem(scrapy.Item):
     values = scrapy.Field()  # [int]
 
 
-class TokenApprovalItem(scrapy.Item):
+class TokenApprovalItem(ContextualItem):
     transaction_hash = scrapy.Field()  # str
     log_index = scrapy.Field()  # int
     block_number = scrapy.Field()  # str
@@ -122,7 +124,7 @@ class TokenApprovalItem(scrapy.Item):
     value = scrapy.Field()  # int
 
 
-class TokenApprovalAllItem(scrapy.Item):
+class TokenApprovalAllItem(ContextualItem):
     transaction_hash = scrapy.Field()  # str
     log_index = scrapy.Field()  # int
     block_number = scrapy.Field()  # str
@@ -133,7 +135,7 @@ class TokenApprovalAllItem(scrapy.Item):
     approved = scrapy.Field()  # bool
 
 
-class TokenPropertyItem(scrapy.Item):
+class TokenPropertyItem(ContextualItem):
     contract_address = scrapy.Field()  # str
     name = scrapy.Field()  # str
     token_symbol = scrapy.Field()  # str
@@ -141,7 +143,7 @@ class TokenPropertyItem(scrapy.Item):
     total_supply = scrapy.Field()  # int
 
 
-class NFTMetadataItem(scrapy.Item):
+class NFTMetadataItem(ContextualItem):
     transaction_hash = scrapy.Field()  # str
     log_index = scrapy.Field()  # int
     block_number = scrapy.Field()  # str
@@ -152,13 +154,13 @@ class NFTMetadataItem(scrapy.Item):
     data = scrapy.Field()  # str
 
 
-class DCFGBlock(scrapy.Item):
+class DCFGBlockItem(ContextualItem):
     contract_address = scrapy.Field()  # str
     start_pc = scrapy.Field()  # int
     operations = scrapy.Field()  # [str]
 
 
-class DCFGEdge(scrapy.Item):
+class DCFGEdgeItem(ContextualItem):
     transaction_hash = scrapy.Field()  # str
     address_from = scrapy.Field()  # str
     start_pc_from = scrapy.Field()  # int

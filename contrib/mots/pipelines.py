@@ -7,8 +7,8 @@ from contrib.mots.items import MotifTransactionRepresentationItem
 class MoTSPipeline:
     def __init__(self):
         self.file = None
-        self.headers = None
         self.writer = None
+        self.headers = ['transaction_hash', *['M%i' % i for i in range(1, 16 + 1)]]
 
     def process_item(self, item, spider):
         if getattr(spider, 'out_dir') is None:
@@ -26,13 +26,9 @@ class MoTSPipeline:
             file = open(fn, 'w', encoding='utf-8', newline='\n')
             self.file = file
 
-            # init headers
-            headers = sorted(item.keys())
-            self.headers = headers
-
             # init writer
             writer = csv.writer(file)
-            writer.writerow(headers)
+            writer.writerow(self.headers)
             self.writer = writer
 
         # save to file

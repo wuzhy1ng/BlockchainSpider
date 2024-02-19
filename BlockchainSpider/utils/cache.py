@@ -1,22 +1,20 @@
+import asyncio
+from collections import OrderedDict
+
+
 class LRUCache:
     def __init__(self, max_size: int = 128):
         self.max_size = max_size
-        self._cache = dict()
-        self._key_list = list()
+        self._cache = OrderedDict()
 
     def get(self, key):
-        value = self._cache.get(key)
+        value = self._cache.pop(key, None)
         if value is not None:
-            self._key_list.remove(key)
-            self._key_list.insert(0, key)
+            self._cache[key] = value
         return value
 
     def set(self, key, value):
-        # replace cache item if full
-        if len(self._cache) >= self.max_size:
-            _key = self._key_list.pop()
-            self._cache.pop(_key)
-
-        # set cache
+        ret = self._cache.pop(key, None)
+        if ret is not None and len(self._cache) >= self.max_size:
+            self._cache.popitem(last=False)
         self._cache[key] = value
-        self._key_list.insert(0, key)

@@ -14,7 +14,7 @@ TOKEN_APPROVE_TOPIC = '0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac
 TOKEN_APPROVE_ALL_TOPIC = '0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31'
 
 
-@async_lru.alru_cache(maxsize=1024)
+@async_lru.alru_cache(maxsize=10240)
 async def is_token721_contract(address: str, provider_bucket, timeout: int) -> bool:
     """
     Detect the contract is ERC721-based or not.
