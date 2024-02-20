@@ -9,7 +9,7 @@ from scrapy import Request
 from BlockchainSpider import settings
 from BlockchainSpider.items import Token721TransferItem, \
     Token1155TransferItem, NFTMetadataItem
-from BlockchainSpider.middlewares._meta import LogMiddleware
+from BlockchainSpider.middlewares.defs import LogMiddleware
 from BlockchainSpider.utils.decorator import log_debug_tracing
 from BlockchainSpider.utils.web3 import web3_json_rpc, parse_bytes_data
 

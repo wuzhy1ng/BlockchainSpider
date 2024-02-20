@@ -41,10 +41,6 @@ You can find the transaction data on `./data/0xeb3...c23.csv` on finished.
 
 Try to import the transaction data and the importance of the addresses in the subgraph `./data/importance/0xeb3...c23.csv` to [Gephi](https://gephi.org/).
 
-![](http://120.78.210.226:8000/readme_kucoin.png)
-
-The hacker is related to Tornado Cash, a mixing server, it shows that the hacker took part in money laundering! 
-
 
 
 ### 💡Collect label data
@@ -84,38 +80,51 @@ You can find the label data on `./data/labels.ofac`, each row of this file is a 
 
 **Note**: Please indicate the source when using crawling labels.
 
-### 🧱Collect block data
+### 🪙Collect transaction data
 
-In this section, we will demonstrate how to collect block data in [Ethereum](https://ethereum.org/)!
+In this section, we will demonstrate how to collect transaction data in [Ethereum](https://ethereum.org/)!
 
-Run this command as follow:
+The following command will continuously collect transactions from block number `19000000` to the latest block:
 ```shell
-scrapy crawl trans.blocks.web3
+scrapy crawl trans.block.web3 -a start_blk=19000000 -a providers=https://freerpc.merkle.io
 ```
 
 You can find the label data on `./data`, in which:
 - `BlockItem.csv` saves the metadata for blocks, such as minter, timestamp and so on.
 - `TransactionItem.csv` saves the external transactions of blocks.
 
-## ❗Important tips
-If you want to get the best performance of Blockchainspider, 
-please read the settings of [APIKeys](https://870167019.gitbook.io/blockchainspider/settings/apikeys) and [Cache](https://870167019.gitbook.io/blockchainspider/settings/cache).
+> BlockchainSpider also supports collecting transaction receipts, logs, token transfers, etc. 
+> Moreover, collecting block data from EVM-compatible chains (e.g., BNBChain, Polygon, etc.) is also available; 
+> see our [documentation](https://870167019.gitbook.io/blockchainspider/transaction-spiders/overview).
 
-## 🔬About TRacer
 
-Please cite our [paper](https://arxiv.org/abs/2201.05757) (and the respective papers of the methods used) if you use this code in your own work:
+## 🏷️Citation
+The following paper supports `BlockchainSpider`. Here are the bib references:
 
 ```latex
-@misc{wu2022tracer,
-      title={TRacer: Scalable Graph-based Transaction Tracing for Account-based Blockchain Trading Systems}, 
-      author={Zhiying Wu and Jieli Liu and Jiajing Wu and Zibin Zheng},
-      year={2022},
-      eprint={2201.05757},
-      archivePrefix={arXiv},
-      primaryClass={cs.CR}
+@article{tracer23wu,
+    author={Wu, Zhiying and Liu, Jieli and Wu, Jiajing and Zheng, Zibin and Chen, Ting},
+    journal={IEEE Transactions on Information Forensics and Security}, 
+    title={TRacer: Scalable Graph-Based Transaction Tracing for Account-Based Blockchain Trading Systems}, 
+    year={2023},
+    volume={18},
+    number={},
+    pages={2609-2621}
+}
+@inproceedings{mots23wu,
+    author = {Wu, Zhiying and Liu, Jieli and Wu, Jiajing and Zheng, Zibin and Luo, Xiapu and Chen, Ting},
+    title = {Know Your Transactions: Real-time and Generic Transaction Semantic Representation on Blockchain \& Web3 Ecosystem},
+    year = {2023},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    doi = {10.1145/3543507.3583537},
+    pages = {1918–1927},
+    numpages = {10},
+    series = {WWW '23}
 }
 ```
 
+## 🔬About TRacer
 Please execute the code in `./test` to reproduce the experimental results in the paper.
 
 - `parameters.py`: Parameter sensitivity experiment.

@@ -8,7 +8,7 @@ from web3 import Web3
 from BlockchainSpider import settings
 from BlockchainSpider.items import EventLogItem, Token1155TransferItem, TokenApprovalAllItem, TokenPropertyItem
 from BlockchainSpider.items import Token721TransferItem, Token20TransferItem, TokenApprovalItem
-from BlockchainSpider.middlewares._meta import LogMiddleware
+from BlockchainSpider.middlewares.defs import LogMiddleware
 from BlockchainSpider.utils.cache import LRUCache
 from BlockchainSpider.utils.decorator import log_debug_tracing
 from BlockchainSpider.utils.token import ERC20_TRANSFER_TOPIC, ERC721_TRANSFER_TOPIC, \

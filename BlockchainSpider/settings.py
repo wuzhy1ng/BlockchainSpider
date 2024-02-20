@@ -91,6 +91,10 @@ ITEM_PIPELINES = {
 # HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 # HTTPCACHE_GZIP = True
 
+# Setting the fingerprinting algorithm is used
+# See https://docs.scrapy.org/en/latest/topics/request-response.html#request-fingerprinter-implementation
+REQUEST_FINGERPRINTER_IMPLEMENTATION = '2.7'
+
 # Enable asyncio
 TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'
 install_reactor('twisted.internet.asyncioreactor.AsyncioSelectorReactor')

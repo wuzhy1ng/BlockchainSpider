@@ -15,8 +15,9 @@ class Web3BlockTransactionSpider(scrapy.Spider):
     name = 'trans.block.web3'
     custom_settings = {
         'ITEM_PIPELINES': {
-            'BlockchainSpider.pipelines.TransPipeline': 299,
-            'BlockchainSpider.pipelines.TransBloomFilterPipeline': 298,
+            'BlockchainSpider.pipelines.Trans2csvPipeline': 299,
+            'BlockchainSpider.pipelines.TransDCFG2csvPipeline': 298,
+            'BlockchainSpider.pipelines.TransBloomFilterPipeline': 297,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
         else getattr(settings, 'ITEM_PIPELINES', dict()),
         'SPIDER_MIDDLEWARES': {
@@ -190,9 +191,6 @@ class Web3BlockTransactionSpider(scrapy.Spider):
             difficulty=hex_to_dec(result.get('difficulty')),
             total_difficulty=hex_to_dec(result.get('totalDifficulty')),
             size=hex_to_dec(result.get('size')),
-            transaction_hashes=list() if not result.get('transactions') else [
-                item.get('hash', '') for item in result['transactions']
-            ],
             gas_limit=hex_to_dec(result.get('gasLimit')),
             gas_used=hex_to_dec(result.get('gasUsed')),
             miner=result.get('miner', ''),
@@ -200,6 +198,11 @@ class Web3BlockTransactionSpider(scrapy.Spider):
             timestamp=hex_to_dec(result.get('timestamp')),
             logs_bloom=result.get('logsBloom', ''),
             nonce=hex_to_dec(result.get('nonce')),
+            cb_kwargs={
+                'transaction_hashes': list() if not result.get('transactions') else [
+                    item.get('hash', '') for item in result['transactions']
+                ],
+            }
         )
 
         # fetch receipt for each transaction if block receipt api unavailable

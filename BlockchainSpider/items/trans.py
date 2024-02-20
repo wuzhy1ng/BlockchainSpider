@@ -10,7 +10,6 @@ class BlockItem(ContextualItem):
     difficulty = scrapy.Field()  # int
     total_difficulty = scrapy.Field()  # int
     size = scrapy.Field()  # int
-    transaction_hashes = scrapy.Field()  # List[str]
     gas_limit = scrapy.Field()  # int
     gas_used = scrapy.Field()  # int
     miner = scrapy.Field()  # str
@@ -152,6 +151,12 @@ class NFTMetadataItem(ContextualItem):
     token_id = scrapy.Field()  # int
     uri = scrapy.Field()  # str
     data = scrapy.Field()  # str
+
+
+class DCFGItem(ContextualItem):
+    transaction_hash = scrapy.Field()  # str
+    blocks = scrapy.Field()  # [DCFGBlockItem]
+    edges = scrapy.Field()  # [DCFGEdgeItem]
 
 
 class DCFGBlockItem(ContextualItem):

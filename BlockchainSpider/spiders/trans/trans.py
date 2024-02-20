@@ -16,8 +16,9 @@ class Web3TransactionSpider(scrapy.Spider):
     name = 'trans.web3'
     custom_settings = {
         'ITEM_PIPELINES': {
-            'BlockchainSpider.pipelines.TransPipeline': 299,
-            'BlockchainSpider.pipelines.TransBloomFilterPipeline': 298,
+            'BlockchainSpider.pipelines.Trans2csvPipeline': 299,
+            'BlockchainSpider.pipelines.TransDCFG2csvPipeline': 298,
+            'BlockchainSpider.pipelines.TransBloomFilterPipeline': 297,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
         else getattr(settings, 'ITEM_PIPELINES', dict()),
         'SPIDER_MIDDLEWARES': {

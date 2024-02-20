@@ -6,7 +6,7 @@ import scrapy
 from scrapy.utils.request import fingerprint
 
 from BlockchainSpider.items.sync import SyncDataItem
-from BlockchainSpider.middlewares._meta import LogMiddleware
+from BlockchainSpider.middlewares.defs import LogMiddleware
 
 
 class SyncMiddleware(LogMiddleware):

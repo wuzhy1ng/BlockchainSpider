@@ -5,7 +5,7 @@ from scipy.sparse import lil_matrix
 from BlockchainSpider.items import SyncDataItem, BlockItem
 from BlockchainSpider.items import TransactionItem, TraceItem, Token721TransferItem, Token20TransferItem, \
     Token1155TransferItem
-from BlockchainSpider.middlewares._meta import LogMiddleware
+from BlockchainSpider.middlewares.defs import LogMiddleware
 from contrib.mots.items import MotifTransactionRepresentationItem
 
 
@@ -18,7 +18,8 @@ class MoTSMiddleware(LogMiddleware):
         async for item in result:
             yield item
             if isinstance(item, BlockItem):
-                self.block2txhashes[item['block_number']] = item['transaction_hashes']
+                context_kwargs = item.get_context_kwargs()
+                self.block2txhashes[item['block_number']] = context_kwargs['transaction_hashes']
                 continue
 
             if any([isinstance(item, t) for t in [

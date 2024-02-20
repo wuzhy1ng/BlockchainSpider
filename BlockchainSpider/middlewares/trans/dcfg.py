@@ -1,10 +1,10 @@
 import json
-from typing import Dict, Union
+import logging
+from typing import Dict, List
 
 import scrapy
-from pybloom import ScalableBloomFilter
 
-from BlockchainSpider.items import DCFGBlockItem, DCFGEdgeItem
+from BlockchainSpider.items import DCFGBlockItem, DCFGEdgeItem, DCFGItem
 from BlockchainSpider.middlewares.trans import TraceMiddleware
 from BlockchainSpider.utils.decorator import log_debug_tracing
 
@@ -140,34 +140,58 @@ class DCFGMiddleware(TraceMiddleware):
     async def parse_debug_trace_block(self, response: scrapy.http.Response, **kwargs):
         data = json.loads(response.text)
         data = data.get('result')
+        if data is None:
+            self.log(
+                message='On parse_debug_trace_block, `result` is None, '
+                        'please check if your providers are fully available at debug_traceBlockByNumber.',
+                level=logging.WARNING,
+            )
+            return
 
         # parse trace item
-        transaction_hashes = kwargs['transaction_hashes']
+        transaction_hashes = kwargs.pop('transaction_hashes')
         for i, result in enumerate(data):
-            result = result['result']
             kwargs['transaction_hash'] = transaction_hashes[i]
-            for item in self.parse_dcfg_items(result, **kwargs):
-                yield item
+            yield DCFGItem(
+                transaction_hash=kwargs['transaction_hash'],
+                blocks=DCFGMiddleware.parse_dcfg_block_items(result['result'], **kwargs),
+                edges=DCFGMiddleware.parse_dcfg_edge_items(result['result'], **kwargs),
+            )
 
     @log_debug_tracing
-    def parse_debug_transaction(self, response: scrapy.http.Response, **kwargs):
+    async def parse_debug_transaction(self, response: scrapy.http.Response, **kwargs):
         result = json.loads(response.text)
         result = result.get('result')
+        if result is None:
+            self.log(
+                message='On parse_debug_trace_block, `result` is None, '
+                        'please check if your providers are fully available at debug_traceTransaction.',
+                level=logging.WARNING,
+            )
+            return
 
-        # parse trance item
-        for item in self.parse_dcfg_items(result, **kwargs):
-            yield item
+        # parse trace item
+        yield DCFGItem(
+            transaction_hash=kwargs['transaction_hash'],
+            blocks=DCFGMiddleware.parse_dcfg_block_items(result, **kwargs),
+            edges=DCFGMiddleware.parse_dcfg_edge_items(result, **kwargs),
+        )
 
-    def parse_dcfg_items(self, result: Dict, **kwargs) -> Union[DCFGBlockItem, DCFGEdgeItem]:
-        for block in result['blocks']:
-            yield DCFGBlockItem(
+    @staticmethod
+    def parse_dcfg_block_items(result: Dict, **kwargs) -> List[DCFGBlockItem]:
+        return [
+            DCFGBlockItem(
                 contract_address=block['contract_address'],
                 start_pc=block['start_pc'],
                 operations=block['operations'],
                 cb_kwargs={'transaction_hash': kwargs['transaction_hash']}
-            )
-        for edge in result['edges']:
-            yield DCFGEdgeItem(
+            ) for block in result['blocks']
+        ]
+
+    @staticmethod
+    def parse_dcfg_edge_items(result: Dict, **kwargs) -> List[DCFGEdgeItem]:
+        return [
+            DCFGEdgeItem(
                 transaction_hash=kwargs['transaction_hash'],
                 address_from=edge['address_from'],
                 start_pc_from=edge['start_pc_from'],
@@ -178,7 +202,8 @@ class DCFGMiddleware(TraceMiddleware):
                 gas=int(edge.get('gas', 0)),
                 selector=edge.get('selector', '0x'),
                 index=edge.get('index', 0),
-            )
+            ) for edge in result['edges']
+        ]
 
     async def get_request_debug_trace_block(
             self, block_number: int, priority: int, cb_kwargs: dict

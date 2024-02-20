@@ -7,7 +7,7 @@ import scrapy
 from BlockchainSpider import settings
 from BlockchainSpider.items import TransactionReceiptItem
 from BlockchainSpider.items.trans import ContractItem
-from BlockchainSpider.middlewares._meta import LogMiddleware
+from BlockchainSpider.middlewares.defs import LogMiddleware
 from BlockchainSpider.utils.cache import LRUCache
 from BlockchainSpider.utils.decorator import log_debug_tracing
 

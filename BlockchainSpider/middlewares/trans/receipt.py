@@ -4,7 +4,7 @@ import logging
 import scrapy
 
 from BlockchainSpider.items import EventLogItem, TransactionReceiptItem, BlockItem, TransactionItem
-from BlockchainSpider.middlewares._meta import LogMiddleware
+from BlockchainSpider.middlewares.defs import LogMiddleware
 from BlockchainSpider.utils.decorator import log_debug_tracing
 from BlockchainSpider.utils.web3 import hex_to_dec, web3_json_rpc
 

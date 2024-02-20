@@ -3,9 +3,9 @@ import os
 
 from pybloom import ScalableBloomFilter
 
-from BlockchainSpider.items.trans import TransactionItem, EventLogItem, TraceItem, ContractItem, \
+from BlockchainSpider.items.trans import BlockItem, TransactionItem, EventLogItem, TraceItem, ContractItem, \
     Token721TransferItem, Token20TransferItem, Token1155TransferItem, TokenApprovalItem, TokenApprovalAllItem, \
-    TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGBlockItem, DCFGEdgeItem
+    TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGItem, DCFGBlockItem, DCFGEdgeItem
 from BlockchainSpider.items.sync import SyncDataItem
 
 
@@ -17,11 +17,6 @@ class TransBloomFilterPipeline:
             mode=ScalableBloomFilter.SMALL_SET_GROWTH,
         )
         self._bloom4token_property = ScalableBloomFilter(
-            initial_capacity=1024,
-            error_rate=1e-4,
-            mode=ScalableBloomFilter.SMALL_SET_GROWTH,
-        )
-        self._bloom4DCFGBlock = ScalableBloomFilter(
             initial_capacity=1024,
             error_rate=1e-4,
             mode=ScalableBloomFilter.SMALL_SET_GROWTH,
@@ -38,19 +33,10 @@ class TransBloomFilterPipeline:
                 return
             self._bloom4token_property.add(item['contract_address'])
             return item
-        if isinstance(item, DCFGBlockItem):
-            block_id = '{}#{}'.format(
-                item['contract_address'],
-                item['start_pc']
-            )
-            if block_id in self._bloom4DCFGBlock:
-                return
-            self._bloom4DCFGBlock.add(block_id)
-            return item
         return item
 
 
-class TransPipeline:
+class Trans2csvPipeline:
     def __init__(self):
         self.filename2file = dict()
         self.filename2writer = dict()
@@ -60,12 +46,12 @@ class TransPipeline:
         if getattr(spider, 'out_dir') is None:
             return item
         if not any([isinstance(item, t) for t in [
-            TransactionItem, TransactionReceiptItem,
+            BlockItem, TransactionItem, TransactionReceiptItem,
             EventLogItem, TraceItem, ContractItem,
             Token721TransferItem, Token20TransferItem, Token1155TransferItem,
             TokenApprovalItem, TokenApprovalAllItem,
             TokenPropertyItem, NFTMetadataItem,
-            DCFGBlockItem, DCFGEdgeItem, SyncDataItem,
+            SyncDataItem,
         ]]):
             return item
 
@@ -97,3 +83,67 @@ class TransPipeline:
     def close_spider(self, spider):
         for file in self.filename2file.values():
             file.close()
+
+
+class TransDCFG2csvPipeline(Trans2csvPipeline):
+    def __init__(self):
+        super().__init__()
+        self._bloom4blocks = ScalableBloomFilter(
+            initial_capacity=1024,
+            error_rate=1e-4,
+            mode=ScalableBloomFilter.SMALL_SET_GROWTH,
+        )
+        self._is_inited = False
+
+    def init_csv_file(self, out_dir: str):
+        self._is_inited = True
+        for cls in [DCFGBlockItem, DCFGEdgeItem]:
+            fn = os.path.join(out_dir, '%s.csv' % cls.__name__)
+            file = open(fn, 'w', encoding='utf-8', newline='\n')
+            self.filename2file[fn] = file
+
+            # init headers
+            headers = sorted(cls.fields.keys())
+            self.filename2headers[fn] = headers
+
+            # init writer
+            writer = csv.writer(file)
+            writer.writerow(headers)
+            self.filename2writer[fn] = writer
+
+    def process_item(self, item, spider):
+        if getattr(spider, 'out_dir') is None:
+            return item
+        if not isinstance(item, DCFGItem):
+            return item
+
+        # create output path
+        if not os.path.exists(spider.out_dir):
+            os.makedirs(spider.out_dir)
+
+        # init file objs
+        if not self._is_inited:
+            self.init_csv_file(spider.out_dir)
+
+        # filter deduplicated blocks and save to files
+        for block in item['blocks']:
+            block_id = '{}#{}'.format(
+                block['contract_address'],
+                block['start_pc']
+            )
+            if block_id in self._bloom4blocks:
+                continue
+            self._bloom4blocks.add(block_id)
+            fn = os.path.join(spider.out_dir, '%s.csv' % block.__class__.__name__)
+            self.filename2writer[fn].writerow([
+                block[k] for k in self.filename2headers[fn]
+            ])
+
+        # save edges
+        for edge in item['edges']:
+            fn = os.path.join(spider.out_dir, '%s.csv' % edge.__class__.__name__)
+            self.filename2writer[fn].writerow([
+                edge[k] for k in self.filename2headers[fn]
+            ])
+
+        return item

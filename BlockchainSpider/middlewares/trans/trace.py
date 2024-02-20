@@ -4,7 +4,7 @@ from typing import Iterator
 import scrapy
 
 from BlockchainSpider.items import BlockItem, TraceItem, TransactionItem
-from BlockchainSpider.middlewares._meta import LogMiddleware
+from BlockchainSpider.middlewares.defs import LogMiddleware
 from BlockchainSpider.spiders.trans.trans import Web3TransactionSpider
 from BlockchainSpider.utils.decorator import log_debug_tracing
 from BlockchainSpider.utils.web3 import hex_to_dec
@@ -28,11 +28,12 @@ class TraceMiddleware(LogMiddleware):
         async for item in result:
             yield item
             if isinstance(item, BlockItem):
+                context_kwargs = item.get_context_kwargs()
                 yield await self.get_request_debug_trace_block(
                     block_number=item['block_number'],
                     priority=response.request.priority,
                     cb_kwargs={
-                        'transaction_hashes': item['transaction_hashes'],
+                        'transaction_hashes': context_kwargs['transaction_hashes'],
                         'block_number': item['block_number'],
                         'timestamp': item['timestamp'],
                     }
