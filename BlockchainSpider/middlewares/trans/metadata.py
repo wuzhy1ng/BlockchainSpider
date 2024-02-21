@@ -1,5 +1,6 @@
 import json
 import re
+import traceback
 from typing import Union
 
 import scrapy.http
@@ -34,11 +35,6 @@ class MetadataMiddleware(LogMiddleware):
         # filter and process the result flow
         async for item in result:
             yield item
-            if any([
-                isinstance(item, Token721TransferItem),
-                isinstance(item, Token1155TransferItem),
-            ]) and item['contract_address'] not in self.bloom4metadata:
-                self.bloom4metadata.add(item['contract_address'])
 
             # extract the erc721 nft metadata
             if isinstance(item, Token721TransferItem):
@@ -46,11 +42,14 @@ class MetadataMiddleware(LogMiddleware):
                 if key in self.bloom4metadata:
                     continue
                 self.bloom4metadata.add(key)
-                yield await self.get_request_nft721_metadata(
+                yield await self.get_request_metadata_uri(
                     contract_address=item['contract_address'],
                     token_id=item['token_id'],
-                    cb_kwargs={'item_token721_transfer': item},
+                    metadata_func_sign='0xc87b56dd',
+                    priority=response.request.priority,
+                    cb_kwargs={'token_transfer_item': item},
                 )
+                continue
 
             # extract the erc1155 nft metadata
             if isinstance(item, Token1155TransferItem):
@@ -61,80 +60,22 @@ class MetadataMiddleware(LogMiddleware):
                     if key in self.bloom4metadata:
                         continue
                     self.bloom4metadata.add(key)
-                    yield await self.get_request_nft1155_metadata(
+                    yield await self.get_request_metadata_uri(
                         contract_address=item['contract_address'],
                         token_id=item['token_ids'][i],
-                        cb_kwargs={'item_token1155_transfer': item, 'index': i},
+                        metadata_func_sign='0x0e89341c',
+                        priority=response.request.priority,
+                        cb_kwargs={'token_transfer_item': item},
                     )
+                continue
 
     @log_debug_tracing
-    def parse_nft721_metadata_item(self, response: scrapy.http.Response, **kwargs):
+    def parse_metadata_uri(self, response: scrapy.http.Response, **kwargs):
         try:
             data = json.loads(response.text)
+            result = parse_bytes_data(data.get('result'), ["string"])
         except:
             return
-
-        # recover the cached item and raw uri
-        item = kwargs['item_token721_transfer']
-        uri = kwargs['uri']
-
-        # generate metadata item
-        yield NFTMetadataItem(
-            transaction_hash=item['transaction_hash'],
-            log_index=item['log_index'],
-            block_number=item['block_number'],
-            timestamp=item['timestamp'],
-            contract_address=item['contract_address'],
-            token_id=item['token_id'],
-            uri=uri,
-            data=json.dumps(data),
-        )
-
-    @log_debug_tracing
-    def parse_nft1155_metadata_item(self, response: scrapy.http.Response, **kwargs):
-        try:
-            data = json.loads(response.text)
-        except:
-            return
-
-        # recover the cached item and raw uri
-        item = kwargs['item_token1155_transfer']
-        index = kwargs['index']
-        uri = kwargs['uri']
-
-        # generate metadata item
-        yield NFTMetadataItem(
-            transaction_hash=item['transaction_hash'],
-            log_index=item['log_index'],
-            block_number=item['block_number'],
-            timestamp=item['timestamp'],
-            contract_address=item['contract_address'],
-            token_id=item['token_ids'][index],
-            uri=uri,
-            data=json.dumps(data),
-        )
-
-    async def get_request_nft721_metadata(
-            self, contract_address: str, token_id: int, cb_kwargs: dict,
-    ) -> Union[Request, None]:
-        # fetch uri
-        # see https://github.com/ethereum/EIPs/blob/master/EIPS/eip-721.md
-        data = await web3_json_rpc(
-            tx_obj={
-                "id": 1,
-                "jsonrpc": "2.0",
-                "params": [{
-                    "to": contract_address,
-                    "data": '0xc87b56dd' + str.zfill(hex(token_id)[2:], 64)
-                }, "latest"],
-                "method": "eth_call"
-            },
-            provider=await self.provider_bucket.get(),
-            timeout=self.timeout,
-        )
-        if data is None:
-            return
-        result = parse_bytes_data(data, ["string"])
         if result is None or len(result) < 1:
             return
 
@@ -143,55 +84,72 @@ class MetadataMiddleware(LogMiddleware):
         url = uri if not uri.startswith('ipfs://ipfs/') else uri.replace('ipfs://ipfs/', 'https://ipfs.io/ipfs/')
         url = uri if not uri.startswith('ipfs://') else uri.replace('ipfs://', 'https://ipfs.io/ipfs/')
         url = url if not url.startswith('//') else 'http:{}'.format(url)
-        if re.search(
-                r'[http|https|ipfs]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
-                url
-        ) is None:
+        pattern = r'[http|https|ipfs]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+        if re.search(pattern, url) is None:
             return
-        return Request(
+        yield self.get_request_metadata(
             url=url,
-            method='GET',
-            callback=self.parse_nft721_metadata_item,
-            cb_kwargs={**cb_kwargs, 'uri': uri},
+            priority=response.request.priority,
+            cb_kwargs={'uri': uri, **kwargs},
         )
 
-    async def get_request_nft1155_metadata(
-            self, contract_address: str, token_id: int, cb_kwargs: dict,
-    ) -> Union[Request, None]:
-        # fetch uri
-        # see https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1155.md
-        data = await web3_json_rpc(
-            tx_obj={
+    @log_debug_tracing
+    def parse_metadata_item(self, response: scrapy.http.Response, **kwargs):
+        try:
+            data = response.text
+            json.loads(data)
+        except:
+            return
+
+        # generate metadata item
+        ctx_item = kwargs['token_transfer_item']
+        yield NFTMetadataItem(
+            transaction_hash=ctx_item['transaction_hash'],
+            log_index=ctx_item['log_index'],
+            block_number=ctx_item['block_number'],
+            timestamp=ctx_item['timestamp'],
+            contract_address=ctx_item['contract_address'],
+            token_id=kwargs['token_id'],
+            uri=kwargs['uri'],
+            data=data,
+        )
+
+    async def get_request_metadata_uri(
+            self, contract_address: str, token_id: int,
+            metadata_func_sign: str,
+            priority: int, cb_kwargs: dict,
+    ) -> Request:
+        return Request(
+            url=await self.provider_bucket.get(),
+            method='POST',
+            headers={'Content-Type': 'application/json'},
+            body=json.dumps({
                 "id": 1,
                 "jsonrpc": "2.0",
+                "method": "eth_call",
                 "params": [{
                     "to": contract_address,
-                    "data": '0x0e89341c' + str.zfill(hex(token_id)[2:], 64)
+                    "data": metadata_func_sign + str.zfill(hex(token_id)[2:], 64)
                 }, "latest"],
-                "method": "eth_call"
+            }),
+            callback=self.parse_metadata_uri,
+            priority=priority,
+            cb_kwargs={
+                'contract_address': contract_address,
+                'token_id': token_id,
+                'metadata_func_sign': metadata_func_sign,
+                **cb_kwargs
             },
-            provider=await self.provider_bucket.get(),
-            timeout=self.timeout,
         )
-        if data is None:
-            return
-        result = parse_bytes_data(data, ["string"])
-        if result is None or len(result) < 1:
-            return
 
-        # generate metadata request
-        uri: str = result[0]
-        url = uri if not uri.startswith('ipfs://ipfs/') else uri.replace('ipfs://ipfs/', 'https://ipfs.io/ipfs/')
-        url = uri if not uri.startswith('ipfs://') else uri.replace('ipfs://', 'https://ipfs.io/ipfs/')
-        url = url if not url.startswith('//') else 'http:{}'.format(url)
-        if re.search(
-                r'[http|https|ipfs]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
-                url
-        ) is None:
-            return
+    def get_request_metadata(
+            self, url: str,
+            priority: int, cb_kwargs: dict,
+    ) -> Request:
         return Request(
             url=url,
             method='GET',
-            callback=self.parse_nft1155_metadata_item,
-            cb_kwargs={**cb_kwargs, 'uri': uri},
+            priority=priority,
+            callback=self.parse_metadata_item,
+            cb_kwargs=cb_kwargs,
         )
