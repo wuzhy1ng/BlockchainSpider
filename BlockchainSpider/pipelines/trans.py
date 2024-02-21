@@ -3,10 +3,10 @@ import os
 
 from pybloom import ScalableBloomFilter
 
+from BlockchainSpider.items.sync import SyncDataItem
 from BlockchainSpider.items.trans import BlockItem, TransactionItem, EventLogItem, TraceItem, ContractItem, \
     Token721TransferItem, Token20TransferItem, Token1155TransferItem, TokenApprovalItem, TokenApprovalAllItem, \
     TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGItem, DCFGBlockItem, DCFGEdgeItem
-from BlockchainSpider.items.sync import SyncDataItem
 
 
 class TransBloomFilterPipeline:
@@ -41,18 +41,22 @@ class Trans2csvPipeline:
         self.filename2file = dict()
         self.filename2writer = dict()
         self.filename2headers = dict()
+        self.accepted_item_cls = {
+            cls.__name__: True for cls in [
+                BlockItem, TransactionItem, TransactionReceiptItem,
+                EventLogItem, TraceItem, ContractItem,
+                Token721TransferItem, Token20TransferItem, Token1155TransferItem,
+                TokenApprovalItem, TokenApprovalAllItem,
+                TokenPropertyItem, NFTMetadataItem,
+                SyncDataItem,
+            ]
+        }
+        # self.executor = ProcessPoolExecutor(os.cpu_count())
 
-    def process_item(self, item, spider):
+    async def process_item(self, item, spider):
         if getattr(spider, 'out_dir') is None:
             return item
-        if not any([isinstance(item, t) for t in [
-            BlockItem, TransactionItem, TransactionReceiptItem,
-            EventLogItem, TraceItem, ContractItem,
-            Token721TransferItem, Token20TransferItem, Token1155TransferItem,
-            TokenApprovalItem, TokenApprovalAllItem,
-            TokenPropertyItem, NFTMetadataItem,
-            SyncDataItem,
-        ]]):
+        if self.accepted_item_cls.get(item.__class__.__name__) is None:
             return item
 
         # create output path

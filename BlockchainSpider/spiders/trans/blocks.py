@@ -21,7 +21,7 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
         else getattr(settings, 'ITEM_PIPELINES', dict()),
         'SPIDER_MIDDLEWARES': {
-            'BlockchainSpider.middlewares.SyncMiddleware': 534,
+            'BlockchainSpider.middlewares.SyncMiddleware': 535,
             **getattr(settings, 'SPIDER_MIDDLEWARES', dict())
         },
     }
@@ -30,13 +30,13 @@ class Web3BlockTransactionSpider(scrapy.Spider):
     def from_crawler(cls, crawler, *args, **kwargs):
         spider = super().from_crawler(crawler, *args, **kwargs)
         available_middlewares = {
-            'BlockchainSpider.middlewares.trans.TransactionReceiptMiddleware': 541,
-            'BlockchainSpider.middlewares.trans.TraceMiddleware': 540,
-            'BlockchainSpider.middlewares.trans.TokenTransferMiddleware': 539,
-            'BlockchainSpider.middlewares.trans.TokenPropertyMiddleware': 538,
-            'BlockchainSpider.middlewares.trans.MetadataMiddleware': 537,
-            'BlockchainSpider.middlewares.trans.ContractMiddleware': 536,
-            'BlockchainSpider.middlewares.trans.DCFGMiddleware': 535,
+            'BlockchainSpider.middlewares.trans.TransactionReceiptMiddleware': 542,
+            'BlockchainSpider.middlewares.trans.TokenTransferMiddleware': 541,
+            'BlockchainSpider.middlewares.trans.TokenPropertyMiddleware': 540,
+            'BlockchainSpider.middlewares.trans.MetadataMiddleware': 539,
+            'BlockchainSpider.middlewares.trans.TraceMiddleware': 538,
+            'BlockchainSpider.middlewares.trans.ContractMiddleware': 537,
+            'BlockchainSpider.middlewares.trans.DCFGMiddleware': 536,
         }
         middlewares = kwargs.get('enable')
         if middlewares is not None:
