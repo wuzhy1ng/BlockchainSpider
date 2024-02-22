@@ -1,7 +1,5 @@
 import json
 import re
-import traceback
-from typing import Union
 
 import scrapy.http
 from pybloom import ScalableBloomFilter
@@ -12,7 +10,7 @@ from BlockchainSpider.items import Token721TransferItem, \
     Token1155TransferItem, NFTMetadataItem
 from BlockchainSpider.middlewares.defs import LogMiddleware
 from BlockchainSpider.utils.decorator import log_debug_tracing
-from BlockchainSpider.utils.web3 import web3_json_rpc, parse_bytes_data
+from BlockchainSpider.utils.web3 import parse_bytes_data
 
 
 class MetadataMiddleware(LogMiddleware):
@@ -25,12 +23,17 @@ class MetadataMiddleware(LogMiddleware):
             mode=ScalableBloomFilter.SMALL_SET_GROWTH,
         )
 
-    async def process_spider_output(self, response, result, spider):
+    def _init_by_spider(self, spider):
+        if self.provider_bucket is not None:
+            return
         if getattr(spider, 'middleware_providers') and \
                 spider.middleware_providers.get(self.__class__.__name__):
             self.provider_bucket = spider.middleware_providers[self.__class__.__name__]
         else:
             self.provider_bucket = spider.provider_bucket
+
+    async def process_spider_output(self, response, result, spider):
+        self._init_by_spider(spider)
 
         # filter and process the result flow
         async for item in result:

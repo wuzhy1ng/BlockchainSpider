@@ -19,12 +19,17 @@ class ContractMiddleware(LogMiddleware):
         self._cache = LRUCache(getattr(settings, 'MIDDLE_CACHE_SIZE', 2 ** 16))
         self._waiting_ctx = dict()  # addr -> str
 
-    async def process_spider_output(self, response, result, spider):
+    def _init_by_spider(self, spider):
+        if self.provider_bucket is not None:
+            return
         if getattr(spider, 'middleware_providers') and \
                 spider.middleware_providers.get(self.__class__.__name__):
             self.provider_bucket = spider.middleware_providers[self.__class__.__name__]
         else:
             self.provider_bucket = spider.provider_bucket
+
+    async def process_spider_output(self, response, result, spider):
+        self._init_by_spider(spider)
 
         # filter and process the result flow
         async for item in result:

@@ -38,6 +38,8 @@ class TraceMiddleware(LogMiddleware):
                         'timestamp': item['timestamp'],
                     }
                 )
+                continue
+
             if isinstance(spider, Web3TransactionSpider) and isinstance(item, TransactionItem):
                 if item.get('gas', 0) <= 21000:
                     continue
@@ -50,6 +52,7 @@ class TraceMiddleware(LogMiddleware):
                         'timestamp': item['timestamp'],
                     }
                 )
+                continue
 
     @log_debug_tracing
     async def parse_debug_trace_block(self, response: scrapy.http.Response, **kwargs):

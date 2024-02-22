@@ -1,3 +1,9 @@
+import asyncio
+import functools
+import os
+from concurrent.futures import ProcessPoolExecutor
+from typing import Tuple
+
 import networkx as nx
 import numpy as np
 from scipy.sparse import lil_matrix
@@ -13,6 +19,7 @@ class MoTSMiddleware(LogMiddleware):
     def __init__(self):
         self.block2txhashes = dict()
         self.txhash2edges = dict()
+        self.executor = ProcessPoolExecutor(max(1, os.cpu_count() // 2))
 
     async def process_spider_output(self, response, result, spider):
         async for item in result:
@@ -22,6 +29,7 @@ class MoTSMiddleware(LogMiddleware):
                 self.block2txhashes[item['block_number']] = context_kwargs['transaction_hashes']
                 continue
 
+            # collect money transfer items
             if any([isinstance(item, t) for t in [
                 TransactionItem, TraceItem,
                 Token721TransferItem, Token20TransferItem,
@@ -35,6 +43,7 @@ class MoTSMiddleware(LogMiddleware):
                     'address_to': item['address_to'],
                 })
 
+            # calc trans semantic vec if synced
             if isinstance(item, SyncDataItem):
                 txhash2edges = dict()
                 if item['data'].get('block_number'):
@@ -44,13 +53,33 @@ class MoTSMiddleware(LogMiddleware):
                 else:
                     transaction_hash = item['data']['transaction_hash']
                     txhash2edges[transaction_hash] = self.txhash2edges.pop(transaction_hash, [])
+
+                # get calc tasks
+                calc_tasks = list()
                 for txhash, edges in txhash2edges.items():
-                    motif_vec = HighOrderMotifCounter(motif_size=4).count(edges)
+                    calc_func = functools.partial(
+                        MoTSMiddleware.calc_trans_vec,
+                        txhash, edges
+                    )
+                    task = asyncio.get_running_loop().run_in_executor(
+                        executor=self.executor,
+                        func=calc_func,
+                    )
+                    calc_tasks.append(task)
+
+                # calc vec parallely
+                for fut in asyncio.as_completed(calc_tasks):
+                    txhash, motif_vec = await fut
                     yield MotifTransactionRepresentationItem(
                         transaction_hash=txhash,
                         **{'M%d' % i: val for i, val in motif_vec.items()},
                     )
                 continue
+
+    @staticmethod
+    def calc_trans_vec(txhash: str, edges: list) -> Tuple[str, dict]:
+        motif_vec = HighOrderMotifCounter(motif_size=4).count(edges)
+        return txhash, motif_vec
 
 
 class HighOrderMotifCounter:

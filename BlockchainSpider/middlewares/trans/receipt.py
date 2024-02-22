@@ -16,48 +16,48 @@ class TransactionReceiptMiddleware(LogMiddleware):
         self._is_checked = False
 
     async def _init_by_spider(self, spider):
+        if self.provider_bucket is not None:
+            return
         if getattr(spider, 'middleware_providers') and \
                 spider.middleware_providers.get(self.__class__.__name__):
             self.provider_bucket = spider.middleware_providers[self.__class__.__name__]
         else:
             self.provider_bucket = spider.provider_bucket
 
-        if not self._is_checked:
-            block_receipt_method = getattr(spider, 'block_receipt_method', '')
-            if block_receipt_method == '':
-                self._is_checked = True
-                self.block_receipt_method = None
-                return
-
-            # test rpc interface
-            rpc_rsp = await web3_json_rpc(
-                tx_obj={
-                    "jsonrpc": "2.0",
-                    "method": block_receipt_method,
-                    "params": ["0x0"],
-                    "id": 1,
-                },
-                provider=await self.provider_bucket.get(),
-                timeout=5,
-            )
+        block_receipt_method = getattr(spider, 'block_receipt_method', '')
+        if block_receipt_method == '':
             self._is_checked = True
-            if rpc_rsp is None:
-                self.log(
-                    message="`%s` is not available, " % block_receipt_method +
-                            "using `eth_getTransactionReceipt` instead.",
-                    level=logging.INFO,
-                )
-                self.block_receipt_method = None
-            else:
-                self.log(
-                    message="Using `%s` for speeding up." % block_receipt_method,
-                    level=logging.INFO,
-                )
-                self.block_receipt_method = block_receipt_method
+            self.block_receipt_method = None
+            return
+
+        # test rpc interface
+        rpc_rsp = await web3_json_rpc(
+            tx_obj={
+                "jsonrpc": "2.0",
+                "method": block_receipt_method,
+                "params": ["0x0"],
+                "id": 1,
+            },
+            provider=await self.provider_bucket.get(),
+            timeout=5,
+        )
+        self._is_checked = True
+        if rpc_rsp is None:
+            self.log(
+                message="`%s` is not available, " % block_receipt_method +
+                        "using `eth_getTransactionReceipt` instead.",
+                level=logging.INFO,
+            )
+            self.block_receipt_method = None
+        else:
+            self.log(
+                message="Using `%s` for speeding up." % block_receipt_method,
+                level=logging.INFO,
+            )
+            self.block_receipt_method = block_receipt_method
 
     async def process_spider_output(self, response, result, spider):
         await self._init_by_spider(spider)
-
         async for item in result:
             yield item
             if isinstance(item, BlockItem) and self.block_receipt_method is not None:
