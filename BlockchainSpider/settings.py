@@ -47,7 +47,7 @@ DEFAULT_REQUEST_HEADERS = {
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 SPIDER_MIDDLEWARES = {
-    'contrib.mots.middlewares.MoTSMiddleware': 500,
+    # 'contrib.mots.middlewares.MoTSMiddleware': 500,
 }
 
 # Enable or disable downloader middlewares
@@ -65,8 +65,7 @@ DOWNLOADER_MIDDLEWARES = {
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'BlockchainSpider.pipelines.Trans2csvPipeline': 667,
-    'contrib.mots.pipelines.MoTSPipeline': 666,
+    # 'contrib.mots.pipelines.MoTSPipeline': 666,
     # 'contrib.rabbit.pipelines.RabbitMQPipeline': 666,
 }
 
