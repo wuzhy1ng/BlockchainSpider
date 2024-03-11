@@ -88,7 +88,7 @@ class TraceMiddleware(LogMiddleware):
 
         # parse trance item (skip the first call)
         for item, depth, order in self._retrieve_mapping_tree('calls', result):
-            if depth == 0 and order == 0:
+            if depth <= 0 and order <= 0:
                 continue
             yield TraceItem(
                 transaction_hash=kwargs['transaction_hash'],
@@ -142,6 +142,10 @@ class TraceMiddleware(LogMiddleware):
         )
 
     def _retrieve_mapping_tree(self, key: str, item: dict, depth: int = 0, order: int = 0) -> Iterator:
+        if item is None:
+            yield None, -1, -1
+            return
+
         yield item, depth, order
         if not item.get(key):
             return
