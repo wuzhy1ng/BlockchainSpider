@@ -64,7 +64,7 @@ class TraceMiddleware(LogMiddleware):
         for idx, trace in enumerate(data):
             trace = trace['result']
             for item, depth, order in self._retrieve_mapping_tree('calls', trace):
-                if depth == 0 and order == 0:
+                if depth <= 0 and order <= 0:
                     continue
                 yield TraceItem(
                     transaction_hash=transaction_hashes[idx],

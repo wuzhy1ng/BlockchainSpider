@@ -48,8 +48,9 @@ class MoTSMiddleware(LogMiddleware):
                 txhash2edges = dict()
                 if item['data'].get('block_number'):
                     block_number = item['data']['block_number']
-                    for txhash in self.block2txhashes[block_number]:
-                        txhash2edges[txhash] = self.txhash2edges[txhash]
+                    txhashes = self.block2txhashes.pop(block_number)
+                    for txhash in txhashes:
+                        txhash2edges[txhash] = self.txhash2edges.pop(txhash)
                 else:
                     transaction_hash = item['data']['transaction_hash']
                     txhash2edges[transaction_hash] = self.txhash2edges.pop(transaction_hash, [])
