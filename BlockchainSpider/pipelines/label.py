@@ -4,7 +4,7 @@ import os
 from BlockchainSpider.items.label import LabelReportItem
 
 
-class LabelsPipeline:
+class LabelReportPipeline:
     def __init__(self):
         self.file = None
 

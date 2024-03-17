@@ -19,7 +19,7 @@ class LabelsWebSpider(scrapy.Spider):
         'SCHEDULER_DISK_QUEUE': 'scrapy.squeues.PickleFifoDiskQueue',
         'SCHEDULER_MEMORY_QUEUE': 'scrapy.squeues.FifoMemoryQueue',
         'ITEM_PIPELINES': {
-            'BlockchainSpider.pipelines.LabelsPipeline': 299,
+            'BlockchainSpider.pipelines.LabelReportPipeline': 299,
             **getattr(settings, 'ITEM_PIPELINES', dict())
         }
     }

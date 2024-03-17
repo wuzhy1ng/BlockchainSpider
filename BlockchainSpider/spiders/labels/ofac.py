@@ -8,7 +8,7 @@ class LabelsOFACSpider(scrapy.Spider):
     name = 'labels.ofac'
     custom_settings = {
         'ITEM_PIPELINES': {
-            'BlockchainSpider.pipelines.LabelsPipeline': 299,
+            'BlockchainSpider.pipelines.LabelReportPipeline': 299,
             **getattr(settings, 'ITEM_PIPELINES', dict())
         }
     }

@@ -15,11 +15,13 @@ class SignsPipeline:
 
         # init file from filename
         if self.file is None:
-            fn = os.path.join(spider.out_dir, spider.name, '.csv')
+            cls_name = item.__class__.__name__
+            fn = os.path.join(spider.out_dir, '{}.csv'.format(cls_name))
             if not os.path.exists(spider.out_dir):
-                os.makedirs(spider.out_dir)
+                os.makedirs(fn)
             self.file = open(fn, 'w', newline='\n', encoding='utf-8')
             self.writer = csv.DictWriter(self.file, item.keys())
+            self.writer.writeheader()
 
         # write item
         self.writer.writerow(item)

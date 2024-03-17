@@ -18,7 +18,7 @@ class LabelsCloudSpider(scrapy.Spider):
             **getattr(settings, 'DOWNLOADER_MIDDLEWARES', dict())
         },
         'ITEM_PIPELINES': {
-            'BlockchainSpider.pipelines.LabelsPipeline': 299,
+            'BlockchainSpider.pipelines.LabelReportPipeline': 299,
             **getattr(settings, 'ITEM_PIPELINES', dict())
         }
     }
