@@ -96,6 +96,8 @@ if __name__ == '__main__':
         with open('./tmp.json', 'w') as f:
             json.dump(infos, f)
         cmd = 'scrapy crawl txs.%s.%s -a file=./tmp.json' % (net, core)
+        if params.get('strategy'):
+            cmd = '{} -a strategy={}'.format(cmd, params['strategy'])
         os.system(cmd)
 
     # save using time
