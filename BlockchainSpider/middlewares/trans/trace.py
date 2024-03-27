@@ -29,11 +29,15 @@ class TraceMiddleware(LogMiddleware):
             yield item
             if isinstance(item, BlockItem):
                 context_kwargs = item.get_context_kwargs()
+                transaction_hashes = [
+                    trans['transaction_hash']
+                    for trans in context_kwargs['@transactions']
+                ]
                 yield await self.get_request_debug_trace_block(
                     block_number=item['block_number'],
                     priority=response.request.priority,
                     cb_kwargs={
-                        'transaction_hashes': context_kwargs['transaction_hashes'],
+                        'transaction_hashes': transaction_hashes,
                         'block_number': item['block_number'],
                         'timestamp': item['timestamp'],
                     }

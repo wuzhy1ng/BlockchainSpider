@@ -4,6 +4,12 @@ from BlockchainSpider.items.defs import ContextualItem
 
 
 class BlockItem(ContextualItem):
+    """
+    The item for transmitting blocks.
+    Note that this object attached with context args:
+
+    **@transactions**: a :class:`list` object with items :class:`TransactionItem`
+    """
     block_hash = scrapy.Field()  # str
     block_number = scrapy.Field()  # int
     parent_hash = scrapy.Field()  # str
@@ -35,6 +41,12 @@ class TransactionItem(ContextualItem):
 
 
 class TransactionReceiptItem(ContextualItem):
+    """
+    The item for transmitting transaction receipts.
+    Note that this object attached with context args:
+
+    **@transaction**: an object, i.e., :class:`TransactionItem`
+    """
     transaction_hash = scrapy.Field()  # str
     transaction_index = scrapy.Field()  # int
     transaction_type = scrapy.Field()  # int
@@ -73,6 +85,14 @@ class TraceItem(ContextualItem):
 
 
 class ContractItem(ContextualItem):
+    """
+    The item for transmitting contract bytecode.
+    Note that this object attached with context args:
+
+    **@receipt**: a receipt object, i.e., :
+    :class:`TransactionReceiptItem`, which identifies
+    the contract creation transaction information.
+    """
     address = scrapy.Field()  # str
     code = scrapy.Field()  # str
 
@@ -135,6 +155,17 @@ class TokenApprovalAllItem(ContextualItem):
 
 
 class TokenPropertyItem(ContextualItem):
+    """
+    The item for transmitting token properties.
+    Note that this object attached with context args:
+
+    **@token_action**: an object, i.e., :
+    :class:`Token20TransferItem` or
+    :class:`Token721TransferItem` or
+    :class:`Token1155TransferItem` or
+    :class:`TokenApprovalItem` or
+    :class:`TokenApprovalAllItem`
+    """
     contract_address = scrapy.Field()  # str
     name = scrapy.Field()  # str
     token_symbol = scrapy.Field()  # str
@@ -143,10 +174,14 @@ class TokenPropertyItem(ContextualItem):
 
 
 class NFTMetadataItem(ContextualItem):
-    transaction_hash = scrapy.Field()  # str
-    log_index = scrapy.Field()  # int
-    block_number = scrapy.Field()  # str
-    timestamp = scrapy.Field()  # int
+    """
+    The item for transmitting NFT metadata.
+    Note that this object attached with context args:
+
+    **@nft_transfer**: an object, i.e., :
+    :class:`Token721TransferItem` or
+    :class:`Token1155TransferItem`
+    """
     contract_address = scrapy.Field()  # str
     token_id = scrapy.Field()  # int
     uri = scrapy.Field()  # str

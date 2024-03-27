@@ -97,16 +97,18 @@ class TxsETHBFSSpider(TxsETHSpider):
 
         # next page request
         if task.info['auto_page'] and len(txs) > 0:
-            yield func_next_page_request(
-                address=kwargs['address'],
-                **{
-                    'startblock': self.get_max_blk(txs),
-                    'endblock': task.info['end_blk'],
-                    'depth': kwargs['depth'],
-                    'task_id': kwargs['task_id']
-                }
-            )
-            return
+            cur_max_blk = self.get_max_blk(txs)
+            if cur_max_blk > kwargs.get('startblock'):
+                yield func_next_page_request(
+                    address=kwargs['address'],
+                    **{
+                        'startblock': cur_max_blk,
+                        'endblock': task.info['end_blk'],
+                        'depth': kwargs['depth'],
+                        'task_id': kwargs['task_id']
+                    }
+                )
+                return
 
         # next address request
         for item in task.pop():

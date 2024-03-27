@@ -16,8 +16,6 @@ class Sign4btyesSpider(scrapy.Spider):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.out_dir = kwargs.get('out', './data')
-        self.url4func_sign = 'https://www.4byte.directory/api/v1/signatures/?'
-        self.url4event_sign = 'https://www.4byte.directory/api/v1/event-signatures/?'
 
     def start_requests(self):
         yield scrapy.Request(

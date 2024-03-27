@@ -184,6 +184,28 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         result = json.loads(response.text)
         result = result.get('result')
 
+        # fetch receipt for each transaction if block receipt api unavailable
+        timestamp = hex_to_dec(result.get('timestamp'))
+        transactions = list()
+        for item in result.get('transactions', list()):
+            item = TransactionItem(
+                transaction_hash=item.get('hash', ''),
+                transaction_index=hex_to_dec(item.get('transactionIndex')),
+                block_hash=item.get('blockHash', ''),
+                block_number=hex_to_dec(item.get('blockNumber')),
+                timestamp=timestamp,
+                address_from=item['from'] if item.get('from') else '',
+                address_to=item['to'] if item.get('to') else '',
+                value=hex_to_dec(item.get('value')),
+                gas=hex_to_dec(item.get('gas')),
+                gas_price=hex_to_dec(item.get('gasPrice')),
+                nonce=hex_to_dec(item.get('nonce')),
+                input=item.get('input', ''),
+            )
+            transactions.append(item)
+            yield item
+
+        # generate block items
         yield BlockItem(
             block_hash=result.get('hash', ''),
             block_number=hex_to_dec(result.get('number')),
@@ -198,30 +220,8 @@ class Web3BlockTransactionSpider(scrapy.Spider):
             timestamp=hex_to_dec(result.get('timestamp')),
             logs_bloom=result.get('logsBloom', ''),
             nonce=hex_to_dec(result.get('nonce')),
-            cb_kwargs={
-                'transaction_hashes': list() if not result.get('transactions') else [
-                    item.get('hash', '') for item in result['transactions']
-                ],
-            }
+            cb_kwargs={'@transactions': transactions}
         )
-
-        # fetch receipt for each transaction if block receipt api unavailable
-        timestamp = hex_to_dec(result.get('timestamp'))
-        for item in result.get('transactions', list()):
-            yield TransactionItem(
-                transaction_hash=item.get('hash', ''),
-                transaction_index=hex_to_dec(item.get('transactionIndex')),
-                block_hash=item.get('blockHash', ''),
-                block_number=hex_to_dec(item.get('blockNumber')),
-                timestamp=timestamp,
-                address_from=item['from'] if item.get('from') else '',
-                address_to=item['to'] if item.get('to') else '',
-                value=hex_to_dec(item.get('value')),
-                gas=hex_to_dec(item.get('gas')),
-                gas_price=hex_to_dec(item.get('gasPrice')),
-                nonce=hex_to_dec(item.get('nonce')),
-                input=item.get('input', ''),
-            )
 
     def get_request_web3_client_version(self):
         return scrapy.Request(

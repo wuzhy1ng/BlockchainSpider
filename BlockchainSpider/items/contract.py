@@ -12,3 +12,14 @@ class SourceCodeItem(scrapy.Item):
     source_code = scrapy.Field()
     constructor_arguments = scrapy.Field()
     license = scrapy.Field()
+
+
+class SignItem(scrapy.Item):
+    text = scrapy.Field()  # str
+    sign = scrapy.Field()  # str
+    type = scrapy.Field()  # str, 'Function' or 'Event'
+
+
+class ABIItem(scrapy.Item):
+    contract_address = scrapy.Field()  # str
+    abi = scrapy.Field()  # dict

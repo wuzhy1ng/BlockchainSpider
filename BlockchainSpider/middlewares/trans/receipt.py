@@ -61,10 +61,11 @@ class TransactionReceiptMiddleware(LogMiddleware):
         async for item in result:
             yield item
             if isinstance(item, BlockItem) and self.block_receipt_method is not None:
+                ctx_kwargs = item.get_context_kwargs()
                 yield await self.get_request_eth_block_receipt(
                     block_number=item['block_number'],
                     priority=response.request.priority,
-                    cb_kwargs={'timestamp': item['timestamp']},
+                    cb_kwargs={'@transactions': ctx_kwargs['@transactions']},
                 )
                 continue
 
@@ -72,29 +73,37 @@ class TransactionReceiptMiddleware(LogMiddleware):
                 yield await self.get_request_eth_transaction_receipt(
                     transaction_hash=item['transaction_hash'],
                     priority=response.request.priority,
-                    cb_kwargs={'timestamp': item['timestamp']},
+                    cb_kwargs={'@transaction': item},
                 )
 
     @log_debug_tracing
     async def parse_eth_block_receipt(self, response: scrapy.http.Response, **kwargs):
         result = json.loads(response.text)
         result = result.get('result')
+        txhash2transaction = {
+            item['transaction_hash']: item
+            for item in kwargs['@transactions']
+        }
 
         # generate items
         for item in result:
+            txhash = item.get('transactionHash', '')
+            transaction = txhash2transaction.get(txhash)
+            if transaction is None:
+                continue
             for log in item['logs']:
                 yield EventLogItem(
                     transaction_hash=log.get('transactionHash', ''),
                     log_index=hex_to_dec(log.get('logIndex')),
                     block_number=hex_to_dec(log.get('blockNumber')),
-                    timestamp=kwargs['timestamp'],
+                    timestamp=transaction['timestamp'],
                     address=log.get('address', '').lower(),
                     topics=log.get('topics', list()),
                     data=log.get('data', ''),
                     removed=log.get('removed', False),
                 )
             yield TransactionReceiptItem(
-                transaction_hash=item.get('transactionHash', ''),
+                transaction_hash=txhash,
                 transaction_index=hex_to_dec(item.get('transactionIndex')),
                 transaction_type=hex_to_dec(item.get('type')),
                 block_hash=item.get('blockHash', ''),
@@ -103,19 +112,21 @@ class TransactionReceiptMiddleware(LogMiddleware):
                 effective_gas_price=hex_to_dec(item.get('effectiveGasPrice')),
                 created_contract=item['contractAddress'] if item.get('contractAddress') else '',
                 is_error=item.get('status') != '0x1',
+                cb_kwargs={'@transaction': transaction}
             )
 
     @log_debug_tracing
     async def parse_eth_get_transaction_receipt(self, response: scrapy.http.Response, **kwargs):
         result = json.loads(response.text)
         result = result.get('result')
+        transaction: TransactionItem = kwargs['@transaction']
 
         for log in result['logs']:
             yield EventLogItem(
                 transaction_hash=log.get('transactionHash', ''),
                 log_index=hex_to_dec(log.get('logIndex')),
                 block_number=hex_to_dec(log.get('blockNumber')),
-                timestamp=kwargs['timestamp'],
+                timestamp=transaction['timestamp'],
                 address=log.get('address', '').lower(),
                 topics=log.get('topics', list()),
                 data=log.get('data', ''),
@@ -131,6 +142,7 @@ class TransactionReceiptMiddleware(LogMiddleware):
             effective_gas_price=hex_to_dec(result.get('effectiveGasPrice')),
             created_contract=result['contractAddress'] if result.get('contractAddress') else '',
             is_error=result.get('status') != '0x1',
+            cb_kwargs={'@transaction': transaction},
         )
 
     async def get_request_eth_block_receipt(

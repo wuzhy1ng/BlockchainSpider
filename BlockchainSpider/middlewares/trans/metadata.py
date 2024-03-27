@@ -1,5 +1,6 @@
 import json
 import re
+from typing import Union
 
 import scrapy.http
 from pybloom import ScalableBloomFilter
@@ -50,7 +51,7 @@ class MetadataMiddleware(LogMiddleware):
                     token_id=item['token_id'],
                     metadata_func_sign='0xc87b56dd',
                     priority=response.request.priority,
-                    cb_kwargs={'token_transfer_item': item},
+                    cb_kwargs={'@nft_transfer': item},
                 )
                 continue
 
@@ -105,16 +106,13 @@ class MetadataMiddleware(LogMiddleware):
             return
 
         # generate metadata item
-        ctx_item = kwargs['token_transfer_item']
+        nft_transfer: Union[Token721TransferItem, Token1155TransferItem] = kwargs['@nft_transfer']
         yield NFTMetadataItem(
-            transaction_hash=ctx_item['transaction_hash'],
-            log_index=ctx_item['log_index'],
-            block_number=ctx_item['block_number'],
-            timestamp=ctx_item['timestamp'],
-            contract_address=ctx_item['contract_address'],
+            contract_address=nft_transfer['contract_address'],
             token_id=kwargs['token_id'],
             uri=kwargs['uri'],
             data=data,
+            cb_kwargs={'@nft_transfer': kwargs['@nft_transfer']}
         )
 
     async def get_request_metadata_uri(

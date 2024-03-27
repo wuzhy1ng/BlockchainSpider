@@ -4,7 +4,7 @@ import logging
 class LogMiddleware:
     @property
     def logger(self):
-        logger = logging.getLogger(self.__class__.__name__)
+        logger = logging.getLogger(self.__class__.__module__)
         return logging.LoggerAdapter(logger, {'spider': self})
 
     def log(self, message, level=logging.DEBUG, **kwargs):

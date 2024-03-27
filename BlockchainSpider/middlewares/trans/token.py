@@ -321,7 +321,6 @@ class TokenPropertyMiddleware(LogMiddleware):
             if not any([
                 isinstance(item, Token20TransferItem),
                 isinstance(item, Token721TransferItem),
-                isinstance(item, Token721TransferItem),
                 isinstance(item, Token1155TransferItem),
                 isinstance(item, TokenApprovalItem),
                 isinstance(item, TokenApprovalAllItem)
@@ -338,7 +337,7 @@ class TokenPropertyMiddleware(LogMiddleware):
                     token_symbol=cached_property.get('token_symbol', ''),
                     decimals=cached_property.get('token_symbol', -1),
                     total_supply=cached_property.get('total_supply', -1),
-                    cb_kwargs={'token_action_item': item},
+                    cb_kwargs={'@token_action': item},
                 )
                 continue
 
@@ -366,8 +365,8 @@ class TokenPropertyMiddleware(LogMiddleware):
                     priority=response.request.priority,
                     cb_kwargs={
                         'contract_address': contract_address,
-                        'token_action_item': item,
                         'token_property': token_property,
+                        '@token_action': item,
                     },
                     **kwargs
                 )
@@ -403,7 +402,7 @@ class TokenPropertyMiddleware(LogMiddleware):
                     token_symbol=token_property.get('token_symbol', ''),
                     decimals=token_property.get('decimals', -1),
                     total_supply=token_property.get('total_supply', -1),
-                    cb_kwargs={'token_action_item': item},
+                    cb_kwargs={'@token_action': item},
                 )
         except:
             traceback.print_exc()
@@ -427,7 +426,7 @@ class TokenPropertyMiddleware(LogMiddleware):
                     token_symbol=token_property.get('token_symbol', ''),
                     decimals=token_property.get('decimals', -1),
                     total_supply=token_property.get('total_supply', -1),
-                    cb_kwargs={'token_action_item': item},
+                    cb_kwargs={'@token_action': item},
                 )
         except:
             pass

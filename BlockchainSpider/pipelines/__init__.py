@@ -3,3 +3,4 @@ from .trans import Trans2csvPipeline, TransDCFG2csvPipeline, TransBloomFilterPip
 from .label import LabelReportPipeline
 from .sign import SignsPipeline
 from .source import SourceCodePipeline
+from .abi import ABIPipeline
