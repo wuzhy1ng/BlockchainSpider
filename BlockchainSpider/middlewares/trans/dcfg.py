@@ -164,7 +164,7 @@ class DCFGMiddleware(TraceMiddleware):
         result = result.get('result')
         if result is None:
             self.log(
-                message='On parse_debug_trace_block, `result` is None, '
+                message='On parse_debug_transaction, `result` is None, '
                         'please check if your providers are fully available at debug_traceTransaction.',
                 level=logging.WARNING,
             )

@@ -1,4 +1,5 @@
 import json
+import time
 import traceback
 from typing import Union, List
 
@@ -288,7 +289,7 @@ class TokenTransferMiddleware(LogMiddleware):
                     "data": "0x01ffc9a780ac58cd00000000000000000000000000000000000000000000000000000000",
                 }, 'latest'
                 ],
-                "id": 1
+                "id": int(time.time() * 1000000),  # ensure not be filtered with the same fingerprint
             }),
             priority=priority,
             callback=self.parse_is_token721,
@@ -335,7 +336,7 @@ class TokenPropertyMiddleware(LogMiddleware):
                     contract_address=contract_address,
                     name=cached_property.get('name', ''),
                     token_symbol=cached_property.get('token_symbol', ''),
-                    decimals=cached_property.get('token_symbol', -1),
+                    decimals=cached_property.get('decimals', -1),
                     total_supply=cached_property.get('total_supply', -1),
                     cb_kwargs={'@token_action': item},
                 )
@@ -447,7 +448,7 @@ class TokenPropertyMiddleware(LogMiddleware):
                     {'to': contract_address, "data": Web3.keccak(text=func).hex()[:2 + 8]},
                     'latest'
                 ],
-                "id": 1
+                "id": int(time.time() * 1000000),  # ensure not be filtered with the same fingerprint
             }),
             priority=priority,
             callback=self.parse_token_property,

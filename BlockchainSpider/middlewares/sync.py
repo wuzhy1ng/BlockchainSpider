@@ -47,11 +47,11 @@ class SyncMiddleware(LogMiddleware):
 
             # trace extra generated requests
             await self._lock.acquire()
-            if not self.request_parent.get(parent_fingerprint):
+            grandpa_fingerprint = self.request_parent.get(parent_fingerprint)
+            if not grandpa_fingerprint:
                 self._lock.release()
                 continue
             req_fingerprint = fingerprint(item)
-            grandpa_fingerprint = self.request_parent[parent_fingerprint]
             if isinstance(grandpa_fingerprint, bytes):
                 self.request_parent[req_fingerprint] = grandpa_fingerprint
                 self.request_parent[grandpa_fingerprint] += 1
@@ -105,10 +105,10 @@ class SyncMiddleware(LogMiddleware):
                 value = self.sync_items.pop(parent_fingerprint)
         else:
             self.request_parent[grandpa_fingerprint] -= 1
-            del self.request_parent[parent_fingerprint]
             if self.request_parent[grandpa_fingerprint] == 0:
                 del self.request_parent[grandpa_fingerprint]
                 value = self.sync_items.pop(grandpa_fingerprint)
+            del self.request_parent[parent_fingerprint]
 
         if value is None:
             return

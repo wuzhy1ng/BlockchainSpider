@@ -125,9 +125,10 @@ class Web3TransactionSpider(scrapy.Spider):
             yield await self.get_request_eth_transaction(
                 txhash=txhash,
                 priority=len(self.txhashs) - i,
-                cb_kwargs={'txhash': txhash, 'sync_item': {
-                    'transaction_hash': txhash,
-                }},
+                cb_kwargs={
+                    'txhash': txhash,
+                    self.sync_item_key: {'transaction_hash': txhash}
+                },
             )
 
     @log_debug_tracing
