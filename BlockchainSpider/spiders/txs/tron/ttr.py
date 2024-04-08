@@ -13,7 +13,7 @@ class TxsTRONTTRSpider(TxsETHTTRSpider):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.apikey_bucket = type(self.apikey_bucket)(net='eth', kps=5)
+        self.apikey_bucket = type(self.apikey_bucket)(net='tron', kps=3)
 
     def get_external_txs_request(self, address: str, **kwargs):
         query_params = {
@@ -23,10 +23,12 @@ class TxsTRONTTRSpider(TxsETHTTRSpider):
             # 'start_timestamp': max(kwargs.get('startblock', self.start_blk), self.start_blk),
             # 'end_timestamp': min(kwargs.get('endblock', self.end_blk), self.end_blk),
         }
-        _ = self.apikey_bucket.get()
         return scrapy.Request(
             url=QueryURLBuilder(self.TXS_API_URL + '/transaction').get(query_params),
             method='GET',
+            headers={
+                'TRON-PRO-API-KEY':self.apikey_bucket.get(),
+            },
             dont_filter=True,
             cb_kwargs={
                 'address': address,
@@ -48,6 +50,9 @@ class TxsTRONTTRSpider(TxsETHTTRSpider):
             url=QueryURLBuilder(self.TXS_API_URL + '/internal-transaction').get(query_params),
             method='GET',
             dont_filter=True,
+            headers={
+                'TRON-PRO-API-KEY': self.apikey_bucket.get(),
+            },
             cb_kwargs={
                 'address': address,
                 **kwargs
@@ -69,6 +74,9 @@ class TxsTRONTTRSpider(TxsETHTTRSpider):
             url=QueryURLBuilder(self.TXS_API_URL + '/contract/events').get(query_params),
             method='GET',
             dont_filter=True,
+            headers={
+                'TRON-PRO-API-KEY': self.apikey_bucket.get(),
+            },
             cb_kwargs={
                 'address': address,
                 **kwargs

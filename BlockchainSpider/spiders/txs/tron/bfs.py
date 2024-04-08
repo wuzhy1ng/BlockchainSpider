@@ -14,7 +14,7 @@ class TxsTRONBFSSpider(TxsETHBFSSpider):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.apikey_bucket = type(self.apikey_bucket)(net='eth', kps=5)
+        self.apikey_bucket = type(self.apikey_bucket)(net='tron', kps=3)
 
     def get_external_txs_request(self, address: str, **kwargs):
         query_params = {
@@ -29,6 +29,9 @@ class TxsTRONBFSSpider(TxsETHBFSSpider):
             url=QueryURLBuilder(self.TXS_API_URL + '/transaction').get(query_params),
             method='GET',
             dont_filter=True,
+            headers={
+                'TRON-PRO-API-KEY': self.apikey_bucket.get(),
+            },
             cb_kwargs={
                 'address': address,
                 **kwargs
@@ -49,6 +52,9 @@ class TxsTRONBFSSpider(TxsETHBFSSpider):
             url=QueryURLBuilder(self.TXS_API_URL + '/internal-transaction').get(query_params),
             method='GET',
             dont_filter=True,
+            headers={
+                'TRON-PRO-API-KEY': self.apikey_bucket.get(),
+            },
             cb_kwargs={
                 'address': address,
                 **kwargs
@@ -70,6 +76,9 @@ class TxsTRONBFSSpider(TxsETHBFSSpider):
             url=QueryURLBuilder(self.TXS_API_URL + '/contract/events').get(query_params),
             method='GET',
             dont_filter=True,
+            headers={
+                'TRON-PRO-API-KEY': self.apikey_bucket.get(),
+            },
             cb_kwargs={
                 'address': address,
                 **kwargs
