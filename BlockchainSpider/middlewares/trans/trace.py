@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Iterator
 
 import scrapy
@@ -62,6 +63,13 @@ class TraceMiddleware(LogMiddleware):
     async def parse_debug_trace_block(self, response: scrapy.http.Response, **kwargs):
         data = json.loads(response.text)
         data = data.get('result')
+        if data is None:
+            self.log(
+                message='On parse_debug_trace_block, `result` is None, '
+                        'please check if your providers are fully available at debug_traceBlockByNumber.',
+                level=logging.WARNING,
+            )
+            return
 
         # parse trance item (skip the first call)
         transaction_hashes = kwargs['transaction_hashes']
@@ -89,6 +97,13 @@ class TraceMiddleware(LogMiddleware):
     def parse_debug_transaction(self, response: scrapy.http.Response, **kwargs):
         result = json.loads(response.text)
         result = result.get('result')
+        if result is None:
+            self.log(
+                message='On parse_debug_transaction, `result` is None, '
+                        'please check if your providers are fully available at debug_traceBlockByNumber.',
+                level=logging.WARNING,
+            )
+            return
 
         # parse trance item (skip the first call)
         for item, depth, order in self._retrieve_mapping_tree('calls', result):

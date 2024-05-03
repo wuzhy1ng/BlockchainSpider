@@ -104,7 +104,7 @@ class Web3BlockTransactionSpider(scrapy.Spider):
             ) if kwargs.get('providers4contract') else None,
             'DCFGMiddleware': AsyncItemBucket(
                 items=kwargs['providers4dcfg'].split(','),
-                qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
+                qps=0.5,
             ) if kwargs.get('providers4dcfg') else None,
         }
 
@@ -180,6 +180,14 @@ class Web3BlockTransactionSpider(scrapy.Spider):
         yield await self.get_request_eth_block_number()
 
     @log_debug_tracing
+    async def errback_parse_eth_block_number(self, failure):
+        self.log(
+            message="Failed to fetch the new block number, try again now...",
+            level=logging.ERROR
+        )
+        yield await self.get_request_eth_block_number()
+
+    @log_debug_tracing
     async def parse_eth_get_block_by_number(self, response: scrapy.http.Response, **kwargs):
         result = json.loads(response.text)
         result = result.get('result')
@@ -248,6 +256,7 @@ class Web3BlockTransactionSpider(scrapy.Spider):
                 "jsonrpc": "2.0"
             }),
             callback=self.parse_eth_block_number,
+            errback=self.errback_parse_eth_block_number,
             priority=0,
             dont_filter=True,
         )
