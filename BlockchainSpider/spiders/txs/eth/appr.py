@@ -105,19 +105,19 @@ class TxsETHAPPRSpider(TxsETHSpider):
             level=logging.INFO
         )
 
-        # save ppr
-        yield ImportanceItem(
-            source=task.info['source'],
-            importance=task.strategy.p,
-            task_info=task.info
-        )
-
         # push data to task and save tx
         for tx in task.push(
                 node=kwargs['address'],
                 edges=txs,
         ):
             yield SubgraphTxItem(source=task.info['source'], tx=tx, task_info=task.info)
+
+        # save ppr
+        yield ImportanceItem(
+            source=task.info['source'],
+            importance=task.strategy.p,
+            task_info=task.info
+        )
 
         # next address request
         if len(txs) < 10000 or task.info['auto_page'] is False:

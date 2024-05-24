@@ -41,7 +41,7 @@ class TxsETHSpider(scrapy.Spider):
         # load apikey bucket class
         apikey_bucket = getattr(settings, 'APIKEYS_BUCKET', None)
         assert apikey_bucket is not None
-        self.apikey_bucket = load_object(apikey_bucket)(net='eth', kps=5)
+        self.apikey_bucket = load_object(apikey_bucket)(net='eth', kps=3)
 
         # tx types
         self.txs_types = kwargs.get('types', 'external').split(',')
