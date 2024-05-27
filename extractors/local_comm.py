@@ -32,8 +32,7 @@ class LocalCommunityExtractor(BaseExtractor):
             out_txs_fn = os.path.join(self.args.out_dir, fn)
             print('processing %s >> %s' % (in_txs_fn, out_txs_fn))
 
-            if os.path.isdir(in_txs_fn) and not os.path.exists(out_txs_fn):
-                os.makedirs(out_txs_fn)
+            if os.path.isdir(in_txs_fn):
                 continue
 
             # load graph
@@ -59,8 +58,11 @@ class LocalCommunityExtractor(BaseExtractor):
             local_comm_nodes = self._local_comm(source, g, p)
 
             # write node for output
+            path = os.path.join(self.args.out_dir, 'importance')
+            if not os.path.exists(path):
+                os.makedirs(path)
             with open(
-                    os.path.join(self.args.out_dir, 'importance', fn), 'w',
+                    os.path.join(path, fn), 'w',
                     newline='\n', encoding='utf-8'
             ) as f:
                 out_writer = csv.writer(f)
