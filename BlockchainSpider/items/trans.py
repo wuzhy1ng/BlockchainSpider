@@ -39,6 +39,27 @@ class TransactionItem(ContextualItem):
     nonce = scrapy.Field()  # int
     input = scrapy.Field()  # str
 
+class SolanaTransactionItem(ContextualItem):
+    fee = scrapy.Field()
+    innerinstructions = scrapy.Field()
+    postbalances = scrapy.Field()
+    posttokenbalances = scrapy.Field()
+    prebalances = scrapy.Field()
+    pretokenbalances = scrapy.Field()
+    postBalances = scrapy.Field()
+    accountkeys = scrapy.Field()
+    instructions = scrapy.Field()
+    instructions = scrapy.Field()
+    data = scrapy.Field()
+    recentblockhash = scrapy.Field()
+    signatures = scrapy.Field()
+class SolanaBlockItem(ContextualItem):
+    blockheight = scrapy.Field()
+    blocktime = scrapy.Field()
+    blockhash = scrapy.Field()
+    parentslot = scrapy.Field()
+    previousblockhash = scrapy.Field()
+
 
 class TransactionReceiptItem(ContextualItem):
     """

@@ -6,7 +6,8 @@ from pybloom import ScalableBloomFilter
 from BlockchainSpider.items.sync import SyncDataItem
 from BlockchainSpider.items.trans import BlockItem, TransactionItem, EventLogItem, TraceItem, ContractItem, \
     Token721TransferItem, Token20TransferItem, Token1155TransferItem, TokenApprovalItem, TokenApprovalAllItem, \
-    TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGItem, DCFGBlockItem, DCFGEdgeItem
+    TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGItem, DCFGBlockItem, DCFGEdgeItem,SolanaBlockItem,\
+    SolanaTransactionItem
 
 
 class TransBloomFilterPipeline:
@@ -49,6 +50,54 @@ class Trans2csvPipeline:
                 TokenApprovalItem, TokenApprovalAllItem,
                 TokenPropertyItem, NFTMetadataItem,
                 SyncDataItem,
+            ]
+        }
+        # self.executor = ProcessPoolExecutor(os.cpu_count())
+
+    async def process_item(self, item, spider):
+        if getattr(spider, 'out_dir') is None:
+            return item
+        if self.accepted_item_cls.get(item.__class__.__name__) is None:
+            return item
+
+        # create output path
+        if not os.path.exists(spider.out_dir):
+            os.makedirs(spider.out_dir)
+
+        # init output file
+        fn = os.path.join(spider.out_dir, '%s.csv' % item.__class__.__name__)
+        if not self.filename2file.get(fn):
+            file = open(fn, 'w', encoding='utf-8', newline='\n')
+            self.filename2file[fn] = file
+
+            # init headers
+            headers = sorted(item.keys())
+            self.filename2headers[fn] = headers
+
+            # init writer
+            writer = csv.writer(file)
+            writer.writerow(headers)
+            self.filename2writer[fn] = writer
+
+        # save to file
+        self.filename2writer[fn].writerow([
+            item[k] for k in self.filename2headers[fn]
+        ])
+        return item
+
+    def close_spider(self, spider):
+        for file in self.filename2file.values():
+            file.close()
+
+
+class Solana2csvPipeline:
+    def __init__(self):
+        self.filename2file = dict()
+        self.filename2writer = dict()
+        self.filename2headers = dict()
+        self.accepted_item_cls = {
+            cls.__name__: True for cls in [
+                SolanaBlockItem, SolanaTransactionItem,
             ]
         }
         # self.executor = ProcessPoolExecutor(os.cpu_count())
