@@ -6,7 +6,8 @@ from pybloom import ScalableBloomFilter
 from BlockchainSpider.items.sync import SyncDataItem
 from BlockchainSpider.items.trans import BlockItem, TransactionItem, EventLogItem, TraceItem, ContractItem, \
     Token721TransferItem, Token20TransferItem, Token1155TransferItem, TokenApprovalItem, TokenApprovalAllItem, \
-    TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGItem, DCFGBlockItem, DCFGEdgeItem
+    TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGItem, DCFGBlockItem, DCFGEdgeItem, SolanaBlockItem, \
+    SolanaTransactionItem
 
 
 class TransBloomFilterPipeline:
@@ -151,3 +152,13 @@ class TransDCFG2csvPipeline(Trans2csvPipeline):
             ])
 
         return item
+
+
+class Solana2csvPipeline(Trans2csvPipeline):
+    def __init__(self):
+        super().__init__()
+        self.accepted_item_cls = {
+            cls.__name__: True for cls in [
+                SolanaBlockItem, SolanaTransactionItem,
+            ]
+        }

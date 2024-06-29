@@ -5,7 +5,7 @@ import time
 import scrapy
 
 from BlockchainSpider import settings
-from BlockchainSpider.items import BlockItem, TransactionItem
+from BlockchainSpider.items import BlockItem, TransactionItem, SolanaBlockItem, SolanaTransactionItem
 from BlockchainSpider.utils.bucket import AsyncItemBucket
 from BlockchainSpider.utils.decorator import log_debug_tracing
 from BlockchainSpider.utils.web3 import hex_to_dec
@@ -276,6 +276,158 @@ class Web3BlockTransactionSpider(scrapy.Spider):
                     True
                 ],
                 "id": 1
+            }),
+            callback=self.parse_eth_get_block_by_number,
+            priority=priority,
+            cb_kwargs=cb_kwargs,
+        )
+
+
+class SolanaBlockTransactionSpider(Web3BlockTransactionSpider):
+    name = 'trans.block.solana'
+    custom_settings = {
+        'ITEM_PIPELINES': {
+            'BlockchainSpider.pipelines.Solana2csvPipeline': 299,
+        } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
+        else getattr(settings, 'ITEM_PIPELINES', dict()),
+        'SPIDER_MIDDLEWARES': {
+            'BlockchainSpider.middlewares.SyncMiddleware': 535,
+            **getattr(settings, 'SPIDER_MIDDLEWARES', dict())
+        },
+    }
+
+    @classmethod
+    def from_crawler(cls, crawler, *args, **kwargs):
+        spider = super().from_crawler(crawler, *args, **kwargs)
+        available_middlewares = {
+            'BlockchainSpider.middlewares.trans.SPLTokenTransferMiddleware': 541,
+        }
+        middlewares = kwargs.get('enable')
+        if middlewares is not None:
+            spider_middlewares = spider.settings.getdict('SPIDER_MIDDLEWARES')
+            for middleware in middlewares.split(','):
+                assert middleware in available_middlewares
+                spider_middlewares[middleware] = available_middlewares[middleware]
+            spider.settings.set(
+                name='SPIDER_MIDDLEWARES',
+                value=spider_middlewares,
+                priority=spider.settings.attributes['SPIDER_MIDDLEWARES'].priority,
+            )
+        return spider
+
+    async def parse_eth_block_number(self, response: scrapy.http.Response, **kwargs):
+        result = json.loads(response.text)
+        result = result.get('result')
+
+        # generate more requests
+        if result is not None:
+            end_block = result
+            start_block, self._block_cursor = self._block_cursor, end_block
+            if end_block - start_block > 0:
+                self.log(
+                    message='Try to fetch the new block to: #%d' % end_block,
+                    level=logging.INFO,
+                )
+            for blk in range(start_block, end_block):
+                yield await self.get_request_eth_block_by_number(
+                    block_number=blk,
+                    priority=2 ** 32 - blk,
+                    cb_kwargs={self.sync_item_key: {'block_number': blk}},
+                )
+        else:
+            self.log(
+                message="Result field is None on eth_getBlockNumber" +
+                        "please ensure that whether the provider is available.",
+                level=logging.ERROR
+            )
+
+        # next query of block number
+        if self.end_block is not None:
+            return
+        yield await self.get_request_eth_block_number()
+
+    async def parse_eth_get_block_by_number(self, response: scrapy.http.Response, **kwargs):
+        data = json.loads(response.text)
+        result = data.get('result')
+
+        yield SolanaBlockItem(
+            block_height=result.get('blockHeight', ''),
+            block_time=result.get('blockTime', ''),
+            block_hash=result.get('blockhash', ''),
+            parent_slot=result.get('parentSlot', ''),
+            previous_blockhash=result.get('previousBlockhash', ''),
+        )
+        result = result.get('transactions')
+        transaction = list()
+        for item in result:
+            instructions = item['transaction']['message']['instructions']
+            instruction_data = [instruction['data'] for instruction in instructions]  # 提取所有指令的 data 字段
+            item = SolanaTransactionItem(
+                fee=item['meta']['fee'],
+                inner_instructions=item['meta']['innerInstructions'],
+                post_balances=item['meta']['postBalances'],
+                post_token_balances=item['meta']['postTokenBalances'],
+                pre_balances=item['meta']['preBalances'],
+                pre_token_balances=item['meta']['preTokenBalances'],
+                account_keys=item['transaction']['message']['accountKeys'],
+                instructions=item['transaction']['message']['instructions'],
+                data=instruction_data,
+                recent_blockhash=item['transaction']['message']['recentBlockhash'],
+                signatures=item['transaction']['signatures']
+            )
+            transaction.append(item)
+            yield item
+
+    def get_request_web3_client_version(self) -> scrapy.Request:
+        return scrapy.Request(
+            url=self.provider_bucket.items[0],
+            method='POST',
+            headers={'Content-Type': 'application/json'},
+            body=json.dumps({
+                "jsonrpc": "2.0",
+                "method": "getVersion",
+                "id": 1
+            }),
+            callback=self._start_requests,
+        )
+
+    async def get_request_eth_block_number(self) -> scrapy.Request:
+        return scrapy.Request(
+            url=await self.provider_bucket.get(),
+            method='POST',
+            headers={'Content-Type': 'application/json'},
+            body=json.dumps({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getBlockHeight",
+            }),
+            callback=self.parse_eth_block_number,
+            errback=self.errback_parse_eth_block_number,
+            priority=0,
+            dont_filter=True,
+        )
+
+    async def get_request_eth_block_by_number(
+            self, block_number: int, priority: int, cb_kwargs: dict
+    ) -> scrapy.Request:
+        return scrapy.Request(
+            url=await self.provider_bucket.get(),
+            method='POST',
+            headers={'Content-Type': 'application/json'},
+            body=json.dumps({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getBlock",
+                "params": [
+                    block_number,
+                    {
+                        "commitment": "finalized",
+                        "encoding": "json",
+                        "maxSupportedTransactionVersion": 0,
+                        "transactionDetails": "full",
+                        "rewards": False
+                    }
+                ]
             }),
             callback=self.parse_eth_get_block_by_number,
             priority=priority,
