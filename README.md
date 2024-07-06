@@ -86,7 +86,7 @@ In this section, we will demonstrate how to collect transaction data in [Ethereu
 
 The following command will continuously collect transactions from block number `19000000` to the latest block:
 ```shell
-scrapy crawl trans.block.web3 -a start_blk=19000000 -a providers=https://freerpc.merkle.io
+scrapy crawl trans.block.evm -a start_blk=19000000 -a providers=https://freerpc.merkle.io
 ```
 
 You can find the label data on `./data`, in which:

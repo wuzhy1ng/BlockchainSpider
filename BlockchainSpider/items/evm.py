@@ -211,25 +211,3 @@ class DCFGEdgeItem(ContextualItem):
     gas = scrapy.Field()  # int
     selector = scrapy.Field()  # str
     index = scrapy.Field()  # int
-
-
-class SolanaBlockItem(ContextualItem):
-    block_hash = scrapy.Field()
-    block_height = scrapy.Field()
-    block_time = scrapy.Field()
-    parent_slot = scrapy.Field()
-    previous_blockhash = scrapy.Field()
-
-
-class SolanaTransactionItem(ContextualItem):
-    fee = scrapy.Field()
-    inner_instructions = scrapy.Field()
-    post_balances = scrapy.Field()
-    post_token_balances = scrapy.Field()
-    pre_balances = scrapy.Field()
-    pre_token_balances = scrapy.Field()
-    account_keys = scrapy.Field()
-    instructions = scrapy.Field()
-    data = scrapy.Field()
-    recent_blockhash = scrapy.Field()
-    signatures = scrapy.Field()

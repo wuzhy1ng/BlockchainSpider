@@ -3,7 +3,7 @@ import json
 import scrapy
 
 from BlockchainSpider.items import TransactionReceiptItem
-from BlockchainSpider.items.trans import ContractItem
+from BlockchainSpider.items.evm import ContractItem
 from BlockchainSpider.middlewares.defs import LogMiddleware
 from BlockchainSpider.utils.decorator import log_debug_tracing
 

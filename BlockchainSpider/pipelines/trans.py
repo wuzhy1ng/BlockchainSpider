@@ -4,13 +4,14 @@ import os
 from pybloom import ScalableBloomFilter
 
 from BlockchainSpider.items.sync import SyncDataItem
-from BlockchainSpider.items.trans import BlockItem, TransactionItem, EventLogItem, TraceItem, ContractItem, \
+from BlockchainSpider.items.evm import BlockItem, TransactionItem, EventLogItem, TraceItem, ContractItem, \
     Token721TransferItem, Token20TransferItem, Token1155TransferItem, TokenApprovalItem, TokenApprovalAllItem, \
-    TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGItem, DCFGBlockItem, DCFGEdgeItem, SolanaBlockItem, \
-    SolanaTransactionItem
+    TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGItem, DCFGBlockItem, DCFGEdgeItem
+from BlockchainSpider.items.solana import SolanaBlockItem, SolanaTransactionItem, SolanaInstructionItem, SolanaLogItem, \
+    SolanaBalanceChangesItem, SPLTokenActionItem, ValidateVotingItem
 
 
-class TransBloomFilterPipeline:
+class EVMTransBloomFilterPipeline:
     def __init__(self):
         self._bloom4contract = ScalableBloomFilter(
             initial_capacity=1024,
@@ -37,7 +38,7 @@ class TransBloomFilterPipeline:
         return item
 
 
-class Trans2csvPipeline:
+class EVMTrans2csvPipeline:
     def __init__(self):
         self.filename2file = dict()
         self.filename2writer = dict()
@@ -90,7 +91,7 @@ class Trans2csvPipeline:
             file.close()
 
 
-class TransDCFG2csvPipeline(Trans2csvPipeline):
+class EVMTransDCFG2csvPipeline(EVMTrans2csvPipeline):
     def __init__(self):
         super().__init__()
         self._bloom4blocks = ScalableBloomFilter(
@@ -154,11 +155,13 @@ class TransDCFG2csvPipeline(Trans2csvPipeline):
         return item
 
 
-class Solana2csvPipeline(Trans2csvPipeline):
+class SolanaTrans2csvPipeline(EVMTrans2csvPipeline):
     def __init__(self):
         super().__init__()
         self.accepted_item_cls = {
             cls.__name__: True for cls in [
                 SolanaBlockItem, SolanaTransactionItem,
+                SolanaBalanceChangesItem, SolanaLogItem,
+                SolanaInstructionItem, SPLTokenActionItem, ValidateVotingItem
             ]
         }

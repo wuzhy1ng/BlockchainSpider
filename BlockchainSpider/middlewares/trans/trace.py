@@ -6,7 +6,7 @@ import scrapy
 
 from BlockchainSpider.items import BlockItem, TraceItem, TransactionItem
 from BlockchainSpider.middlewares.defs import LogMiddleware
-from BlockchainSpider.spiders.trans.trans import Web3TransactionSpider
+from BlockchainSpider.spiders.trans.evm.trans import EVMTransactionSpider
 from BlockchainSpider.utils.decorator import log_debug_tracing
 from BlockchainSpider.utils.web3 import hex_to_dec
 
@@ -45,7 +45,7 @@ class TraceMiddleware(LogMiddleware):
                 )
                 continue
 
-            if isinstance(spider, Web3TransactionSpider) and isinstance(item, TransactionItem):
+            if isinstance(spider, EVMTransactionSpider) and isinstance(item, TransactionItem):
                 if item.get('gas', 0) <= 21000:
                     continue
                 yield await self.get_request_debug_transaction(

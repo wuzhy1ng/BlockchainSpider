@@ -12,13 +12,13 @@ from BlockchainSpider.utils.decorator import log_debug_tracing
 from BlockchainSpider.utils.web3 import hex_to_dec
 
 
-class Web3TransactionSpider(scrapy.Spider):
-    name = 'trans.web3'
+class EVMTransactionSpider(scrapy.Spider):
+    name = 'trans.evm'
     custom_settings = {
         'ITEM_PIPELINES': {
-            'BlockchainSpider.pipelines.Trans2csvPipeline': 299,
-            'BlockchainSpider.pipelines.TransDCFG2csvPipeline': 298,
-            'BlockchainSpider.pipelines.TransBloomFilterPipeline': 297,
+            'BlockchainSpider.pipelines.EVMTrans2csvPipeline': 299,
+            'BlockchainSpider.pipelines.EVMTransDCFG2csvPipeline': 298,
+            'BlockchainSpider.pipelines.EVMTransBloomFilterPipeline': 297,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
         else getattr(settings, 'ITEM_PIPELINES', dict()),
         'SPIDER_MIDDLEWARES': {
