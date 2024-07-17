@@ -80,7 +80,7 @@ You can find the label data on `./data/labels.ofac`, each row of this file is a 
 
 **Note**: Please indicate the source when using crawling labels.
 
-### 🪙Collect transaction data
+### ✨Collect transaction data
 
 In this section, we will demonstrate how to collect transaction data in [Ethereum](https://ethereum.org/)!
 
@@ -97,6 +97,10 @@ You can find the label data on `./data`, in which:
 > Moreover, collecting block data from EVM-compatible chains (e.g., BNBChain, Polygon, etc.) is also available; 
 > see our [documentation](https://870167019.gitbook.io/blockchainspider/transaction-spiders/overview).
 
+(Solana support, alpha) The following command will continuously collect transaction data from block height `270000000` to the latest block:
+```shell
+scrapy crawl trans.block.solana -a start_blk=19000000 -a providers=<your http provider>
+```
 
 ## 🏷️Citation
 The following paper supports `BlockchainSpider`. Here are the bib references:

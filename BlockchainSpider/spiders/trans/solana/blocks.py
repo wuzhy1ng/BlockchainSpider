@@ -5,7 +5,8 @@ import scrapy
 
 from BlockchainSpider import settings
 from BlockchainSpider.items import SolanaBlockItem, SolanaTransactionItem
-from BlockchainSpider.items.solana import SolanaLogItem, SolanaInstructionItem
+from BlockchainSpider.items.solana import SolanaLogItem, SolanaInstructionItem, SolanaBalanceChangesItem, \
+    SPLTokenActionItem, ValidateVotingItem, SystemItem
 from BlockchainSpider.spiders.trans.evm import EVMBlockTransactionSpider
 
 
@@ -13,7 +14,7 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
     name = 'trans.block.solana'
     custom_settings = {
         'ITEM_PIPELINES': {
-            'BlockchainSpider.pipelines.Solana2csvPipeline': 299,
+            'BlockchainSpider.pipelines.SolanaTrans2csvPipeline': 299,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
         else getattr(settings, 'ITEM_PIPELINES', dict()),
         'SPIDER_MIDDLEWARES': {
@@ -25,9 +26,7 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
         spider = super().from_crawler(crawler, *args, **kwargs)
-        available_middlewares = {
-            'BlockchainSpider.middlewares.trans.SPLTokenTransferMiddleware': 541,
-        }
+        available_middlewares = {}
         middlewares = kwargs.get('enable')
         if middlewares is not None:
             spider_middlewares = spider.settings.getdict('SPIDER_MIDDLEWARES')
@@ -58,11 +57,11 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
                 yield await self.get_request_eth_block_by_number(
                     block_number=blk,
                     priority=2 ** 32 - blk,
-                    cb_kwargs={self.sync_item_key: {'block_number': blk}},
+                    cb_kwargs={self.sync_item_key: {'block_height': blk}},
                 )
         else:
             self.log(
-                message="Result field is None on eth_getBlockNumber" +
+                message="Result field is None on getBlockHeight" +
                         "please ensure that whether the provider is available.",
                 level=logging.ERROR
             )
@@ -75,47 +74,167 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
     async def parse_eth_get_block_by_number(self, response: scrapy.http.Response, **kwargs):
         data = json.loads(response.text)
         result = data.get('result')
+        if result is None:
+            self.log(
+                message="Result field is None on getBlock" +
+                        "please ensure that whether the provider is available.",
+                level=logging.ERROR
+            )
+            return
 
-        block_time = result.get('blockTime', '')
+        block_height = kwargs[self.sync_item_key]['block_height']
+        block_time = result.get('blockTime', -1)
         yield SolanaBlockItem(
-            block_height=result.get('blockHeight', ''),
+            block_height=block_height,
             block_time=block_time,
             block_hash=result.get('blockhash', ''),
-            parent_slot=result.get('parentSlot', ''),
+            parent_slot=result.get('parentSlot', -1),
             previous_blockhash=result.get('previousBlockhash', ''),
         )
         for item in result['transactions']:
+            trans_meta = item.get('meta')
             signature = item['transaction']['signatures'][0]
+            err = list(trans_meta['err'].keys())[0] \
+                if isinstance(trans_meta, dict) and isinstance(trans_meta.get('err'), dict) else ''
             yield SolanaTransactionItem(
                 signature=signature,
                 block_time=block_time,
-                version=item['version'],
-                fee=item['meta']['fee'],
-                compute_consumed=item['meta']['computeUnitsConsumed'],
-                err=None if item['meta']['err'] is None else item['meta']['err'].keys()[0],
+                version=item.get('version', 'legacy'),
+                fee=trans_meta['fee'] if trans_meta is not None else -1,
+                compute_consumed=trans_meta['computeUnitsConsumed'] if trans_meta is not None else -1,
+                err=err,
                 recent_blockhash=item['transaction']['message']['recentBlockhash'],
             )
 
-            # TODO: parse balance changes
+            # parse balance changes
             accounts = [ak['pubkey'] for ak in item['transaction']['message']['accountKeys']]
+            if isinstance(trans_meta, dict) \
+                    and isinstance(trans_meta.get('preTokenBalances'), list) \
+                    and isinstance(trans_meta.get('postTokenBalances'), list):
+                pre_balances = [None for _ in range(len(accounts))]
+                for balance in trans_meta['preTokenBalances']:
+                    idx = balance.get('accountIndex')
+                    if idx is None: continue
+                    pre_balances[idx] = balance
+                post_balances = [None for _ in range(len(accounts))]
+                for balance in trans_meta['postTokenBalances']:
+                    idx = balance.get('accountIndex')
+                    if idx is None: continue
+                    post_balances[idx] = balance
+                for i, account in enumerate(accounts):
+                    pre_balance, post_balance = pre_balances[i], post_balances[i]
+                    if pre_balance is None or post_balance is None:
+                        continue
+                    yield SolanaBalanceChangesItem(
+                        signature=signature,
+                        account=account,
+                        mint=pre_balance.get('mint', ''),
+                        owner=pre_balance.get('owner', ''),
+                        program_id=pre_balance.get('programId', ''),
+                        pre_amount=pre_balance['uiTokenAmount']['amount'],
+                        post_amount=post_balance['uiTokenAmount']['amount'],
+                        decimals=post_balance['uiTokenAmount']['decimals'],
+                    )
 
             # parse logs
-            for index, log in enumerate(item['meta']['logMessages']):
-                yield SolanaLogItem(
-                    signature=signature,
-                    index=index,
-                    log=log,
-                )
+            if isinstance(trans_meta, dict) and trans_meta.get('logMessages'):
+                for index, log in enumerate(trans_meta['logMessages']):
+                    yield SolanaLogItem(
+                        signature=signature,
+                        index=index,
+                        log=log,
+                    )
 
-            # TODO: parse instructions
+            # parse instructions
             trace_ids, instructions = list(), list()
             for index, instruction in enumerate(item['transaction']['message']['instructions']):
                 trace_ids.append(str(index))
                 instructions.append(instruction)
-            for inner_instruction in item['meta'].get('innerInstructions', []):
-                index = inner_instruction['index']
-                for inst in inner_instruction['instructions']:
-                    pass
+                program_id = instruction['programId']
+                if not instruction.get('parsed'):
+                    yield SolanaInstructionItem(
+                        signature=signature,
+                        trace_id=index,
+                        data=instruction.get('data', ''),
+                        program_id=program_id
+                    )
+                    continue
+                parsed_instruction = instruction['parsed']
+                program = instruction['program']
+                if program == 'spl-token':
+                    yield SPLTokenActionItem(
+                        signature=signature,
+                        trace_id=index,
+                        program_id=program_id,
+                        dtype=parsed_instruction['type'],
+                        info=parsed_instruction['info'],
+                        program=program
+                    )
+                elif program == 'vote':
+                    yield ValidateVotingItem(
+                        signature=signature,
+                        trace_id=index,
+                        program_id=program_id,
+                        dtype=parsed_instruction['type'],
+                        info=parsed_instruction['info'],
+                        program=program
+                    )
+                elif program == 'system':
+                    yield SystemItem(
+                        signature=signature,
+                        trace_id=index,
+                        program_id=program_id,
+                        dtype=parsed_instruction['type'],
+                        info=parsed_instruction['info'],
+                        program=program
+                    )
+
+            # TODO: parse inner instructions
+            # TODO: 1. fix up bug of instruction parsing, referring `parse instructions`
+            # TODO: 2. trace_id is not correct, referring solscan
+            if isinstance(trans_meta, dict) and isinstance(trans_meta.get('innerInstructions'), list):
+                for inner_instruction in trans_meta['innerInstructions']:
+                    index = inner_instruction['index']
+                    for instruction in inner_instruction['instructions']:
+                        program_id = instruction['programId']
+                        if not instruction.get('parsed'):
+                            yield SolanaInstructionItem(
+                                signature=signature,
+                                trace_id=index,
+                                data=data,
+                                program_id=program_id
+                            )
+                            continue
+                        dtype = instruction['parsed']['type']
+                        info = instruction['parsed']['info']
+                        program = instruction['program']
+                        if program == 'spl-token':
+                            yield SPLTokenActionItem(
+                                signature=signature,
+                                trace_id=index,
+                                program_id=program_id,
+                                dtype=dtype,
+                                info=info,
+                                program=program
+                            )
+                        elif program == 'vote':
+                            yield ValidateVotingItem(
+                                signature=signature,
+                                trace_id=index,
+                                program_id=program_id,
+                                dtype=dtype,
+                                info=info,
+                                program=program
+                            )
+                        else:
+                            yield SystemItem(
+                                signature=signature,
+                                trace_id=index,
+                                program_id=program_id,
+                                dtype=dtype,
+                                info=info,
+                                program=program
+                            )
 
     def get_request_web3_client_version(self) -> scrapy.Request:
         return scrapy.Request(

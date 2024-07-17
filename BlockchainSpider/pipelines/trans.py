@@ -53,7 +53,6 @@ class EVMTrans2csvPipeline:
                 SyncDataItem,
             ]
         }
-        # self.executor = ProcessPoolExecutor(os.cpu_count())
 
     async def process_item(self, item, spider):
         if getattr(spider, 'out_dir') is None:

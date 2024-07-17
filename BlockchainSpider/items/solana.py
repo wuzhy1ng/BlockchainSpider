@@ -7,7 +7,7 @@ class SolanaBlockItem(ContextualItem):
     block_hash = scrapy.Field()  # str
     block_height = scrapy.Field()  # int
     block_time = scrapy.Field()  # int
-    parent_slot = scrapy.Field()  # str
+    parent_slot = scrapy.Field()  # int
     previous_blockhash = scrapy.Field()  # str
 
 
@@ -17,16 +17,16 @@ class SolanaTransactionItem(ContextualItem):
     version = scrapy.Field()  # Union[int, str]
     fee = scrapy.Field()  # int
     compute_consumed = scrapy.Field()  # int
-    err = scrapy.Field()  # Union[None, str]
+    err = scrapy.Field()  # str
     recent_blockhash = scrapy.Field()  # str
 
 
 class SolanaBalanceChangesItem(ContextualItem):
     signature = scrapy.Field()  # str
     account = scrapy.Field()  # str
-    mint = scrapy.Field()  # Union[None, str]
+    mint = scrapy.Field()  # str
     owner = scrapy.Field()  # str
-    programId = scrapy.Field()  # Union[None, str]
+    program_id = scrapy.Field()  # str
     pre_amount = scrapy.Field()  # str
     post_amount = scrapy.Field()  # str
     decimals = scrapy.Field()  # int
@@ -50,56 +50,16 @@ class SolanaInstructionItem(ContextualItem):
 class SPLTokenActionItem(SolanaInstructionItem):
     dtype = scrapy.Field()  # str
     info = scrapy.Field()  # dict
+    program = scrapy.Field()  # str
 
 
-# class SPLInitializeMintItem(SolanaInstructionItem):
-#     decimals = scrapy.Field()  # int
-#     mint_authority = scrapy.Field()  # str
-#     freeze_authority = scrapy.Field()  # str
-#
-#
-# class SPLInitializeAccountItem(SolanaInstructionItem):
-#     account = scrapy.Field()  # str
-#     pass  # TODO
-#
-#
-# class SPLInitializeMultisigItem(SolanaInstructionItem):
-#     account = scrapy.Field()  # str
-#     pass  # TODO
-#
-#
-# class SPLTransferItem(SolanaInstructionItem):
-#     source = scrapy.Field()  # str
-#     destination = scrapy.Field()  # str
-#     signer = scrapy.Field()  # str
-#     amount = scrapy.Field()  # str
-#
-#
-# class SPLApproveItem(SolanaInstructionItem):
-#     source = scrapy.Field()  # str
-#     destination = scrapy.Field()  # str
-#     signer = scrapy.Field()  # str
-#
-#
-# class SPLRevokeItem(SolanaInstructionItem):
-#     source = scrapy.Field()  # str
-#     signer = scrapy.Field()  # str
-#
-#
-# class SPLSetAuthorityItem(SolanaInstructionItem):
-#     authority = scrapy.Field()  # str
-#     signer = scrapy.Field()  # str
-#     authority_type = scrapy.Field()  # str
-#     new_authority = scrapy.Field()  # str
-#
-#
-# class SPLMintToItem(SolanaInstructionItem):
-#     mint = scrapy.Field()  # str
-#     account = scrapy.Field()  # str
-#     amount = scrapy.Field()  # str
-#     mint_authority = scrapy.Field()  # str
-
-
-class ValidateVotingItem(ContextualItem):
+class ValidateVotingItem(SolanaInstructionItem):
     dtype = scrapy.Field()  # str
     info = scrapy.Field()  # dict
+    program = scrapy.Field()  # str
+
+
+class SystemItem(SolanaInstructionItem):
+    dtype = scrapy.Field()  # str
+    info = scrapy.Field()  # dict
+    program = scrapy.Field()  # str
