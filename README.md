@@ -99,7 +99,7 @@ You can find the label data on `./data`, in which:
 
 (Solana support, alpha) The following command will continuously collect transaction data from block height `270000000` to the latest block:
 ```shell
-scrapy crawl trans.block.solana -a start_blk=19000000 -a providers=<your http provider>
+scrapy crawl trans.block.solana -a start_blk=270000000 -a providers=<your http provider>
 ```
 
 ## 🏷️Citation
