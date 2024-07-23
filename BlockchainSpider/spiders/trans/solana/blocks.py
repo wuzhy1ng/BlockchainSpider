@@ -5,8 +5,7 @@ import scrapy
 
 from BlockchainSpider import settings
 from BlockchainSpider.items import SolanaBlockItem, SolanaTransactionItem
-from BlockchainSpider.items.solana import SolanaLogItem, SolanaInstructionItem, SolanaBalanceChangesItem, \
-    SPLTokenActionItem, ValidateVotingItem, SystemItem
+from BlockchainSpider.items.solana import SolanaLogItem, SolanaInstructionItem,SolanaBalanceChangesItem,SPLTokenActionItem,ValidateVotingItem,SystemItem,SPLmemoItem,SolanaInnerInstructionItem
 from BlockchainSpider.spiders.trans.evm import EVMBlockTransactionSpider
 
 
@@ -26,7 +25,8 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
         spider = super().from_crawler(crawler, *args, **kwargs)
-        available_middlewares = {}
+        available_middlewares = {
+        }
         middlewares = kwargs.get('enable')
         if middlewares is not None:
             spider_middlewares = spider.settings.getdict('SPIDER_MIDDLEWARES')
@@ -82,10 +82,10 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
             )
             return
 
-        block_height = kwargs[self.sync_item_key]['block_height']
+        #block_height = kwargs[self.sync_item_key]['block_height']
         block_time = result.get('blockTime', -1)
         yield SolanaBlockItem(
-            block_height=block_height,
+            block_height=result.get('blockheight', -1),
             block_time=block_time,
             block_hash=result.get('blockhash', ''),
             parent_slot=result.get('parentSlot', -1),
@@ -101,13 +101,14 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
                 block_time=block_time,
                 version=item.get('version', 'legacy'),
                 fee=trans_meta['fee'] if trans_meta is not None else -1,
-                compute_consumed=trans_meta['computeUnitsConsumed'] if trans_meta is not None else -1,
+                compute_consumed=trans_meta['computeUnitsConsumed'] if trans_meta is not None and 'computeUnitsConsumed' in trans_meta.keys() else -1, #有些区块的meta无computeUnitsConsumed关键字
                 err=err,
                 recent_blockhash=item['transaction']['message']['recentBlockhash'],
             )
+            #TODO: parse balance changes
 
-            # parse balance changes
             accounts = [ak['pubkey'] for ak in item['transaction']['message']['accountKeys']]
+
             if isinstance(trans_meta, dict) \
                     and isinstance(trans_meta.get('preTokenBalances'), list) \
                     and isinstance(trans_meta.get('postTokenBalances'), list):
@@ -136,105 +137,122 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
                         decimals=post_balance['uiTokenAmount']['decimals'],
                     )
 
-            # parse logs
+            #parse logs
             if isinstance(trans_meta, dict) and trans_meta.get('logMessages'):
-                for index, log in enumerate(trans_meta['logMessages']):
+                for index, log in enumerate(item['meta']['logMessages']):
                     yield SolanaLogItem(
+
                         signature=signature,
                         index=index,
                         log=log,
                     )
+            if item:
+                trace_ids, instructions = list(), list()
+                for index, instruction in enumerate(item['transaction']['message']['instructions']):
+                    trace_ids.append(str(index))
+                    instructions.append(instruction)
+                    program_id = instruction['programId']
+                    if not instruction.get('parsed'):
+                        yield SolanaInstructionItem(
+                            signature=signature,
+                            trace_id=index,
+                            data=instruction.get('data', ''),
+                            program_id=program_id
+                        )
+                        continue
+                    parsed_instruction = instruction['parsed']
+                    program = instruction['program']
+                    if program == 'spl-token':
+                        yield SPLTokenActionItem(
+                            signature=signature,
+                            trace_id=index,
+                            program_id=program_id,
+                            dtype=parsed_instruction['type'],
+                            info=parsed_instruction['info'],
+                            program=program
+                        )
+                    elif program == 'vote':
+                        yield ValidateVotingItem(
+                            signature=signature,
+                            trace_id=index,
+                            program_id=program_id,
+                            dtype=parsed_instruction['type'],
+                            info=parsed_instruction['info'],
+                            program=program
+                        )
+                    elif program == 'system':
+                        yield SystemItem(
+                            signature=signature,
+                            trace_id=index,
+                            program_id=program_id,
+                            dtype=parsed_instruction['type'],
+                            info=parsed_instruction['info'],
+                            program=program
+                        )
+                    elif program == 'spl-memo':
+                        yield SPLmemoItem(
+                            signature = signature,
+                            trace_id = index,
+                            program=program,
+                            program_id=program_id
+                        )
 
-            # parse instructions
-            trace_ids, instructions = list(), list()
-            for index, instruction in enumerate(item['transaction']['message']['instructions']):
-                trace_ids.append(str(index))
-                instructions.append(instruction)
-                program_id = instruction['programId']
-                if not instruction.get('parsed'):
-                    yield SolanaInstructionItem(
-                        signature=signature,
-                        trace_id=index,
-                        data=instruction.get('data', ''),
-                        program_id=program_id
-                    )
-                    continue
-                parsed_instruction = instruction['parsed']
-                program = instruction['program']
-                if program == 'spl-token':
-                    yield SPLTokenActionItem(
-                        signature=signature,
-                        trace_id=index,
-                        program_id=program_id,
-                        dtype=parsed_instruction['type'],
-                        info=parsed_instruction['info'],
-                        program=program
-                    )
-                elif program == 'vote':
-                    yield ValidateVotingItem(
-                        signature=signature,
-                        trace_id=index,
-                        program_id=program_id,
-                        dtype=parsed_instruction['type'],
-                        info=parsed_instruction['info'],
-                        program=program
-                    )
-                elif program == 'system':
-                    yield SystemItem(
-                        signature=signature,
-                        trace_id=index,
-                        program_id=program_id,
-                        dtype=parsed_instruction['type'],
-                        info=parsed_instruction['info'],
-                        program=program
-                    )
+            if isinstance(trans_meta, dict) and trans_meta.get('innerInstructions'):
+                    for inner_instruction in trans_meta['innerInstructions']:
+                        index = inner_instruction['index']+1
+                        stack_height_array=list()
+                        idx_array=[]
+                        for instruction in inner_instruction['instructions']:
+                            stack_height_array.append(instruction['stackHeight'])
 
-            # TODO: parse inner instructions
-            # TODO: 1. fix up bug of instruction parsing, referring `parse instructions`
-            # TODO: 2. trace_id is not correct, referring solscan
-            if isinstance(trans_meta, dict) and isinstance(trans_meta.get('innerInstructions'), list):
-                for inner_instruction in trans_meta['innerInstructions']:
-                    index = inner_instruction['index']
-                    for instruction in inner_instruction['instructions']:
-                        program_id = instruction['programId']
-                        if not instruction.get('parsed'):
-                            yield SolanaInstructionItem(
-                                signature=signature,
-                                trace_id=index,
-                                data=data,
-                                program_id=program_id
-                            )
-                            continue
-                        dtype = instruction['parsed']['type']
-                        info = instruction['parsed']['info']
-                        program = instruction['program']
-                        if program == 'spl-token':
-                            yield SPLTokenActionItem(
-                                signature=signature,
-                                trace_id=index,
-                                program_id=program_id,
-                                dtype=dtype,
-                                info=info,
-                                program=program
-                            )
-                        elif program == 'vote':
-                            yield ValidateVotingItem(
-                                signature=signature,
-                                trace_id=index,
-                                program_id=program_id,
-                                dtype=dtype,
-                                info=info,
-                                program=program
-                            )
-                        else:
-                            yield SystemItem(
-                                signature=signature,
-                                trace_id=index,
-                                program_id=program_id,
-                                dtype=dtype,
-                                info=info,
-                                program=program
-                            )
+                        idx_array=generate_multilevel_sequence(stack_height_array,index)
+
+                        for idx,instruction in enumerate(inner_instruction['instructions']):
+                            program_id=instruction['programId']
+                            if not instruction.get('parsed'):
+                                yield SolanaInnerInstructionItem(
+                                    signature=signature,
+                                    trace_id=idx_array[idx],
+                                    program_id=program_id,
+                                    data=instruction.get('data', '')
+                                )
+                                continue
+                            parsed_instruction = instruction['parsed']
+                            program = instruction['program']
+                            if program == 'spl-token':
+                                yield SPLTokenActionItem(
+                                    signature=signature,
+                                    trace_id=idx_array[idx],
+                                    program_id=program_id,
+                                    dtype=parsed_instruction['type'],
+                                    info=parsed_instruction['info'],
+                                    program=program
+                                )
+                            elif program == 'vote':
+                                yield ValidateVotingItem(
+                                    signature=signature,
+                                    trace_id=idx_array[idx],
+                                    program_id=program_id,
+                                    dtype=parsed_instruction['type'],
+                                    info=parsed_instruction['info'],
+                                    program=program
+                                )
+                            elif program == 'spl-memo':
+                                yield SPLmemoItem(
+                                    signature=signature,
+                                    trace_id=idx_array[idx],
+                                    program_id=program_id,
+                                    program=program
+                                )
+                            elif program == 'system':
+                                yield SystemItem(
+                                    signature=signature,
+                                    trace_id=idx_array[idx],
+                                    program_id=program_id,
+                                    dtype=parsed_instruction['type'],
+                                    info=parsed_instruction['info'],
+                                    program=program
+                                )
 
     def get_request_web3_client_version(self) -> scrapy.Request:
         return scrapy.Request(
@@ -290,3 +308,26 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
             priority=priority,
             cb_kwargs=cb_kwargs,
         )
+
+
+def generate_multilevel_sequence(levels, start):
+
+    stack = [start - 1]
+    result = []
+    def add_sequence(level):
+        if level > len(stack):
+            stack.append(1)
+        else:
+            stack[level - 1] += 1
+            for i in range(level, len(stack)):
+                stack[i] = 0
+
+        result.append(".".join(str(num) for num in stack[:level]))
+
+    for num in levels:
+        add_sequence(num)
+
+    return result
+
+
+
