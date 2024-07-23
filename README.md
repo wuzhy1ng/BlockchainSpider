@@ -10,7 +10,6 @@ Blockchain spiders aim to collect data of public chains, including:
 For more info in detail, see our [documentation](https://870167019.gitbook.io/blockchainspider/).
 
 
-
 ## 🚀Getting Started
 
 ### 🔧Install
