@@ -7,7 +7,7 @@ class SolanaBlockItem(ContextualItem):
     block_hash = scrapy.Field()  # str
     block_height = scrapy.Field()  # int
     block_time = scrapy.Field()  # int
-    parent_slot = scrapy.Field()  # int
+    parent_slot = scrapy.Field()  # str
     previous_blockhash = scrapy.Field()  # str
 
 
@@ -45,6 +45,13 @@ class SolanaInstructionItem(ContextualItem):
     program_id = scrapy.Field()  # str
 
 
+class SolanaInnerInstructionItem(ContextualItem):
+    signature = scrapy.Field()  # str
+    trace_id = scrapy.Field()  # str
+    data = scrapy.Field()  # Union[None, str], None if parsed
+    program_id = scrapy.Field()  # str
+
+
 # SPL definition, please see:
 # https://github.com/solana-labs/solana-program-library/blob/master/token/program/src/instruction.rs
 class SPLTokenActionItem(SolanaInstructionItem):
@@ -62,4 +69,8 @@ class ValidateVotingItem(SolanaInstructionItem):
 class SystemItem(SolanaInstructionItem):
     dtype = scrapy.Field()  # str
     info = scrapy.Field()  # dict
+    program = scrapy.Field()  # str
+
+
+class SPLmemoItem(SolanaInstructionItem):
     program = scrapy.Field()  # str
