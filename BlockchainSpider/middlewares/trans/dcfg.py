@@ -4,7 +4,7 @@ from typing import Dict, List
 
 import scrapy
 
-from BlockchainSpider.items import DCFGBlockItem, DCFGEdgeItem, DCFGItem
+from BlockchainSpider.items import DCFGBlockItem, DCFGEdgeItem
 from BlockchainSpider.middlewares.trans import TraceMiddleware
 from BlockchainSpider.utils.decorator import log_debug_tracing
 
@@ -152,11 +152,10 @@ class DCFGMiddleware(TraceMiddleware):
         transaction_hashes = kwargs.pop('transaction_hashes')
         for i, result in enumerate(data):
             kwargs['transaction_hash'] = transaction_hashes[i]
-            yield DCFGItem(
-                transaction_hash=kwargs['transaction_hash'],
-                blocks=DCFGMiddleware.parse_dcfg_block_items(result['result'], **kwargs),
-                edges=DCFGMiddleware.parse_dcfg_edge_items(result['result'], **kwargs),
-            )
+            for item in DCFGMiddleware.parse_dcfg_block_items(result['result'], **kwargs):
+                yield item
+            for item in DCFGMiddleware.parse_dcfg_edge_items(result['result'], **kwargs):
+                yield item
 
     @log_debug_tracing
     async def parse_debug_transaction(self, response: scrapy.http.Response, **kwargs):
@@ -171,11 +170,10 @@ class DCFGMiddleware(TraceMiddleware):
             return
 
         # parse trace item
-        yield DCFGItem(
-            transaction_hash=kwargs['transaction_hash'],
-            blocks=DCFGMiddleware.parse_dcfg_block_items(result, **kwargs),
-            edges=DCFGMiddleware.parse_dcfg_edge_items(result, **kwargs),
-        )
+        for item in DCFGMiddleware.parse_dcfg_block_items(result, **kwargs):
+            yield item
+        for item in DCFGMiddleware.parse_dcfg_edge_items(result, **kwargs):
+            yield item
 
     @staticmethod
     def parse_dcfg_block_items(result: Dict, **kwargs) -> List[DCFGBlockItem]:

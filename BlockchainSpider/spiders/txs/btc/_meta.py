@@ -1,7 +1,9 @@
 import datetime
 
 import scrapy
+from scrapy.utils.misc import load_object
 
+from BlockchainSpider import settings
 from BlockchainSpider.items import SubgraphTxItem
 from BlockchainSpider.utils.bucket import JsonAPIKeyBucket
 from BlockchainSpider.utils.url import RouterURLBuiler, QueryURLBuilder
@@ -23,8 +25,10 @@ class TxsBTCSpider(scrapy.Spider):
         self.out_dir = kwargs.get('out', './data')
         self.out_fields = kwargs.get('fields', 'id,hash,from,to,value,timeStamp,blockNumber,age').split(',')
 
-        # apikey bucket
-        self.apikey_bucket = JsonAPIKeyBucket('btc', kps=3)
+        # load apikey bucket class
+        apikey_bucket = getattr(settings, 'APIKEYS_BUCKET', None)
+        assert apikey_bucket is not None
+        self.apikey_bucket = load_object(apikey_bucket)(net='btc', kps=3)
 
     def get_tx_request(self, txhash: str, **kwargs):
         return scrapy.Request(
@@ -56,7 +60,7 @@ class TxsBTCSpider(scrapy.Spider):
                     'to': data['hash'],
                     'value': tx['output_value'],
                     'address': tx['addresses'][0] if len(tx['addresses']) > 0 else '',
-                    'timeStamp': int(datetime.datetime.strptime(data['confirmed'], '%Y-%m-%dT%H:%M:%S%z').timestamp()),
+                    # 'timeStamp': int(datetime.datetime.strptime(data['confirmed'], '%Y-%m-%dT%H:%M:%S%z').timestamp()),
                     'spent': True,
                     'blockNumber': data['block_height'],
                     'script': tx.get('script', ''),
@@ -78,7 +82,7 @@ class TxsBTCSpider(scrapy.Spider):
                     'to': spent_by if spent_by else '',
                     'value': tx['value'],
                     'address': tx.get('addresses')[0] if tx.get('addresses') and len(tx['addresses']) > 0 else '',
-                    'timeStamp': int(datetime.datetime.strptime(data['confirmed'], '%Y-%m-%dT%H:%M:%S%z').timestamp()),
+                    # 'timeStamp': int(datetime.datetime.strptime(data['confirmed'], '%Y-%m-%dT%H:%M:%S%z').timestamp()),
                     'spent': True if spent_by else False,
                     'blockNumber': data['block_height'],
                     'script': tx.get('script', ''),

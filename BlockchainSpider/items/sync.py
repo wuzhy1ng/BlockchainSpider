@@ -1,5 +1,6 @@
 import scrapy
 
 
-class SyncDataItem(scrapy.Item):
+class SyncItem(scrapy.Item):
+    key = scrapy.Field()  # Any
     data = scrapy.Field()  # dict

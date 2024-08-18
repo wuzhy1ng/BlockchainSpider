@@ -8,7 +8,7 @@ import networkx as nx
 import numpy as np
 from scipy.sparse import lil_matrix
 
-from BlockchainSpider.items import SyncDataItem, BlockItem
+from BlockchainSpider.items import SyncItem, BlockItem
 from BlockchainSpider.items import TransactionItem, TraceItem, Token721TransferItem, Token20TransferItem, \
     Token1155TransferItem
 from BlockchainSpider.middlewares.defs import LogMiddleware
@@ -44,7 +44,7 @@ class MoTSMiddleware(LogMiddleware):
                 })
 
             # calc trans semantic vec if synced
-            if isinstance(item, SyncDataItem):
+            if isinstance(item, SyncItem):
                 txhash2edges = dict()
                 if item['data'].get('block_number'):
                     block_number = item['data']['block_number']

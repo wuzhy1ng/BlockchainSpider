@@ -16,8 +16,6 @@ class EVMBlockTransactionSpider(scrapy.Spider):
     custom_settings = {
         'ITEM_PIPELINES': {
             'BlockchainSpider.pipelines.EVMTrans2csvPipeline': 299,
-            'BlockchainSpider.pipelines.EVMTransDCFG2csvPipeline': 298,
-            'BlockchainSpider.pipelines.EVMTransBloomFilterPipeline': 297,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
         else getattr(settings, 'ITEM_PIPELINES', dict()),
         'SPIDER_MIDDLEWARES': {
@@ -66,9 +64,6 @@ class EVMBlockTransactionSpider(scrapy.Spider):
         # block receipt method
         self.block_receipt_method = kwargs.get('block_receipt_method', 'eth_getBlockReceipts')
 
-        # sync signal key
-        self.sync_item_key = 'sync_item'
-
         # provider settings
         assert kwargs.get('providers') is not None, "please input providers separated by commas!"
         self.provider_bucket = AsyncItemBucket(
@@ -104,7 +99,7 @@ class EVMBlockTransactionSpider(scrapy.Spider):
             ) if kwargs.get('providers4contract') else None,
             'DCFGMiddleware': AsyncItemBucket(
                 items=kwargs['providers4dcfg'].split(','),
-                qps=0.5,
+                qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
             ) if kwargs.get('providers4dcfg') else None,
         }
 
@@ -131,7 +126,7 @@ class EVMBlockTransactionSpider(scrapy.Spider):
                 yield await self.get_request_eth_block_by_number(
                     block_number=blk,
                     priority=2 ** 32 - i,
-                    cb_kwargs={self.sync_item_key: {'block_number': blk}},
+                    cb_kwargs={'$sync': blk},
                 )
             return
 
@@ -144,7 +139,7 @@ class EVMBlockTransactionSpider(scrapy.Spider):
             yield await self.get_request_eth_block_by_number(
                 block_number=blk,
                 priority=2 ** 32 - blk,
-                cb_kwargs={self.sync_item_key: {'block_number': blk}},
+                cb_kwargs={'$sync': blk},
             )
 
     @log_debug_tracing
@@ -165,7 +160,7 @@ class EVMBlockTransactionSpider(scrapy.Spider):
                 yield await self.get_request_eth_block_by_number(
                     block_number=blk,
                     priority=2 ** 32 - blk,
-                    cb_kwargs={self.sync_item_key: {'block_number': blk}},
+                    cb_kwargs={'$sync': blk},
                 )
         else:
             self.log(

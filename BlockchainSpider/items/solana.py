@@ -45,18 +45,16 @@ class SolanaInstructionItem(ContextualItem):
     program_id = scrapy.Field()  # str
 
 
-class SolanaInnerInstructionItem(ContextualItem):
-    signature = scrapy.Field()  # str
-    trace_id = scrapy.Field()  # str
-    data = scrapy.Field()  # Union[None, str], None if parsed
-    program_id = scrapy.Field()  # str
-
-
 # SPL definition, please see:
 # https://github.com/solana-labs/solana-program-library/blob/master/token/program/src/instruction.rs
 class SPLTokenActionItem(SolanaInstructionItem):
     dtype = scrapy.Field()  # str
     info = scrapy.Field()  # dict
+    program = scrapy.Field()  # str
+
+
+class SPLMemoItem(SolanaInstructionItem):
+    memo = scrapy.Field()  # str
     program = scrapy.Field()  # str
 
 
@@ -69,8 +67,4 @@ class ValidateVotingItem(SolanaInstructionItem):
 class SystemItem(SolanaInstructionItem):
     dtype = scrapy.Field()  # str
     info = scrapy.Field()  # dict
-    program = scrapy.Field()  # str
-
-
-class SPLmemoItem(SolanaInstructionItem):
     program = scrapy.Field()  # str

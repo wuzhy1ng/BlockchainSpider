@@ -188,12 +188,6 @@ class NFTMetadataItem(ContextualItem):
     data = scrapy.Field()  # str
 
 
-class DCFGItem(ContextualItem):
-    transaction_hash = scrapy.Field()  # str
-    blocks = scrapy.Field()  # [DCFGBlockItem]
-    edges = scrapy.Field()  # [DCFGEdgeItem]
-
-
 class DCFGBlockItem(ContextualItem):
     contract_address = scrapy.Field()  # str
     start_pc = scrapy.Field()  # int

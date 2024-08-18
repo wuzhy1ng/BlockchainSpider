@@ -38,12 +38,10 @@ class TxsBTCHaircutSpider(TxsBTCSpider):
 
         # generate requests
         for node in source_nodes:
-            now = time.time()
-            self.task_map[node].wait(now)
+            self.task_map[node].wait()
             yield self.get_tx_request(node, **{
                 'source': node,
                 'weight': 1.0,
-                'wait_key': now,
             })
 
     def parse_tx(self, response, **kwargs):
@@ -68,19 +66,17 @@ class TxsBTCHaircutSpider(TxsBTCSpider):
 
         # push data to task
         task = self.task_map[kwargs['source']]
-        task.push(
+        for _ in task.push(
             node=kwargs['hash'],
             edges=[item['tx'] for item in out_txs if item['tx']['to'] != ''],
-            wait_key=kwargs['wait_key']
-        )
+        ):
+            pass
 
         # next requests
         item = task.pop()
         if item is not None:
-            now = time.time()
-            task.wait(now)
+            task.wait()
             yield self.get_tx_request(item['node'], **{
                 'source': kwargs['source'],
                 'weight': item['weight'],
-                'wait_key': now
             })
