@@ -38,8 +38,8 @@ class SolScanSpider(scrapy.Spider):
         # TODO: (optional) generate IDL request
         address = kwargs.get('address')
         item = LabelReportItem(
-            labels=...,
-            ...
+            # labels=...,
+            # ...
         )
         url = 'https://api-v2.solscan.io/v2/account/anchor_idl?address='
         yield scrapy.Request(
@@ -53,5 +53,5 @@ class SolScanSpider(scrapy.Spider):
     def parse_idl(self, response, **kwargs):
         # TODO: parse IDL data and attach to description
         item = kwargs.get('item')
-        item['description'] = idl
+        # item['description'] = idl
         yield item
