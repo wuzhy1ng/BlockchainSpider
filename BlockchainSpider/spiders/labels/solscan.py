@@ -1,5 +1,5 @@
 import scrapy
-
+import json
 from BlockchainSpider import settings
 from BlockchainSpider.items import LabelReportItem, LabelAddressItem
 
@@ -30,28 +30,45 @@ class SolScanSpider(scrapy.Spider):
                 method='GET',
                 headers={'Origin': 'https://solscan.io'},
                 callback=self.parse_label,
-                cb_kwargs={'address': addr},
+                cb_kwargs={'address': addr,'url':url},
             )
 
     def parse_label(self, response, **kwargs):
         # TODO: parse label data
         # TODO: (optional) generate IDL request
+        result = json.loads(response.text)
         address = kwargs.get('address')
+        url = kwargs.get('address')
+
         item = LabelReportItem(
-            # labels=...,
-            # ...
+            labels=result['data']['notifications']['label'],
+            urls=url+address,
+            addresses=address,
+            transactions=None,
+            reporter=None,
         )
-        url = 'https://api-v2.solscan.io/v2/account/anchor_idl?address='
-        yield scrapy.Request(
-            url=url + address,
-            method='GET',
-            headers={'Origin': 'https://solscan.io'},
-            callback=self.parse_idl,
-            cb_kwargs={'item': item},
-        )
+        if result['data']['executable']:
+            url = 'https://api-v2.solscan.io/v2/account/anchor_idl?address='
+            yield scrapy.Request(
+                url=url + address,
+                method='GET',
+                headers={'Origin': 'https://solscan.io'},
+                callback=self.parse_idl,
+                cb_kwargs={'item': item},
+            )
+        else:
+            yield LabelReportItem(
+                labels=result['data']['notifications']['label'],
+                urls=url + address,
+                addresses=address,
+                transactions=None,
+                description=None,
+                reporter=None,
+            )
 
     def parse_idl(self, response, **kwargs):
         # TODO: parse IDL data and attach to description
+        result = json.loads(response.text)
         item = kwargs.get('item')
-        # item['description'] = idl
+        item['description'] = result['data']
         yield item
