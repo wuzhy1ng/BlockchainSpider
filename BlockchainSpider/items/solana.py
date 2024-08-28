@@ -13,7 +13,9 @@ class SolanaBlockItem(ContextualItem):
 
 class SolanaTransactionItem(ContextualItem):
     signature = scrapy.Field()  # str
+    signer = scrapy.Field()  # str
     block_time = scrapy.Field()  # int
+    block_height = scrapy.Field()  # int
     version = scrapy.Field()  # Union[int, str]
     fee = scrapy.Field()  # int
     compute_consumed = scrapy.Field()  # int
@@ -43,6 +45,7 @@ class SolanaInstructionItem(ContextualItem):
     trace_id = scrapy.Field()  # str
     data = scrapy.Field()  # Union[None, str], None if parsed
     program_id = scrapy.Field()  # str
+    accounts = scrapy.Field()  # [str]
 
 
 # SPL definition, please see:

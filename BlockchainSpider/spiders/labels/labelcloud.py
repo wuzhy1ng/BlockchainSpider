@@ -7,7 +7,7 @@ from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 
 from BlockchainSpider import settings
-from BlockchainSpider.items import LabelAddressItem, LabelTransactionItem, LabelReportItem
+from BlockchainSpider.items import LabelReportItem
 
 
 class LabelsCloudSpider(scrapy.Spider):
@@ -178,15 +178,15 @@ class LabelsCloudSpider(scrapy.Spider):
             addresses = list()
             transactions = list()
             if kwargs.get('category') == 'accounts' or kwargs.get('category') == 'tokens':
-                addresses.append({**LabelAddressItem(
+                addresses.append(dict(
                     net=self.site2net[self.site],
                     address=info.get('Address', info.get('ContractAddress')),
-                )})
+                ))
             if kwargs.get('category') == 'transactions':
-                transactions.append({**LabelTransactionItem(
+                transactions.append(dict(
                     net=self.site2net[self.site],
                     transaction_hash=info.get('TxnHash'),
-                )})
+                ))
             yield LabelReportItem(
                 labels=[label],
                 urls=list(),

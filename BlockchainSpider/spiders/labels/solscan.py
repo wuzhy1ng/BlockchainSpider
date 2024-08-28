@@ -1,14 +1,14 @@
 import scrapy
 import json
 from BlockchainSpider import settings
-from BlockchainSpider.items import LabelReportItem, LabelAddressItem
+from BlockchainSpider.items import LabelReportItem
 
 
 class SolScanSpider(scrapy.Spider):
     name = 'labels.solscan'
     custom_settings = {
         'DOWNLOADER_MIDDLEWARES': {
-            'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 666,
+            'BlockchainSpider.middlewares.HTTPProxyMiddleware': 749,
         },
         'ITEM_PIPELINES': {  # May be need proxies here
             'BlockchainSpider.pipelines.LabelReportPipeline': 299,
@@ -22,7 +22,7 @@ class SolScanSpider(scrapy.Spider):
         self.out_dir = kwargs.get('out', './data')
 
     def start_requests(self):
-        # TODO: yield request of label
+        # yield request of label
         for addr in self.addresses:
             url = 'https://api-v2.solscan.io/v2/account?address='
             yield scrapy.Request(
@@ -30,45 +30,41 @@ class SolScanSpider(scrapy.Spider):
                 method='GET',
                 headers={'Origin': 'https://solscan.io'},
                 callback=self.parse_label,
-                cb_kwargs={'address': addr,'url':url},
+                cb_kwargs={'address': addr, 'url': url},
             )
 
     def parse_label(self, response, **kwargs):
-        # TODO: parse label data
-        # TODO: (optional) generate IDL request
+        # parse label data
+        # (optional) generate IDL request
         result = json.loads(response.text)
         address = kwargs.get('address')
-        url = kwargs.get('address')
-
+        if not result['data'].get('notifications'):
+            return
         item = LabelReportItem(
             labels=result['data']['notifications']['label'],
-            urls=url+address,
-            addresses=address,
+            urls=[response.url],
+            addresses=[dict(
+                net='solana',
+                address=address,
+            )],
             transactions=None,
-            reporter=None,
+            reporter='solscan.io',
         )
-        if result['data']['executable']:
-            url = 'https://api-v2.solscan.io/v2/account/anchor_idl?address='
-            yield scrapy.Request(
-                url=url + address,
-                method='GET',
-                headers={'Origin': 'https://solscan.io'},
-                callback=self.parse_idl,
-                cb_kwargs={'item': item},
-            )
-        else:
-            yield LabelReportItem(
-                labels=result['data']['notifications']['label'],
-                urls=url + address,
-                addresses=address,
-                transactions=None,
-                description=None,
-                reporter=None,
-            )
+        if not result['data']['executable']:
+            yield item
+            return
+        url = 'https://api-v2.solscan.io/v2/account/anchor_idl?address='
+        yield scrapy.Request(
+            url=url + address,
+            method='GET',
+            headers={'Origin': 'https://solscan.io'},
+            callback=self.parse_idl,
+            cb_kwargs={'item': item},
+        )
 
     def parse_idl(self, response, **kwargs):
-        # TODO: parse IDL data and attach to description
+        # parse IDL data and attach to description
         result = json.loads(response.text)
         item = kwargs.get('item')
-        item['description'] = result['data']
+        item['description'] = {'idl': result['data']}
         yield item

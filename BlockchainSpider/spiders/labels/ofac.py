@@ -1,7 +1,7 @@
 import scrapy
 
 from BlockchainSpider import settings
-from BlockchainSpider.items import LabelReportItem, LabelAddressItem
+from BlockchainSpider.items import LabelReportItem
 
 
 class LabelsOFACSpider(scrapy.Spider):
@@ -56,10 +56,10 @@ class LabelsOFACSpider(scrapy.Spider):
                     yield LabelReportItem(
                         labels=[sdn_type],
                         urls=list(),
-                        addresses=[{**LabelAddressItem(
+                        addresses=[dict(
                             net=net if net != 'XBT' else 'BTC',
                             address=id_number,
-                        )}],
+                        )],
                         transactions=list(),
                         description={
                             'uid': uid,

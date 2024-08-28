@@ -9,7 +9,7 @@ from summa.summarizer import summarize
 from web3 import Web3
 
 from BlockchainSpider import settings
-from BlockchainSpider.items import LabelReportItem, LabelAddressItem, LabelTransactionItem
+from BlockchainSpider.items import LabelReportItem
 
 
 class LabelsWebSpider(scrapy.Spider):
@@ -124,10 +124,10 @@ class LabelsWebSpider(scrapy.Spider):
             yield LabelReportItem(
                 labels=keywords(summary_text, split=True, words=self.keywords),
                 urls=list(),
-                addresses=[{**LabelAddressItem(
+                addresses=[dict(
                     net='BTC-Like',
                     address=addr,
-                )}],
+                )],
                 transactions=list(),
                 description=summarize(summary_text, words=self.summary),
                 reporter=url,
@@ -138,10 +138,10 @@ class LabelsWebSpider(scrapy.Spider):
             yield LabelReportItem(
                 labels=keywords(summary_text, split=True, words=self.keywords),
                 urls=list(),
-                addresses=[{**LabelAddressItem(
+                addresses=[dict(
                     net='ETH-Like',
                     address=addr,
-                )}],
+                )],
                 transactions=list(),
                 description=summarize(summary_text, words=self.summary),
                 reporter=url,
@@ -153,10 +153,10 @@ class LabelsWebSpider(scrapy.Spider):
                 labels=keywords(summary_text, split=True, words=self.keywords),
                 urls=list(),
                 addresses=list(),
-                transactions=[{**LabelTransactionItem(
+                transactions=[dict(
                     net='BTC-Like',
                     transaction_hash=txhash,
-                )}],
+                )],
                 description=summarize(summary_text, words=self.summary),
                 reporter=url,
             )
@@ -167,10 +167,10 @@ class LabelsWebSpider(scrapy.Spider):
                 labels=keywords(summary_text, split=True, words=self.keywords),
                 urls=list(),
                 addresses=list(),
-                transactions=[{**LabelTransactionItem(
+                transactions=[dict(
                     net='ETH-Like',
                     transaction_hash=txhash,
-                )}],
+                )],
                 description=summarize(summary_text, words=self.summary),
                 reporter=url,
             )

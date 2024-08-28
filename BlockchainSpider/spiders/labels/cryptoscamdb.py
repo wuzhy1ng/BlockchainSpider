@@ -5,7 +5,7 @@ import scrapy
 from web3 import Web3
 
 from BlockchainSpider import settings
-from BlockchainSpider.items import LabelReportItem, LabelAddressItem
+from BlockchainSpider.items import LabelReportItem
 
 
 class LabelsCryptoScamDBSpider(scrapy.Spider):
@@ -47,10 +47,10 @@ class LabelsCryptoScamDBSpider(scrapy.Spider):
                 yield LabelReportItem(
                     labels=labels,
                     urls=[item['url']] if item.get('url') else list(),
-                    addresses=[{**LabelAddressItem(
+                    addresses=[dict(
                         net='ETH' if Web3.isAddress(item.get('address')) else '',
                         address=item.get('address').lower(),
-                    )}],
+                    )],
                     transactions=list(),
                     description=item,
                     reporter=item.get('reporter'),

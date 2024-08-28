@@ -19,7 +19,7 @@ class LabelReportPipeline:
             fn = os.path.join(spider.out_dir, spider.name)
             if not os.path.exists(spider.out_dir):
                 os.makedirs(spider.out_dir)
-            self.file = open(fn, 'w')
+            self.file = open(fn, 'a')
 
         # write item
         json.dump({**item}, self.file)

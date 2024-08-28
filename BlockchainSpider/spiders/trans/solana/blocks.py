@@ -1,9 +1,5 @@
-import asyncio
-import functools
 import json
 import logging
-import os
-from concurrent.futures import ProcessPoolExecutor
 from typing import List
 
 import scrapy
@@ -105,7 +101,9 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
                 if isinstance(trans_meta, dict) and isinstance(trans_meta.get('err'), dict) else ''
             yield SolanaTransactionItem(
                 signature=signature,
+                signer=item['transaction']['message']['accountKeys'][0]['pubkey'],
                 block_time=block_time,
+                block_height=block_height,
                 version=item.get('version', 'legacy'),
                 fee=trans_meta['fee'] if trans_meta is not None else -1,
                 compute_consumed=trans_meta['computeUnitsConsumed'] if trans_meta.get('computeUnitsConsumed') else -1,
@@ -118,29 +116,52 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
             if isinstance(trans_meta, dict) \
                     and isinstance(trans_meta.get('preTokenBalances'), list) \
                     and isinstance(trans_meta.get('postTokenBalances'), list):
-                pre_balances = [None for _ in range(len(accounts))]
-                for balance in trans_meta['preTokenBalances']:
-                    idx = balance.get('accountIndex')
-                    if idx is None: continue
-                    pre_balances[idx] = balance
-                post_balances = [None for _ in range(len(accounts))]
-                for balance in trans_meta['postTokenBalances']:
-                    idx = balance.get('accountIndex')
-                    if idx is None: continue
-                    post_balances[idx] = balance
+                token_account2pre_balance = {
+                    accounts[pre_balance['accountIndex']]: pre_balance
+                    for pre_balance in trans_meta['preTokenBalances']
+                }
+                token_account2post_balance = {
+                    accounts[post_balance['accountIndex']]: post_balance
+                    for post_balance in trans_meta['postTokenBalances']
+                }
+                token_accounts = set(token_account2pre_balance.keys())
+                token_accounts = token_accounts.union(set(token_account2post_balance.keys()))
+                for token_account in token_accounts:
+                    pre_balance = token_account2pre_balance.get(token_account)
+                    post_balance = token_account2post_balance.get(token_account)
+                    pre_amount = pre_balance['uiTokenAmount']['amount'] if pre_balance is not None else 0
+                    post_amount = post_balance['uiTokenAmount']['amount'] if post_balance is not None else 0
+                    if pre_amount == post_amount:
+                        continue
+                    balance_info = pre_balance if pre_balance is not None else post_balance
+                    yield SolanaBalanceChangesItem(
+                        signature=signature,
+                        account=token_account,
+                        mint=balance_info.get('mint', ''),
+                        owner=balance_info.get('owner', ''),
+                        program_id=balance_info.get('programId', ''),
+                        pre_amount=pre_amount,
+                        post_amount=post_amount,
+                        decimals=balance_info['uiTokenAmount']['decimals'],
+                    )
+            if isinstance(trans_meta, dict) \
+                    and isinstance(trans_meta.get('preBalances'), list) \
+                    and isinstance(trans_meta.get('postBalances'), list):
+                pre_balances = trans_meta['preBalances']
+                post_balances = trans_meta['postBalances']
                 for i, account in enumerate(accounts):
                     pre_balance, post_balance = pre_balances[i], post_balances[i]
-                    if pre_balance is None or post_balance is None:
+                    if post_balance == pre_balance:
                         continue
                     yield SolanaBalanceChangesItem(
                         signature=signature,
                         account=account,
-                        mint=pre_balance.get('mint', ''),
-                        owner=pre_balance.get('owner', ''),
-                        program_id=pre_balance.get('programId', ''),
-                        pre_amount=pre_balance['uiTokenAmount']['amount'],
-                        post_amount=post_balance['uiTokenAmount']['amount'],
-                        decimals=post_balance['uiTokenAmount']['decimals'],
+                        mint='',
+                        owner=account,
+                        program_id='11111111111111111111111111111111',
+                        pre_amount=pre_balance,
+                        post_amount=post_balance,
+                        decimals=9,
                     )
 
             # parse logs
@@ -160,7 +181,8 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
                         signature=signature,
                         trace_id=index,
                         data=instruction.get('data', ''),
-                        program_id=program_id
+                        program_id=program_id,
+                        accounts=instruction.get('accounts', []),
                     )
                     continue
                 parsed_instruction = instruction['parsed']
@@ -217,7 +239,8 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
                                 signature=signature,
                                 trace_id=idx_array[idx],
                                 program_id=program_id,
-                                data=instruction.get('data', '')
+                                data=instruction.get('data', ''),
+                                accounts=instruction.get('accounts', []),
                             )
                             continue
                         parsed_instruction = instruction['parsed']
