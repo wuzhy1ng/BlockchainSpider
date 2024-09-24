@@ -4,6 +4,7 @@ import os
 
 from pybloom import ScalableBloomFilter
 
+from BlockchainSpider.items import SignatureItem, TransactionsItem
 from BlockchainSpider.items.evm import BlockItem, TransactionItem, EventLogItem, TraceItem, ContractItem, \
     Token721TransferItem, Token20TransferItem, Token1155TransferItem, TokenApprovalItem, TokenApprovalAllItem, \
     TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGBlockItem, DCFGEdgeItem
@@ -98,5 +99,15 @@ class SolanaTrans2csvPipeline(EVMTrans2csvPipeline):
                 SolanaBalanceChangesItem, SolanaLogItem,
                 SolanaInstructionItem, SPLTokenActionItem,
                 SPLMemoItem, ValidateVotingItem,
+            ]
+        }
+
+
+class SolanaSignature2csvPipeline(EVMTrans2csvPipeline):
+    def __init__(self):
+        super().__init__()
+        self.accepted_item_cls = {
+            cls.__name__: True for cls in [
+                SignatureItem, TransactionsItem,
             ]
         }
