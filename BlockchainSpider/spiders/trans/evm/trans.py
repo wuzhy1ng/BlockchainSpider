@@ -17,8 +17,6 @@ class EVMTransactionSpider(scrapy.Spider):
     custom_settings = {
         'ITEM_PIPELINES': {
             'BlockchainSpider.pipelines.EVMTrans2csvPipeline': 299,
-            'BlockchainSpider.pipelines.EVMTransDCFG2csvPipeline': 298,
-            'BlockchainSpider.pipelines.EVMTransBloomFilterPipeline': 297,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
         else getattr(settings, 'ITEM_PIPELINES', dict()),
         'SPIDER_MIDDLEWARES': {
