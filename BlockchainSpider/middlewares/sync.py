@@ -10,16 +10,17 @@ from BlockchainSpider.middlewares.defs import LogMiddleware
 
 
 class SyncMiddleware(LogMiddleware):
+    SYNC_KEYWORD = '$sync'
+
     def __init__(self):
         self.request_parent = dict()  # request -> request | int
         self.sync_keys = dict()  # request -> sync_key
         self.sync_items = dict()  # sync_key -> items
         self._lock = asyncio.Lock()
-        self._keyword = '$sync'
 
     async def process_spider_output(self, response: scrapy.http.Response, result, spider):
         # listen each request for tracing sync process
-        key = response.cb_kwargs.get(self._keyword)
+        key = response.cb_kwargs.get(self.SYNC_KEYWORD)
         parent_fingerprint = fingerprint(response.request)
         async for item in result:
             # add item to the sync cache
@@ -33,15 +34,15 @@ class SyncMiddleware(LogMiddleware):
             # handle error in the new request
             # and append sync_key to the cb_kwargs
             request = item
-            sync_key = request.cb_kwargs.get(self._keyword)
+            sync_key = request.cb_kwargs.get(self.SYNC_KEYWORD)
             sync_key = sync_key if sync_key is not None else key
             yield request.replace(
                 errback=self.make_errback(request.errback),
-                cb_kwargs={self._keyword: sync_key, **request.cb_kwargs},
+                cb_kwargs={self.SYNC_KEYWORD: sync_key, **request.cb_kwargs},
             )
 
             # trace requests with a new task
-            if request.cb_kwargs.get(self._keyword) is not None:
+            if request.cb_kwargs.get(self.SYNC_KEYWORD) is not None:
                 req_fingerprint = fingerprint(request)
                 await self._lock.acquire()
                 self.request_parent[req_fingerprint] = 1
