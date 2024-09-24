@@ -4,3 +4,4 @@ from .label import LabelReportPipeline
 from .sign import SignsPipeline
 from .source import SourceCodePipeline
 from .abi import ABIPipeline
+from .signature import SignaturePipeline
