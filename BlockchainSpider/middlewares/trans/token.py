@@ -21,8 +21,7 @@ from BlockchainSpider.utils.web3 import split_to_words, word_to_address, hex_to_
 class TokenTransferMiddleware(LogMiddleware):
     def __init__(self):
         self.provider_bucket = None
-        self._cache_is_token721 = LRUCache(getattr(settings, 'MIDDLE_CACHE_SIZE', 2 ** 16))
-        self._waiting_ctx = dict()  # addr -> logs
+        self._cache_is_token721 = LRUCache(getattr(settings, 'MIDDLE_CACHE_SIZE', 2 ** 20))
 
     def _init_by_spider(self, spider):
         if self.provider_bucket is not None:
@@ -57,15 +56,10 @@ class TokenTransferMiddleware(LogMiddleware):
                         if cached_is_token721 is True \
                         else self.parse_token20_transfer_item(log=log)
                     continue
-                logs = self._waiting_ctx.get(log['address'])
-                if isinstance(logs, list):
-                    logs.append(log)
-                    continue
-                self._waiting_ctx[log['address']] = [log]
                 yield await self.get_request_is_token721(
                     contract_address=log['address'],
                     priority=response.request.priority,
-                    cb_kwargs={'contract_address': log['address']},
+                    cb_kwargs={'log': log},
                 )
                 continue
 
@@ -252,14 +246,13 @@ class TokenTransferMiddleware(LogMiddleware):
                     is_token721 = True
 
             # set the cache
-            self._cache_is_token721.set(kwargs['contract_address'], is_token721)
+            log = kwargs['log']
+            self._cache_is_token721.set(log['address'], is_token721)
 
             # process waiting items
-            logs = self._waiting_ctx.pop(kwargs['contract_address'])
-            for log in logs:
-                yield self.parse_token721_transfer_item(log=log) \
-                    if is_token721 is True \
-                    else self.parse_token20_transfer_item(log=log)
+            yield self.parse_token721_transfer_item(log=log) \
+                if is_token721 is True \
+                else self.parse_token20_transfer_item(log=log)
         except:
             traceback.print_exc()
 
@@ -268,9 +261,8 @@ class TokenTransferMiddleware(LogMiddleware):
         kwargs = failure.request.cb_kwargs
 
         # process waiting items
-        logs = self._waiting_ctx.pop(kwargs['contract_address'])
-        for log in logs:
-            yield self.parse_token20_transfer_item(log=log)
+        log = kwargs['log']
+        yield self.parse_token20_transfer_item(log=log)
 
     async def get_request_is_token721(
             self, contract_address: str, priority: int, cb_kwargs: dict
@@ -301,8 +293,7 @@ class TokenTransferMiddleware(LogMiddleware):
 class TokenPropertyMiddleware(LogMiddleware):
     def __init__(self):
         self.provider_bucket = None
-        self._cache_property = LRUCache(getattr(settings, 'MIDDLE_CACHE_SIZE', 2 ** 16))
-        self._waiting_ctx = dict()  # addr -> token transfers
+        self._cache_property = LRUCache(getattr(settings, 'MIDDLE_CACHE_SIZE', 2 ** 20))
 
     def _init_by_spider(self, spider):
         if self.provider_bucket is not None:
@@ -342,12 +333,6 @@ class TokenPropertyMiddleware(LogMiddleware):
                 )
                 continue
 
-            # add items waiting for processing
-            if isinstance(self._waiting_ctx.get(contract_address), list):
-                self._waiting_ctx[contract_address].append(item)
-                continue
-            self._waiting_ctx[contract_address] = [item]
-
             # generate requests for fetching property
             request_kwargs = [
                 {'property_key': 'name', 'func': 'name()', 'return_type': ["string", ]},
@@ -365,7 +350,6 @@ class TokenPropertyMiddleware(LogMiddleware):
                     contract_address=contract_address,
                     priority=response.request.priority,
                     cb_kwargs={
-                        'contract_address': contract_address,
                         'token_property': token_property,
                         '@token_action': item,
                     },
@@ -391,20 +375,22 @@ class TokenPropertyMiddleware(LogMiddleware):
             kwargs['token_property']['semaphore'] += 1
             if kwargs['token_property']['semaphore'] < 0:
                 return
-            self._cache_property.set(kwargs['contract_address'], kwargs['token_property'])
+            kwargs['token_property'].pop('semaphore')
 
-            # generate items
-            token_action_items = self._waiting_ctx.pop(kwargs['contract_address'])
+            # save to cache
+            token_action = kwargs['@token_action']
             token_property = kwargs['token_property']
-            for item in token_action_items:
-                yield TokenPropertyItem(
-                    contract_address=kwargs['contract_address'],
-                    name=token_property.get('name', ''),
-                    token_symbol=token_property.get('token_symbol', ''),
-                    decimals=token_property.get('decimals', -1),
-                    total_supply=token_property.get('total_supply', -1),
-                    cb_kwargs={'@token_action': item},
-                )
+            self._cache_property.set(token_action['contract_address'], token_property)
+
+            # generate item
+            yield TokenPropertyItem(
+                contract_address=token_action['contract_address'],
+                name=token_property.get('name', ''),
+                token_symbol=token_property.get('token_symbol', ''),
+                decimals=token_property.get('decimals', -1),
+                total_supply=token_property.get('total_supply', -1),
+                cb_kwargs={'@token_action': token_action},
+            )
         except:
             traceback.print_exc()
 
@@ -415,20 +401,22 @@ class TokenPropertyMiddleware(LogMiddleware):
             kwargs['token_property']['semaphore'] += 1
             if kwargs['token_property']['semaphore'] < 0:
                 return
-            self._cache_property.set(kwargs['contract_address'], kwargs['token_property'])
+            kwargs['token_property'].pop('semaphore')
+
+            # save to cache
+            token_action = kwargs['@token_action']
+            token_property = kwargs['token_property']
+            self._cache_property.set(token_action['contract_address'], token_property)
 
             # generate items
-            token_action_items = self._waiting_ctx.pop(kwargs['contract_address'])
-            token_property = kwargs['token_property']
-            for item in token_action_items:
-                yield TokenPropertyItem(
-                    contract_address=kwargs['contract_address'],
-                    name=token_property.get('name', ''),
-                    token_symbol=token_property.get('token_symbol', ''),
-                    decimals=token_property.get('decimals', -1),
-                    total_supply=token_property.get('total_supply', -1),
-                    cb_kwargs={'@token_action': item},
-                )
+            yield TokenPropertyItem(
+                contract_address=token_action['contract_address'],
+                name=token_property.get('name', ''),
+                token_symbol=token_property.get('token_symbol', ''),
+                decimals=token_property.get('decimals', -1),
+                total_supply=token_property.get('total_supply', -1),
+                cb_kwargs={'@token_action': token_action},
+            )
         except:
             pass
 
