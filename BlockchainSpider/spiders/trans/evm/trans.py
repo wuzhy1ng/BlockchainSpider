@@ -17,8 +17,6 @@ class EVMTransactionSpider(scrapy.Spider):
     custom_settings = {
         'ITEM_PIPELINES': {
             'BlockchainSpider.pipelines.EVMTrans2csvPipeline': 299,
-            'BlockchainSpider.pipelines.EVMTransDCFG2csvPipeline': 298,
-            'BlockchainSpider.pipelines.EVMTransBloomFilterPipeline': 297,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
         else getattr(settings, 'ITEM_PIPELINES', dict()),
         'SPIDER_MIDDLEWARES': {
@@ -101,9 +99,6 @@ class EVMTransactionSpider(scrapy.Spider):
             ) if kwargs.get('providers4dcfg') else None,
         }
 
-        # set sync key
-        self.sync_item_key = 'sync_item'
-
     def start_requests(self):
         request = self.get_request_web3_client_version()
         time.sleep(1 / self.provider_bucket.qps)
@@ -127,7 +122,7 @@ class EVMTransactionSpider(scrapy.Spider):
                 priority=len(self.txhashs) - i,
                 cb_kwargs={
                     'txhash': txhash,
-                    self.sync_item_key: {'transaction_hash': txhash}
+                    '$sync': txhash,
                 },
             )
 
