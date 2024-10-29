@@ -13,7 +13,7 @@ class MoTSPipeline:
     def __init__(self):
         self.file = None
         self.writer = None
-        self.executor = ProcessPoolExecutor(max_workers=max(1, os.cpu_count() - 1))
+        self.executor = ProcessPoolExecutor(max_workers=max(1, os.cpu_count() - 1, 61))
 
     def open_spider(self, spider):
         out_dir = getattr(spider, 'out_dir')

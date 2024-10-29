@@ -3,14 +3,17 @@ import logging
 from typing import Dict, List
 
 import scrapy
+from pyevmasm import evmasm
 
 from BlockchainSpider.items import DCFGBlockItem, DCFGEdgeItem
 from BlockchainSpider.middlewares.trans import TraceMiddleware
 from BlockchainSpider.utils.decorator import log_debug_tracing
 
-js_tracer = """{
-    blocks: {},
+JS_TRACER = """{
+    blocks: [],
     edges: [],
+    bid2idx: {},
+    bid2vis: {},
     context: {
         'cur_bid': null,
         'pre_op': null,
@@ -20,14 +23,14 @@ js_tracer = """{
         'addrStack': [],
         'index': 0,
     },
-    slice_op: {
-        'JUMP': true, 'JUMPI': true,
+    slice_op: { // JUMP, JUMPI
+        0x56: true, 0x57: true,
     },
-    call_op: {
-        'CALL': true, 'CALLCODE': true,
-        'STATICCALL': true, 'DELEGATECALL': true,
-        'CREATE': true, 'CREATE2': true,
-        'SELFDESTRUCT': true,
+    call_op: { // CALL, CALLCODE, STATICCALL, DELEGATECALL, CREATE, CREATE2, SELFDESTRUCT
+        0xF1: true, 0xF2: true,
+        0xFA: true, 0xF4: true,
+        0xF0: true, 0xF5: true,
+        0xFF: true,
     },
     byte2Hex: function (byte) {
         if (byte < 0x10) return '0' + byte.toString(16);
@@ -44,7 +47,7 @@ js_tracer = """{
     step: function (log, db) {
         // parse step args
         pc = log.getPC();
-        op = log.op.toString();
+        op = log.op.toNumber();
         if (this.context.addrStack.length === 0) {
             this.context.addrStack.push(this.getAddr(log.contract.getAddress()));
         }
@@ -53,7 +56,11 @@ js_tracer = """{
         // init an new block and add the edge
         if (this.context.cur_bid == null) {
             this.context.cur_bid = address + '#' + pc;
-            this.blocks[this.context.cur_bid] = [op];
+            this.bid2idx[this.context.cur_bid] = this.blocks.length;
+            this.blocks.push({
+                'bid': this.context.cur_bid,
+                'ops': [op],
+            });
             this.context.pre_op = op;
             return
         }
@@ -61,27 +68,40 @@ js_tracer = """{
         // just add opcode for current block
         if (this.slice_op[this.context.pre_op] === undefined && 
             this.call_op[this.context.pre_op] === undefined) {
-            this.blocks[this.context.cur_bid].push(op);
+            if (!this.bid2vis[this.context.cur_bid]) {
+                this.blocks[this.bid2idx[this.context.cur_bid]]['ops'].push(op);
+            }
             this.context.pre_op = op;
             return
         }
 
-        // slice an new block and add the edge
+        // add the edge and flash the ops in the (new) block
         new_bid = address + '#' + pc;
         edge = {
             'from': this.context.cur_bid,
             'to': new_bid,
             'type': this.context.pre_op,
             'index': this.context.index,
-        }
+        };
         if (this.call_op[this.context.pre_op]) {
             edge['value'] = this.context.call_value;
             edge['gas'] = this.context.call_gas;
             edge['selector'] = this.context.call_selector;
         }
+        if (this.bid2idx[new_bid] == undefined) {
+            this.bid2idx[new_bid] = this.blocks.length;
+            this.blocks.push({
+                'bid': new_bid,
+                'ops': [op],
+            });
+        }
+        edge['from'] = this.bid2idx[edge['from']];
+        edge['to'] = this.bid2idx[edge['to']];
         this.edges.push(edge);
+        this.bid2vis[this.context.cur_bid] = true;
+
+        // update context
         this.context.cur_bid = new_bid;
-        this.blocks[this.context.cur_bid] = [op];
         this.context.pre_op = op;
         this.context.index += 1;
     },
@@ -100,36 +120,27 @@ js_tracer = """{
     },
     result: function (ctx, db) {
         var blocks = [];
-        for (const [bid, ops] of Object.entries(this.blocks)) {
-            let addr_pc = bid.split('#');
+        for (const block of this.blocks) {
+            let addr_pc = block['bid'].split('#');
             blocks.push({
                 'contract_address': addr_pc[0],
                 'start_pc': Number(addr_pc[1]),
-                'operations': ops,
-            });
-        }
-        var edges = [];
-        for (const edge of this.edges) {
-            let addr_pc_from = edge['from'].split('#');
-            let addr_pc_to = edge['to'].split('#');
-            edges.push({
-                'address_from': addr_pc_from[0],
-                'start_pc_from': Number(addr_pc_from[1]),
-                'address_to': addr_pc_to[0],
-                'start_pc_to': Number(addr_pc_to[1]),
-                'flow_type': edge['type'],
-                'value': edge['value'],
-                'gas': edge['gas'],
-                'selector': edge['selector'],
-                'index': edge['index'],
+                'operations': block['ops'],
             });
         }
         return {
             'blocks': blocks,
-            'edges': edges,
+            'edges': this.edges,
         };
     }
 }"""
+
+NUM2OP_NAME = set()
+for table in evmasm.instruction_tables.values():
+    for key in table.keys():
+        NUM2OP_NAME.add((key, table[key].name))
+NUM2OP_NAME = sorted(list(NUM2OP_NAME), key=lambda _item: _item[0])
+NUM2OP_NAME = {num: op for num, op in NUM2OP_NAME}
 
 
 class DCFGMiddleware(TraceMiddleware):
@@ -177,31 +188,38 @@ class DCFGMiddleware(TraceMiddleware):
 
     @staticmethod
     def parse_dcfg_block_items(result: Dict, **kwargs) -> List[DCFGBlockItem]:
-        return [
-            DCFGBlockItem(
+        items = list()
+        for block in result['blocks']:
+            operations = [
+                NUM2OP_NAME[num] for num in block['operations']
+                if NUM2OP_NAME.get(num)  # Note: may become outdated
+            ]
+            items.append(DCFGBlockItem(
                 contract_address=block['contract_address'],
                 start_pc=block['start_pc'],
-                operations=block['operations'],
+                operations=operations,
                 cb_kwargs={'transaction_hash': kwargs['transaction_hash']}
-            ) for block in result['blocks']
-        ]
+            ))
+        return items
 
     @staticmethod
     def parse_dcfg_edge_items(result: Dict, **kwargs) -> List[DCFGEdgeItem]:
-        return [
-            DCFGEdgeItem(
+        items = list()
+        blocks = result['blocks']
+        for edge in result['edges']:
+            items.append(DCFGEdgeItem(
                 transaction_hash=kwargs['transaction_hash'],
-                address_from=edge['address_from'],
-                start_pc_from=edge['start_pc_from'],
-                address_to=edge['address_to'],
-                start_pc_to=edge['start_pc_to'],
-                flow_type=edge['flow_type'],
-                value=int(edge.get('value', 0)),
-                gas=int(edge.get('gas', 0)),
+                address_from=blocks[edge['from']]['contract_address'],
+                start_pc_from=blocks[edge['from']]['start_pc'],
+                address_to=blocks[edge['to']]['contract_address'],
+                start_pc_to=blocks[edge['to']]['start_pc'],
+                flow_type=NUM2OP_NAME[edge['type']],
+                value=int(edge.get('value', -1)),
+                gas=int(edge.get('gas', -1)),
                 selector=edge.get('selector', '0x'),
                 index=edge.get('index', 0),
-            ) for edge in result['edges']
-        ]
+            ))
+        return items
 
     async def get_request_debug_trace_block(
             self, block_number: int, priority: int, cb_kwargs: dict
@@ -213,7 +231,7 @@ class DCFGMiddleware(TraceMiddleware):
             body=json.dumps({
                 "jsonrpc": "2.0",
                 "method": "debug_traceBlockByNumber",
-                "params": [hex(block_number), {"tracer": js_tracer}],
+                "params": [hex(block_number), {"tracer": JS_TRACER}],
                 "id": 1
             }),
             priority=priority,
@@ -231,7 +249,7 @@ class DCFGMiddleware(TraceMiddleware):
             body=json.dumps({
                 "jsonrpc": "2.0",
                 "method": "debug_traceTransaction",
-                "params": [txhash, {"tracer": js_tracer}],
+                "params": [txhash, {"tracer": JS_TRACER}],
                 "id": 1
             }),
             priority=priority,
