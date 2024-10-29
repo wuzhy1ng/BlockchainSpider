@@ -5,7 +5,7 @@ import os
 from concurrent.futures import ProcessPoolExecutor
 
 from BlockchainSpider.items import SyncItem, TransactionItem, TraceItem, Token721TransferItem, Token20TransferItem, \
-    Token1155TransferItem, TokenApprovalItem, TokenApprovalAllItem
+    Token1155TransferItem
 from contrib.mots.highorder import HighOrderMotifCounter
 
 
@@ -39,7 +39,6 @@ class MoTSPipeline:
             cls.__name__ for cls in [
                 TransactionItem, TraceItem,
                 Token721TransferItem, Token20TransferItem, Token1155TransferItem,
-                TokenApprovalItem, TokenApprovalAllItem,
             ]
         ]
         for name in transfer_type_names:
