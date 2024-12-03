@@ -63,7 +63,7 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
                 )
         else:
             self.log(
-                message="Result field is None on getBlockHeight" +
+                message="Result field is None on getBlockHeight," +
                         "please ensure that whether the provider is available.",
                 level=logging.ERROR
             )

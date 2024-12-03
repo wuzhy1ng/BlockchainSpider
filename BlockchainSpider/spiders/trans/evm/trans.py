@@ -54,7 +54,7 @@ class EVMTransactionSpider(scrapy.Spider):
         super().__init__(**kwargs)
 
         # output dir and transaction hash
-        self.out_dir = kwargs.get('out')
+        self.out_dir = kwargs.get('out', './data')
         self.txhashs = [
             item for item in kwargs.get('hash', '').split(',')
             if re.search(r"(0x[0-9a-f]{64})", item, re.IGNORECASE | re.ASCII)

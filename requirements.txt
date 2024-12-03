@@ -5,9 +5,9 @@ aiohttp_socks==0.7.1
 async_lru==2.0.4
 bitcoin==1.1.42
 networkx==2.6.2
-numpy
+numpy==1.21.2
 scipy
 selenium==3.141.0
 summa==1.2.0
-web3==5.28.0
+web3==7.5.0
 git+https://github.com/jaybaird/python-bloomfilter/
