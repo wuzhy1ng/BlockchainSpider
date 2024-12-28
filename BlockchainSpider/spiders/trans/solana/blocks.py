@@ -302,7 +302,7 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
             body=json.dumps({
                 "jsonrpc": "2.0",
                 "id": 1,
-                "method": "getBlockHeight",
+                "method": "getSlot",
             }),
             callback=self.parse_eth_block_number,
             errback=self.errback_parse_eth_block_number,

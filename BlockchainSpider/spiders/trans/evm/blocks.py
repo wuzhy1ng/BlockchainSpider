@@ -68,7 +68,7 @@ class EVMBlockTransactionSpider(scrapy.Spider):
         assert kwargs.get('providers') is not None, "please input providers separated by commas!"
         self.provider_bucket = AsyncItemBucket(
             items=kwargs.get('providers').split(','),
-            qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),
+            qps=getattr(settings, 'CONCURRENT_REQUESTS', 5),
         )
 
         # provider settings for specific data

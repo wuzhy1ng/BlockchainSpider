@@ -125,3 +125,19 @@ class SyncMiddleware(LogMiddleware):
         )
         items = self.sync_items.pop(sync_key)
         return SyncItem(key=sync_key, data=items)
+
+
+class SyncIgnoreMiddleware(LogMiddleware):
+    async def process_spider_output(self, response: scrapy.http.Response, result, spider):
+        sync_ignore = spider.__dict__.get('sync_ignore')
+        async for item in result:
+            if not isinstance(item, scrapy.Request) or not sync_ignore:
+                yield item
+                continue
+            sync_key = item.cb_kwargs.get(SyncMiddleware.SYNC_KEYWORD)
+            if sync_key is None:
+                yield item
+                continue
+            ignore_exp = sync_ignore.replace(SyncMiddleware.SYNC_KEYWORD, str(sync_key))
+            if eval(ignore_exp):
+                yield item
