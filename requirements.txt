@@ -5,7 +5,7 @@ aiohttp_socks==0.7.1
 async_lru==2.0.4
 bitcoin==1.1.42
 networkx==2.6.2
-numpy==1.21.2
+numpy==1.25.2
 scipy
 selenium==3.141.0
 summa==1.2.0

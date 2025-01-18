@@ -85,8 +85,8 @@ class SyncMiddleware(LogMiddleware):
             # reload context data and log out
             request = failure.request
             self.log(
-                message='Get error when fetching {} with {}, callback args {}'.format(
-                    request.url, request.body, str(request.cb_kwargs)
+                message='Get error when fetching {} with {}'.format(
+                    request.url, request.body
                 ),
                 level=logging.WARNING
             )
