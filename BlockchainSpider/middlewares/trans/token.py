@@ -1,3 +1,4 @@
+import asyncio
 import json
 import time
 import traceback
@@ -294,6 +295,7 @@ class TokenPropertyMiddleware(LogMiddleware):
     def __init__(self):
         self.provider_bucket = None
         self._cache_property = LRUCache(getattr(settings, 'MIDDLE_CACHE_SIZE', 2 ** 20))
+        self._waiting_property_items = dict()  # contract -> [Item]
 
     def _init_by_spider(self, spider):
         if self.provider_bucket is not None:
@@ -333,6 +335,13 @@ class TokenPropertyMiddleware(LogMiddleware):
                 )
                 continue
 
+            # waiting for the result if no cache available
+            waiting_items = self._waiting_property_items.get(contract_address)
+            if isinstance(waiting_items, list):
+                waiting_items.append(item)
+                continue
+            self._waiting_property_items[contract_address] = [item]
+
             # generate requests for fetching property
             request_kwargs = [
                 {'property_key': 'name', 'func': 'name()', 'return_type': ["string", ]},
@@ -349,10 +358,7 @@ class TokenPropertyMiddleware(LogMiddleware):
                 yield await self.get_request_token_property(
                     contract_address=contract_address,
                     priority=response.request.priority,
-                    cb_kwargs={
-                        'token_property': token_property,
-                        '@token_action': item,
-                    },
+                    cb_kwargs={'token_property': token_property},
                     **kwargs
                 )
 
@@ -361,8 +367,8 @@ class TokenPropertyMiddleware(LogMiddleware):
         return_type = kwargs['return_type']
         try:
             result = json.loads(response.text)
-            result = result.get('result')
-            result = parse_bytes_data(result, return_type)
+            data = result.get('result')
+            result = parse_bytes_data(data, return_type)
             if result is not None:
                 result = result[0] if not isinstance(result[0], bytes) else result[0].decode()
                 result = result.replace('\0', '') if isinstance(result, str) else result
@@ -370,7 +376,9 @@ class TokenPropertyMiddleware(LogMiddleware):
                 property_value = kwargs['token_property'].get(property_key)
                 if property_value is None or result > property_value:
                     kwargs['token_property'][property_key] = result
-
+        except:
+            traceback.print_exc()
+        finally:
             # check the property is available or not
             kwargs['token_property']['semaphore'] += 1
             if kwargs['token_property']['semaphore'] < 0:
@@ -378,47 +386,47 @@ class TokenPropertyMiddleware(LogMiddleware):
             kwargs['token_property'].pop('semaphore')
 
             # save to cache
-            token_action = kwargs['@token_action']
             token_property = kwargs['token_property']
-            self._cache_property.set(token_action['contract_address'], token_property)
+            contract_address = kwargs['contract_address']
+            self._cache_property.set(contract_address, token_property)
 
-            # generate item
-            yield TokenPropertyItem(
-                contract_address=token_action['contract_address'],
-                name=token_property.get('name', ''),
-                token_symbol=token_property.get('token_symbol', ''),
-                decimals=token_property.get('decimals', -1),
-                total_supply=token_property.get('total_supply', -1),
-                cb_kwargs={'@token_action': token_action},
-            )
-        except:
-            traceback.print_exc()
+            # release the waiting items
+            items = self._waiting_property_items.pop(contract_address)
+            for item in items:
+                yield TokenPropertyItem(
+                    contract_address=contract_address,
+                    name=token_property.get('name', ''),
+                    token_symbol=token_property.get('token_symbol', ''),
+                    decimals=token_property.get('decimals', -1),
+                    total_supply=token_property.get('total_supply', -1),
+                    cb_kwargs={'@token_action': item},
+                )
 
     @log_debug_tracing
     def errback_parse_token_property(self, failure):
         kwargs = failure.request.cb_kwargs
-        try:
-            kwargs['token_property']['semaphore'] += 1
-            if kwargs['token_property']['semaphore'] < 0:
-                return
-            kwargs['token_property'].pop('semaphore')
+        kwargs['token_property']['semaphore'] += 1
+        if kwargs['token_property']['semaphore'] < 0:
+            return
+        kwargs['token_property'].pop('semaphore')
 
-            # save to cache
-            token_action = kwargs['@token_action']
-            token_property = kwargs['token_property']
-            self._cache_property.set(token_action['contract_address'], token_property)
+        # save to cache
+        token_property = kwargs['token_property']
+        contract_address = kwargs['contract_address']
+        self._cache_property.set(contract_address, token_property)
 
-            # generate items
+        # generate items
+        # release the waiting items
+        items = self._waiting_property_items.pop(contract_address)
+        for item in items:
             yield TokenPropertyItem(
-                contract_address=token_action['contract_address'],
+                contract_address=contract_address,
                 name=token_property.get('name', ''),
                 token_symbol=token_property.get('token_symbol', ''),
                 decimals=token_property.get('decimals', -1),
                 total_supply=token_property.get('total_supply', -1),
-                cb_kwargs={'@token_action': token_action},
+                cb_kwargs={'@token_action': item},
             )
-        except:
-            pass
 
     async def get_request_token_property(
             self, contract_address: str, priority: int,
@@ -433,7 +441,10 @@ class TokenPropertyMiddleware(LogMiddleware):
                 "jsonrpc": "2.0",
                 "method": "eth_call",
                 "params": [
-                    {'to': contract_address, "data": Web3.keccak(text=func).hex()[:2 + 8]},
+                    {
+                        'to': contract_address,
+                        "data": '0x' + Web3.keccak(text=func).hex()[:2 + 8]
+                    },
                     'latest'
                 ],
                 "id": int(time.time() * 1000000),  # ensure not be filtered with the same fingerprint
@@ -442,6 +453,7 @@ class TokenPropertyMiddleware(LogMiddleware):
             callback=self.parse_token_property,
             errback=self.errback_parse_token_property,
             cb_kwargs={
+                'contract_address': contract_address,
                 'property_key': property_key,
                 'return_type': return_type,
                 **cb_kwargs,

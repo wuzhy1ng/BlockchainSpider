@@ -55,7 +55,7 @@ def parse_bytes_data(data: bytes, output_types: list) -> Union[tuple, None]:
     # parse using web3
     try:
         data = bytes.fromhex(data[2:])
-        result = Web3().codec.decode_abi(output_types, data)
+        result = Web3().codec.decode(output_types, data)
     except:
         return
     return result
