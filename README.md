@@ -1,4 +1,8 @@
 # BlockchainSpider
+![](https://img.shields.io/badge/Python-3.8~3.10-blue
+)
+![](https://img.shields.io/badge/license-MIT-green
+)
 
 Blockchain spiders aim to collect on-chain data, including:
 
@@ -39,9 +43,9 @@ You can find the money transfer data on `./data/AccountTransferItem.csv`.
 
 ### ✨Collect transaction data
 
-In this section, we will demonstrate how to collect transaction data in [Ethereum](https://ethereum.org/)!
+In this section, we will demonstrate how to collect transaction data.
 
-The following command will continuously collect transactions from block number `19000000` to the latest block:
+The following command will continuously collect transactions in [Ethereum](https://ethereum.org/) from block number `19000000` to the latest block:
 ```shell
 scrapy crawl trans.block.evm -a start_blk=19000000 -a providers=https://eth.llamarpc.com
 ```
@@ -54,7 +58,7 @@ You can find the label data on `./data`, in which:
 > Moreover, collecting block data from EVM-compatible chains (e.g., BNBChain, Polygon, etc.) is also available; 
 > see our [documentation](https://wuzhy1ng.github.io/blockchainspider/spiders/transaction/evm/).
 
-The following command will continuously collect transaction data from block height `270000000` to the latest block:
+The following command will continuously collect transaction data in [Solana](https://solana.com) from block height `270000000` to the latest block:
 ```shell
 scrapy crawl trans.block.solana -a start_slot=270000000 -a providers=https://solana-mainnet.g.alchemy.com/v2/UOD8HE4CVqEiDY5E_9XbKDFqYZzJE3XP
 ```
