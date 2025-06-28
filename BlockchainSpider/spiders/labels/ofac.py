@@ -15,7 +15,7 @@ class LabelsOFACSpider(scrapy.Spider):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.url_sdn = 'https://www.treasury.gov/ofac/downloads/sdn.xml'
+        self.url_sdn = 'https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.XML'
 
         self.out_dir = kwargs.get('out', './data')
 
@@ -26,7 +26,7 @@ class LabelsOFACSpider(scrapy.Spider):
         )
 
     def parse(self, response: scrapy.http.HtmlResponse, **kwargs):
-        response.selector.register_namespace("sdn", "http://tempuri.org/sdnList.xsd")
+        response.selector.register_namespace("sdn", "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/XML")
         for entry in response.xpath("//sdn:sdnEntry"):
             if not self._has_address(entry):
                 continue
