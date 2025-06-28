@@ -1,26 +1,39 @@
 import sys
-import time
+from typing import Dict, Tuple, Any
 
-from BlockchainSpider.strategies import PushPopModel
+from BlockchainSpider.strategies.txs import PushPopModel
 
 
 class TTR(PushPopModel):
     def __init__(
             self,
-            source, alpha: float = 0.15,
-            beta: float = 0.8,
-            epsilon: float = 1e-5,
+            source, alpha=0.15,
+            beta=0.8,
+            epsilon=1e-5,
     ):
         super().__init__(source)
-        self.alpha = alpha
-        self.beta = beta
-        self.epsilon = epsilon
+        self.alpha = float(alpha)
+        self.beta = float(beta)
+        self.epsilon = float(epsilon)
+        self.p, self.r = dict(), dict()
 
     def push(self, node, edges: list, **kwargs):
         raise NotImplementedError()
 
     def pop(self):
         raise NotImplementedError()
+
+    def get_context_snapshot(self) -> Dict:
+        return {
+            'source': self.source,
+            'alpha': self.alpha,
+            'beta': self.beta,
+            'epsilon': self.epsilon,
+            'r': self.r, 'p': self.p,
+        }
+
+    def get_node_rank(self) -> Dict:
+        return self.p
 
 
 class TTRBase(TTR):
@@ -29,14 +42,13 @@ class TTRBase(TTR):
     def __init__(
             self,
             source,
-            alpha: float = 0.15,
-            beta: float = 0.8,
-            epsilon: float = 1e-5,
+            alpha=0.15,
+            beta=0.8,
+            epsilon=1e-5,
+            **kwargs,
     ):
         super().__init__(source, alpha, beta, epsilon)
-        self.p = dict()
-        self.r = {source: 1.0}
-        self._vis = set()
+        self.r[source] = 1.0
 
     def push(self, node, edges: list, **kwargs):
         # init residual vector
@@ -51,11 +63,6 @@ class TTRBase(TTR):
         self._self_push(node, r)
         self._forward_push(node, edges, r)
         self._backward_push(node, edges, r)
-
-        # yield edges
-        if node not in self._vis:
-            self._vis.add(node)
-            yield from edges
 
     def _self_push(self, node, r):
         self.p[node] = self.p.get(node, 0) + self.alpha * r
@@ -82,22 +89,28 @@ class TTRBase(TTR):
             inc = (1 - self.alpha) * (1 - self.beta) * r / in_edges_cnt if in_edges_cnt > 0 else 0
             self.r[e['from']] = self.r.get(e['from'], 0) + inc
 
-    def pop(self):
+    def pop(self) -> Tuple[Any, Dict]:
         node, r = None, self.epsilon
         for _node, _r in self.r.items():
             if _r > r:
                 node, r = _node, _r
-        return dict(node=node, residual=r) if node is not None else None
+        if node is None:
+            return None, {}
+        return node, {'residual': r}
 
 
 class TTRWeight(TTR):
     name = 'TTRWeight'
 
-    def __init__(self, source, alpha: float = 0.15, beta: float = 0.8, epsilon=1e-5):
+    def __init__(
+            self, source,
+            alpha=0.15,
+            beta=0.8,
+            epsilon=1e-5,
+            **kwargs,
+    ):
         super().__init__(source, alpha, beta, epsilon)
-        self.p = dict()
-        self.r = {source: 1.0}
-        self._vis = set()
+        self.r[source] = 1.0
 
     def push(self, node, edges: list, **kwargs):
         # residual vector空值判定
@@ -113,11 +126,6 @@ class TTRWeight(TTR):
         self._forward_push(node, edges, r)
         self._backward_push(node, edges, r)
 
-        # yield edges
-        if node not in self._vis:
-            self._vis.add(node)
-            yield from edges
-
     def _self_push(self, node, r):
         self.p[node] = self.p.get(node, 0) + self.alpha * r
 
@@ -131,7 +139,6 @@ class TTRWeight(TTR):
         for e in out_edges:
             inc = (1 - self.alpha) * self.beta * (e['value'] / out_sum) * r if out_sum > 0 else 0
             self.r[e['to']] = self.r.get(e['to'], 0) + inc
-            # yield e
 
     def _backward_push(self, node, edges: list, r):
         in_sum = 0
@@ -143,23 +150,28 @@ class TTRWeight(TTR):
         for e in in_edges:
             inc = (1 - self.alpha) * (1 - self.beta) * (e['value'] / in_sum) * r if in_sum > 0 else 0
             self.r[e['from']] = self.r.get(e['from'], 0) + inc
-            # yield e
 
-    def pop(self):
+    def pop(self) -> Tuple[Any, Dict]:
         node, r = None, self.epsilon
         for _node, _r in self.r.items():
             if _r > r:
                 node, r = _node, _r
-        return dict(node=node, residual=r) if node is not None else None
+        if node is None:
+            return None, {}
+        return node, {'residual': r}
 
 
 class TTRTime(TTR):
     name = 'TTRTime'
 
-    def __init__(self, source, alpha: float = 0.15, beta: float = 0.8, epsilon=1e-5):
+    def __init__(
+            self, source,
+            alpha=0.15,
+            beta=0.8,
+            epsilon=1e-5,
+            **kwargs,
+    ):
         super().__init__(source, alpha, beta, epsilon)
-        self.p = dict()
-        self.r = dict()
         self._vis = set()
 
     def push(self, node, edges: list, **kwargs):
@@ -203,11 +215,6 @@ class TTRTime(TTR):
         self._self_push(node, r)
         self._forward_push(node, edges, r)
         self._backward_push(node, edges, r)
-
-        # yield edges
-        if node not in self._vis:
-            self._vis.add(node)
-            yield from edges
 
     def _self_push(self, node, r: dict):
         sum_r = 0
@@ -311,7 +318,7 @@ class TTRTime(TTR):
                                          (1 - self.alpha) * (1 - self.beta) * r_node[j][1]
             j -= 1
 
-    def pop(self):
+    def pop(self) -> Tuple[Any, Dict]:
         node, r = None, self.epsilon
         for _node, chips in self.r.items():
             sum_r = 0
@@ -319,22 +326,25 @@ class TTRTime(TTR):
                 sum_r += v
             if sum_r > r:
                 node, r = _node, sum_r
-
-        return dict(node=node, residual=r) if node is not None else None
+        if node is None:
+            return None, {}
+        return node, {'residual': r}
 
 
 class TTRRedirect(TTR):
     name = 'TTRRedirect'
 
-    def __init__(self, source, alpha: float = 0.15, beta: float = 0.8, epsilon=1e-5):
+    def __init__(
+            self, source,
+            alpha=0.15,
+            beta=0.8,
+            epsilon=1e-5,
+            **kwargs,
+    ):
         super().__init__(source, alpha, beta, epsilon)
-        self.p = dict()
-        self.r = dict()
         self._vis = set()
 
     def push(self, node, edges: list, **kwargs):
-        start = time.time()
-
         # if residual vector is none, add empty list
         if self.r.get(node) is None:
             self.r[node] = list()
@@ -420,11 +430,6 @@ class TTRRedirect(TTR):
                 _chips[key]['value'] += chip.get('value', 0)
             self.r[node] = [v for v in _chips.values()]
 
-        # yield edges
-        if node not in self._vis:
-            self._vis.add(node)
-            yield from edges
-
     def _self_push(self, node, r: list):
         sum_r = 0
         for chip in r:
@@ -490,7 +495,7 @@ class TTRRedirect(TTR):
                 if inc == 0:
                     continue
 
-                distributing_profits = self._get_distributing_profit_v2(
+                distributing_profits = self._get_distributing_profit(
                     direction=-1,
                     symbol=profit.symbol,
                     index=i,
@@ -581,7 +586,7 @@ class TTRRedirect(TTR):
                 if inc == 0:
                     continue
 
-                distributing_profits = self._get_distributing_profit_v2(
+                distributing_profits = self._get_distributing_profit(
                     direction=1,
                     symbol=profit.symbol,
                     index=i,
@@ -613,7 +618,7 @@ class TTRRedirect(TTR):
                 timestamp=key[1]
             ))
 
-    def pop(self):
+    def pop(self) -> Tuple[Any, Dict]:
         node, r = None, self.epsilon
         for _node, chips in self.r.items():
             sum_r = 0
@@ -621,10 +626,22 @@ class TTRRedirect(TTR):
                 sum_r += chip.get('value', 0)
             if sum_r > r:
                 node, r = _node, sum_r
+        if node is None:
+            return None, {}
+        return node, {
+            'residual': r,
+            'allow_all_tokens': True,  # the strategy can automatically deal with different token types
+        }
 
-        return dict(node=node, residual=r) if node is not None else None
+    def get_context_snapshot(self) -> Dict:
+        data = super().get_context_snapshot()
+        acc_r = dict()
+        for _node, chips in self.r.items():
+            acc_r[_node] = sum([chip.get('value', 0) for chip in chips])
+        data['r'] = acc_r
+        return data
 
-    def _get_distributing_profit_v2(
+    def _get_distributing_profit(
             self,
             direction: int,
             symbol: str,
@@ -675,61 +692,6 @@ class TTRRedirect(TTR):
 
                 for _index in indices:
                     stack.append((direction, profit.symbol, _index))
-            else:
-                rlt.extend([profit for profit in no_reverse_profits if profit.symbol == symbol])
-
-        return rlt
-
-    def _get_swapped_aggregate_edge_indices(
-            self,
-            direction: int,
-            profit,
-            index: int,
-            aggregated_edges: list,
-    ):
-        rlt = list()
-        indices = range(index + 1, len(aggregated_edges)) if direction < 0 else range(0, index)
-        for _index in indices:
-            profits = aggregated_edges[_index].profits
-            profits = [p for p in profits if p.symbol == profit.symbol and p.value * profit.value < 0]
-            if len(profits) > 0:
-                rlt.append(_index)
-        return rlt
-
-    def _get_distributing_profit(
-            self,
-            direction: int,
-            symbol: str,
-            index: int,
-            aggregated_edges: list,
-    ) -> list:
-        """
-
-        :param direction: 1 means input and -1 means output
-        :param index: current aggregated edge index
-        :param aggregated_edges:
-        :return: a list of profit
-        """
-        rlt = list()
-
-        stack = list()
-        stack.append((direction, symbol, index))
-        vis = set()
-        while len(stack) > 0:
-            args = stack.pop()
-            if args in vis:
-                continue
-            vis.add(args)
-
-            direction, symbol, index = args
-            cur_e = aggregated_edges[index]
-            no_reverse_profits = [profit for profit in cur_e.profits if profit.value * direction > 0]
-            reverse_profits = [profit for profit in cur_e.profits if profit.value * direction < 0]
-            if len(reverse_profits) == 1:
-                profit = reverse_profits[0]
-                indices = self._get_swapped_aggregate_edge_indices(direction, profit, index, aggregated_edges)
-                for _index in indices:
-                    stack.append((direction, symbol, _index))
             else:
                 rlt.extend([profit for profit in no_reverse_profits if profit.symbol == symbol])
 

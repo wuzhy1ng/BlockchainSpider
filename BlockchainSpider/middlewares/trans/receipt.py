@@ -119,8 +119,15 @@ class TransactionReceiptMiddleware(LogMiddleware):
     async def parse_eth_get_transaction_receipt(self, response: scrapy.http.Response, **kwargs):
         result = json.loads(response.text)
         result = result.get('result')
-        transaction: TransactionItem = kwargs['@transaction']
+        if result is None:
+            self.log(
+                message='On parse_eth_get_transaction_receipt, `result` is None, '
+                        'please check if your providers are fully available at eth_getTransactionReceipt.',
+                level=logging.WARNING,
+            )
+            return
 
+        transaction: TransactionItem = kwargs['@transaction']
         for log in result['logs']:
             yield EventLogItem(
                 transaction_hash=log.get('transactionHash', ''),

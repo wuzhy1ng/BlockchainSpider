@@ -1,11 +1,16 @@
 import json
 import logging
-from typing import List
+import os
+import asyncio
+import functools
+from concurrent.futures.process import ProcessPoolExecutor
+from typing import List, Iterator, Union
 
 import scrapy
+from scrapy import Spider
 
 from BlockchainSpider import settings
-from BlockchainSpider.items import SolanaBlockItem, SolanaTransactionItem
+from BlockchainSpider.items import SolanaBlockItem, SolanaTransactionItem, SyncItem
 from BlockchainSpider.items.solana import SolanaLogItem, SolanaInstructionItem, SolanaBalanceChangesItem, \
     SPLTokenActionItem, ValidateVotingItem, SystemItem, SPLMemoItem
 from BlockchainSpider.spiders.trans.evm import EVMBlockTransactionSpider
@@ -18,17 +23,20 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
             'BlockchainSpider.pipelines.SolanaTrans2csvPipeline': 299,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
         else getattr(settings, 'ITEM_PIPELINES', dict()),
-        'SPIDER_MIDDLEWARES': {
-            'BlockchainSpider.middlewares.SyncMiddleware': 535,
-            **getattr(settings, 'SPIDER_MIDDLEWARES', dict())
-        },
     }
+
+    def __init__(self, **kwargs):
+        kwargs['start_blk'] = kwargs.get('start_slot', '0')
+        kwargs['end_blk'] = kwargs.get('end_slot')
+        super().__init__(**kwargs)
+
+        workers = max(1, os.cpu_count() // 2)
+        self.executor = ProcessPoolExecutor(max_workers=workers)
 
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
         spider = super().from_crawler(crawler, *args, **kwargs)
-        available_middlewares = {
-        }
+        available_middlewares = {}
         middlewares = kwargs.get('enable')
         if middlewares is not None:
             spider_middlewares = spider.settings.getdict('SPIDER_MIDDLEWARES')
@@ -74,18 +82,102 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
         yield await self.get_request_eth_block_number()
 
     async def parse_eth_get_block_by_number(self, response: scrapy.http.Response, **kwargs):
-        data = json.loads(response.text)
-        result = data.get('result')
-        block_height = kwargs['$sync']
-        if result is None:
+        func = functools.partial(
+            SolanaBlockTransactionSpider._packing_items,
+            response.text, kwargs,
+        )
+        loop = asyncio.get_running_loop()
+        item = await loop.run_in_executor(self.executor, func)
+        if item is not None:
             self.log(
-                message="Result field is None on getBlock method, " +
-                        "please ensure that whether the provider is available. " +
-                        "(blockHeight: {})".format(block_height),
-                level=logging.ERROR
+                message="Synchronized: {}".format(kwargs['$sync']),
+                level=logging.INFO,
             )
-            return
+            return item
+        self.log(
+            message="Result field is None on getBlock method, " +
+                    "it looks like an empty slot?" +
+                    "(blockHeight: {})".format(kwargs['$sync']),
+            level=logging.WARN
+        )
 
+    def get_request_web3_client_version(self) -> scrapy.Request:
+        return scrapy.Request(
+            url=self.provider_bucket.items[0],
+            method='POST',
+            headers={'Content-Type': 'application/json'},
+            body=json.dumps({
+                "jsonrpc": "2.0",
+                "method": "getVersion",
+                "id": 1
+            }),
+            callback=self._start_requests,
+        )
+
+    async def get_request_eth_block_number(self) -> scrapy.Request:
+        return scrapy.Request(
+            url=await self.provider_bucket.get(),
+            method='POST',
+            headers={'Content-Type': 'application/json'},
+            body=json.dumps({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getSlot",
+            }),
+            callback=self.parse_eth_block_number,
+            errback=self.errback_parse_eth_block_number,
+            priority=0,
+            dont_filter=True,
+        )
+
+    async def get_request_eth_block_by_number(
+            self, block_number: int, priority: int, cb_kwargs: dict
+    ) -> scrapy.Request:
+        return scrapy.Request(
+            url=await self.provider_bucket.get(),
+            method='POST',
+            headers={'Content-Type': 'application/json'},
+            body=json.dumps({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getBlock",
+                "params": [
+                    block_number,
+                    {
+                        "encoding": "jsonParsed",
+                        "maxSupportedTransactionVersion": 0,
+                        "transactionDetails": "full",
+                        "rewards": False
+                    }
+                ]
+            }),
+            callback=self.parse_eth_get_block_by_number,
+            priority=priority,
+            cb_kwargs=cb_kwargs,
+        )
+
+    @staticmethod
+    def _packing_items(response_body: str, kwargs: dict) -> Union[SyncItem, None]:
+        data = json.loads(response_body)
+        result = data.get('result')
+        if result is None:
+            return None
+
+        # parse items from the response
+        items = dict()
+        for item in SolanaBlockTransactionSpider._parsing_block(result, **kwargs):
+            cls_name = item.__class__.__name__
+            if not items.get(cls_name):
+                items[cls_name] = list()
+            items[cls_name].append(item)
+        return SyncItem(
+            key=kwargs['$sync'],
+            data=items,
+        )
+
+    @staticmethod
+    def _parsing_block(result, **kwargs) -> Iterator:
+        block_height = kwargs['$sync']
         block_time = result.get('blockTime', -1)
         yield SolanaBlockItem(
             block_height=block_height,
@@ -106,7 +198,8 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
                 block_height=block_height,
                 version=item.get('version', 'legacy'),
                 fee=trans_meta['fee'] if trans_meta is not None else -1,
-                compute_consumed=trans_meta['computeUnitsConsumed'] if trans_meta.get('computeUnitsConsumed') else -1,
+                compute_consumed=trans_meta['computeUnitsConsumed'] \
+                    if trans_meta is not None and trans_meta.get('computeUnitsConsumed') else -1,
                 err=err,
                 recent_blockhash=item['transaction']['message']['recentBlockhash'],
             )
@@ -231,7 +324,7 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
                     for instruction in inner_instruction['instructions']:
                         stack_height_array.append(instruction['stackHeight'])
 
-                    idx_array = self._generate_multilevel_sequence(stack_height_array, index)
+                    idx_array = SolanaBlockTransactionSpider._generate_multilevel_sequence(stack_height_array, index)
                     for idx, instruction in enumerate(inner_instruction['instructions']):
                         program_id = instruction['programId']
                         if not instruction.get('parsed'):
@@ -281,61 +374,6 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
                                 program=program
                             )
 
-    def get_request_web3_client_version(self) -> scrapy.Request:
-        return scrapy.Request(
-            url=self.provider_bucket.items[0],
-            method='POST',
-            headers={'Content-Type': 'application/json'},
-            body=json.dumps({
-                "jsonrpc": "2.0",
-                "method": "getVersion",
-                "id": 1
-            }),
-            callback=self._start_requests,
-        )
-
-    async def get_request_eth_block_number(self) -> scrapy.Request:
-        return scrapy.Request(
-            url=await self.provider_bucket.get(),
-            method='POST',
-            headers={'Content-Type': 'application/json'},
-            body=json.dumps({
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "getSlot",
-            }),
-            callback=self.parse_eth_block_number,
-            errback=self.errback_parse_eth_block_number,
-            priority=0,
-            dont_filter=True,
-        )
-
-    async def get_request_eth_block_by_number(
-            self, block_number: int, priority: int, cb_kwargs: dict
-    ) -> scrapy.Request:
-        return scrapy.Request(
-            url=await self.provider_bucket.get(),
-            method='POST',
-            headers={'Content-Type': 'application/json'},
-            body=json.dumps({
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "getBlock",
-                "params": [
-                    block_number,
-                    {
-                        "encoding": "jsonParsed",
-                        "maxSupportedTransactionVersion": 0,
-                        "transactionDetails": "full",
-                        "rewards": False
-                    }
-                ]
-            }),
-            callback=self.parse_eth_get_block_by_number,
-            priority=priority,
-            cb_kwargs=cb_kwargs,
-        )
-
     @staticmethod
     def _generate_multilevel_sequence(levels: List[int], start: int) -> List[str]:
         stack = [start - 1]
@@ -354,3 +392,7 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
         for num in levels:
             _add_sequence(num)
         return result
+
+    @staticmethod
+    def close(spider: Spider, reason: str):
+        spider.executor.shutdown(wait=True)

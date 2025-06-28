@@ -6,6 +6,7 @@ import scrapy
 
 from BlockchainSpider import settings
 from BlockchainSpider.items import BlockItem, TransactionItem
+from BlockchainSpider.middlewares import SyncMiddleware
 from BlockchainSpider.utils.bucket import AsyncItemBucket
 from BlockchainSpider.utils.decorator import log_debug_tracing
 from BlockchainSpider.utils.web3 import hex_to_dec
@@ -109,16 +110,17 @@ class EVMBlockTransactionSpider(scrapy.Spider):
         yield request
 
     async def _start_requests(self, response: scrapy.http.Response, **kwargs):
-        result = json.loads(response.text)
-        result = result.get('result')
-
-        # start requests
-        self.log(
-            message="Detected client version: {}, {} is starting.".format(
-                result, getattr(settings, 'BOT_NAME'),
-            ),
-            level=logging.INFO,
-        )
+        try:
+            result = json.loads(response.text)
+            result = result.get('result')
+            self.log(
+                message="Detected client version: {}, {} is starting.".format(
+                    result, getattr(settings, 'BOT_NAME'),
+                ),
+                level=logging.INFO,
+            )
+        except:
+            pass
 
         # generate the requests for discrete blocks
         if self.blocks is not None:
@@ -126,7 +128,7 @@ class EVMBlockTransactionSpider(scrapy.Spider):
                 yield await self.get_request_eth_block_by_number(
                     block_number=blk,
                     priority=2 ** 32 - i,
-                    cb_kwargs={'$sync': blk},
+                    cb_kwargs={SyncMiddleware.SYNC_KEYWORD: blk},
                 )
             return
 

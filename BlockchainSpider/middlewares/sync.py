@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Callable, Generator, AsyncGenerator, Union
+from typing import Callable, Generator, AsyncGenerator, Union, List
 
 import scrapy
 from scrapy.utils.request import fingerprint
@@ -13,8 +13,9 @@ class SyncMiddleware(LogMiddleware):
     SYNC_KEYWORD = '$sync'
 
     def __init__(self):
-        self.request_parent = dict()  # request -> request | int
+        self.request_parent = dict()  # request -> request | semaphore (int)
         self.sync_keys = dict()  # request -> sync_key
+        self.sync_sem = dict()  # sync_key -> semaphore (int)
         self.sync_items = dict()  # sync_key -> items
         self._lock = asyncio.Lock()
 
@@ -22,9 +23,20 @@ class SyncMiddleware(LogMiddleware):
         # listen each request for tracing sync process
         key = response.cb_kwargs.get(self.SYNC_KEYWORD)
         parent_fingerprint = fingerprint(response.request)
+
+        # access all items in blocking mode
+        # It ensures that there will be no premature unlocking cache
+        results = list()
         async for item in result:
+            results.append(item)
+
+        # process all items
+        for item in results:
             # add item to the sync cache
-            if not isinstance(item, scrapy.Request) and key is not None:
+            if not isinstance(item, scrapy.Request):
+                if self.sync_items.get(key) is None:
+                    yield item
+                    continue
                 cls_name = item.__class__.__name__
                 if not self.sync_items[key].get(cls_name):
                     self.sync_items[key][cls_name] = list()
@@ -42,12 +54,18 @@ class SyncMiddleware(LogMiddleware):
             )
 
             # trace requests with a new task
+            # note that we use the locked semaphore as the sync signal
+            # so the semaphore is released when creating new task
             if request.cb_kwargs.get(self.SYNC_KEYWORD) is not None:
                 req_fingerprint = fingerprint(request)
                 await self._lock.acquire()
-                self.request_parent[req_fingerprint] = 1
+                sem = self.sync_sem.get(sync_key)
+                if sem is None:
+                    self.sync_sem[sync_key] = asyncio.Semaphore(value=0)
+                    self.sync_items[sync_key] = dict()
+                self.sync_sem[sync_key].release()
+                self.request_parent[req_fingerprint] = self.sync_sem[sync_key]
                 self.sync_keys[req_fingerprint] = sync_key
-                self.sync_items[sync_key] = dict()
                 self._lock.release()
                 continue
 
@@ -60,43 +78,78 @@ class SyncMiddleware(LogMiddleware):
             req_fingerprint = fingerprint(request)
             if isinstance(grandpa_fingerprint, bytes):
                 self.request_parent[req_fingerprint] = grandpa_fingerprint
-                self.request_parent[grandpa_fingerprint] += 1
+                self.request_parent[grandpa_fingerprint].release()
             else:
                 self.request_parent[req_fingerprint] = parent_fingerprint
-                self.request_parent[parent_fingerprint] += 1
+                self.request_parent[parent_fingerprint].release()
             self._lock.release()
 
         # release!
         await self._lock.acquire()
-        yield self._release_sync_item(response.request)
+        yield await self._release_sync_item(response.request)
         self._lock.release()
 
     def make_errback(self, old_errback) -> Callable:
         async def new_errback(failure):
-            # wrap the old error callback
-            old_results = old_errback(failure) if old_errback else None
-            if isinstance(old_results, Generator):
-                for rlt in old_results:
-                    yield rlt
-            if isinstance(old_results, AsyncGenerator):
-                async for rlt in old_results:
-                    yield rlt
-
             # reload context data and log out
             request = failure.request
             self.log(
-                message='Get error when fetching {} with {}'.format(
-                    request.url, request.body
-                ),
-                level=logging.WARNING
+                message='Get error when fetching {}'.format(request.body),
+                level=logging.WARNING,
             )
 
+            # wrap the old error callback
+            old_results = old_errback(failure) if old_errback else None
+            if isinstance(old_results, Generator):
+                old_results = [rlt for rlt in old_results]
+            if isinstance(old_results, AsyncGenerator):
+                _old_results = list()
+                async for rlt in old_results:
+                    _old_results.append(rlt)
+                old_results = _old_results
+
+            # trace requests in the error callback
+            # note that the item in the error callback will be skipped
+            if isinstance(old_results, List):
+                parent_fingerprint = fingerprint(request)
+                for item in old_results:
+                    if not isinstance(item, scrapy.Request):
+                        yield item
+                        continue
+
+                    # generate the wrapped request
+                    sync_key = request.cb_kwargs[self.SYNC_KEYWORD]
+                    yield request.replace(
+                        errback=self.make_errback(request.errback),
+                        cb_kwargs={
+                            self.SYNC_KEYWORD: sync_key,
+                            **item.cb_kwargs
+                        },
+                    )
+
+                    # update the trace map
+                    await self._lock.acquire()
+                    grandpa_fingerprint = self.request_parent.get(parent_fingerprint)
+                    if not grandpa_fingerprint:
+                        self._lock.release()
+                        continue
+                    req_fingerprint = fingerprint(item)
+                    if isinstance(grandpa_fingerprint, bytes):
+                        self.request_parent[req_fingerprint] = grandpa_fingerprint
+                        self.request_parent[grandpa_fingerprint].release()
+                    else:
+                        self.request_parent[req_fingerprint] = parent_fingerprint
+                        self.request_parent[parent_fingerprint].release()
+                    self._lock.release()
+
             # generate sync item (when the response fails)
-            yield self._release_sync_item(request)
+            await self._lock.acquire()
+            yield await self._release_sync_item(request)
+            self._lock.release()
 
         return new_errback
 
-    def _release_sync_item(self, finished_request: scrapy.Request) -> Union[SyncItem, None]:
+    async def _release_sync_item(self, finished_request: scrapy.Request) -> Union[SyncItem, None]:
         # calc fingerprint
         parent_fingerprint = fingerprint(finished_request)
         grandpa_fingerprint = self.request_parent.get(parent_fingerprint)
@@ -106,13 +159,13 @@ class SyncMiddleware(LogMiddleware):
         # release sync data when response
         sync_key = None
         if not isinstance(grandpa_fingerprint, bytes):
-            self.request_parent[parent_fingerprint] -= 1
-            if self.request_parent[parent_fingerprint] == 0:
+            await self.request_parent[parent_fingerprint].acquire()
+            if self.request_parent[parent_fingerprint].locked():
                 del self.request_parent[parent_fingerprint]
                 sync_key = self.sync_keys.pop(parent_fingerprint)
         else:
-            self.request_parent[grandpa_fingerprint] -= 1
-            if self.request_parent[grandpa_fingerprint] == 0:
+            await self.request_parent[grandpa_fingerprint].acquire()
+            if self.request_parent[grandpa_fingerprint].locked():
                 del self.request_parent[grandpa_fingerprint]
                 sync_key = self.sync_keys.pop(grandpa_fingerprint)
             del self.request_parent[parent_fingerprint]
@@ -123,7 +176,9 @@ class SyncMiddleware(LogMiddleware):
             message="Synchronized: {}".format(sync_key),
             level=logging.INFO,
         )
-        items = self.sync_items.pop(sync_key)
+        items = self.sync_items[sync_key]
+        del self.sync_sem[sync_key]
+        del self.sync_items[sync_key]
         return SyncItem(key=sync_key, data=items)
 
 

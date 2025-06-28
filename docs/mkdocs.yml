@@ -1,0 +1,27 @@
+site_name: BlockchainSpider
+theme: readthedocs
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Spiders:
+      - Transfer Subgraph:
+          - Blockscan: spiders/transfer_subgraph/blockscan.md
+          - Tronscan: spiders/transfer_subgraph/tronscan.md
+          - BlockchainInfo: spiders/transfer_subgraph/blockchaininfo.md
+      - Transactions:
+          - EVM chains: spiders/transaction/evm.md
+          - Solana: spiders/transaction/solana.md
+      - Label:
+          - CryptoScamDB: spiders/label/cryptoscamdb.md
+          - OFAC: spiders/label/ofac.md
+          - Tor: spiders/label/tor.md
+  - Advance:
+      - Pipeline: advance/pipeline.md
+      - Proxy: advance/proxy.md
+      - Speedup: advance/speedup.md
+      - Transaction tracing: advance/transaction_tracing.md
+  - Plugins:
+      - RabbitMQ Pipeline: plugins/rabbitmq.md
+      - MoTS Pipeline: plugins/mots.md
+

@@ -16,7 +16,7 @@ class LabelReportPipeline:
 
         # init file from filename
         if self.file is None:
-            fn = os.path.join(spider.out_dir, spider.name)
+            fn = os.path.join(spider.out_dir, LabelReportItem.__name__)
             if not os.path.exists(spider.out_dir):
                 os.makedirs(spider.out_dir)
             self.file = open(fn, 'a')

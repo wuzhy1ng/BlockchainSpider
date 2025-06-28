@@ -100,7 +100,7 @@ class TraceMiddleware(LogMiddleware):
         if result is None:
             self.log(
                 message='On parse_debug_transaction, `result` is None, '
-                        'please check if your providers are fully available at debug_traceBlockByNumber.',
+                        'please check if your providers are fully available at debug_traceTransaction.',
                 level=logging.WARNING,
             )
             return

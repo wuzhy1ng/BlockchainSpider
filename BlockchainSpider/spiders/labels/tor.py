@@ -1,3 +1,4 @@
+import logging
 from urllib.parse import urlparse
 
 import scrapy
@@ -23,6 +24,10 @@ class LabelsTorSpider(LabelsWebSpider):
         self.tor_port = kwargs.get('tor_port', 9150)
 
     def parse(self, response, **kwargs):
+        self.log(
+            message=f"Parsing TOR page at {response.url}",
+            level=logging.INFO,
+        )
         for item in super(LabelsTorSpider, self).parse(response, **kwargs):
             if isinstance(item, scrapy.Request) and \
                     not self._is_onion_url(item.url):

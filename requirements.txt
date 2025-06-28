@@ -10,4 +10,5 @@ scipy
 selenium==3.141.0
 summa==1.2.0
 web3==7.5.0
+pyevmasm==0.2.3
 git+https://github.com/jaybaird/python-bloomfilter/

@@ -7,9 +7,6 @@ from BlockchainSpider.items import LabelReportItem
 class SolScanSpider(scrapy.Spider):
     name = 'labels.solscan'
     custom_settings = {
-        'DOWNLOADER_MIDDLEWARES': {
-            'BlockchainSpider.middlewares.HTTPProxyMiddleware': 749,
-        },
         'ITEM_PIPELINES': {  # May be need proxies here
             'BlockchainSpider.pipelines.LabelReportPipeline': 299,
             **getattr(settings, 'ITEM_PIPELINES', dict())

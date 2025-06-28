@@ -20,7 +20,7 @@ NEWSPIDER_MODULE = 'BlockchainSpider.spiders'
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-# CONCURRENT_REQUESTS = 4
+# CONCURRENT_REQUESTS = 2
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
@@ -41,19 +41,18 @@ DEFAULT_REQUEST_HEADERS = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'Accept-Language': 'en',
     'Accept-Encoding': 'gzip',
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.8 Safari/537.36',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
 }
 
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 SPIDER_MIDDLEWARES = {
-    # 'contrib.mots.middlewares.MoTSMiddleware': 500,
 }
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-    # 'BlockchainSpider.middlewares.RequestCacheMiddleware': 901,
+    # 'BlockchainSpider.middlewares.HTTPProxyMiddleware': 901,
 }
 
 # Enable or disable extensions
@@ -65,8 +64,8 @@ DOWNLOADER_MIDDLEWARES = {
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 # ITEM_PIPELINES = {
-    # 'contrib.mots.pipelines.MoTSPipeline': 666,
-    # 'contrib.rabbit.pipelines.RabbitMQPipeline': 666,
+#     'plugins.rabbit.pipelines.RabbitMQPipeline': 666,
+#     'plugins.mots.pipelines.MoTSPipeline': 667,
 # }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -104,28 +103,3 @@ LOG_LEVEL = 'INFO'
 
 # The response size (in bytes) that downloader will start to warn.
 DOWNLOAD_WARNSIZE = 33554432 * 2
-
-# APIKey configure
-APIKEYS_BUCKET = 'BlockchainSpider.utils.bucket.StaticAPIKeyBucket'
-APIKEYS = {
-    "eth": [
-        "7MM6JYY49WZBXSYFDPYQ3V7V3EMZWE4KJK"
-    ],
-    "bsc": [
-        "NYYFYM2GM9FPCFETAMHHBXN67X7PU46EB9"
-    ],
-    "polygon": [
-        "7BTFI86WFGAAD91X2AGSF7YWBWC3M4R39S"
-    ],
-    "heco": [
-        "7SMM4F12EQRRGKYCN2VK6I48R7M8CFNE8R"
-    ]
-}
-
-PROVIDERS = {
-    'eth': [
-        "https://eth-mainnet.alchemyapi.io/v2/UOD8HE4CVqEiDY5E_9XbKDFqYZzJE3XP",
-        "https://eth-mainnet.alchemyapi.io/v2/AgKT8OzbNsYnul856tenwnsnL3Pm7WRB",
-        "https://eth-mainnet.alchemyapi.io/v2/gwlaWGMm1YWliQTvWtEHcjjfNXQ3W0lK",
-    ]
-}
