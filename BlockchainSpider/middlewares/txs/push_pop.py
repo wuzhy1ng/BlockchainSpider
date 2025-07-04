@@ -40,6 +40,8 @@ def adapt_push_item(item: SyncItem) -> Tuple[str, List]:
             edge['symbol'] = ''
             edges.append(edge)
         return node, edges
+    
+    return node, edges
 
 
 class PushAdapterMiddleware(LogMiddleware):
