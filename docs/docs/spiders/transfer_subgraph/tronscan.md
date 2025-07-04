@@ -31,7 +31,7 @@ scrapy crawl txs.tronscan \
 - **`strategy`**: (**optional**) The traversal strategy for collecting transactions.
   Default is `BlockchainSpider.strategies.txs.BFS` (Breadth-First Search).
   BlockchainSpider implements other advanced strategies, e.g., Poison, APPR, and TTR.
-  For more details, please refer to [Transaction tracing](/advance/transaction_tracing/) section.
+  For more details, please refer to [Transaction tracing](../../../advance/transaction_tracing) section.
 - **`allowed_tokens`**: (**optional**) A comma-separated list of token contract addresses to filter transactions. If not
   provided, all
   tokens are included.
