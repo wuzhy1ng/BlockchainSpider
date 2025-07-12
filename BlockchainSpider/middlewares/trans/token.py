@@ -432,6 +432,11 @@ class TokenPropertyMiddleware(LogMiddleware):
             self, contract_address: str, priority: int,
             property_key: str, func: str, return_type: List, cb_kwargs: dict,
     ) -> Union[scrapy.Request, None]:
+        # data formatting with compatibility detection
+        data = Web3.keccak(text=func).hex()
+        data = data[2:2 + 8] if data.startswith('0x') else data[:8]
+        data = '0x' + data
+
         # generate request
         return scrapy.Request(
             url=await self.provider_bucket.get(),
@@ -443,7 +448,7 @@ class TokenPropertyMiddleware(LogMiddleware):
                 "params": [
                     {
                         'to': contract_address,
-                        "data": '0x' + Web3.keccak(text=func).hex()[:2 + 8]
+                        "data": data
                     },
                     'latest'
                 ],
