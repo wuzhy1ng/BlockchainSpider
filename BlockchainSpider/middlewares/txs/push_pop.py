@@ -26,7 +26,6 @@ def adapt_push_item(item: SyncItem) -> Tuple[str, List]:
             edge['timeStamp'] = transfer['timestamp']
             edge['symbol'] = '_'.join(token_identity)
             edges.append(edge)
-        return node, edges
 
     # adapt to utxo transfers
     if data.get(UTXOTransferItem.__name__):
@@ -39,7 +38,7 @@ def adapt_push_item(item: SyncItem) -> Tuple[str, List]:
             edge['timeStamp'] = transfer['timestamp']
             edge['symbol'] = ''
             edges.append(edge)
-        return node, edges
+    return node, edges
 
 
 class PushAdapterMiddleware(LogMiddleware):

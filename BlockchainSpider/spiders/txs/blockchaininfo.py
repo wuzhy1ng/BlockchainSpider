@@ -22,6 +22,7 @@ class BlockchainInfoTxsSpider(scrapy.Spider):
         'DOWNLOADER_MIDDLEWARES': {
             'BlockchainSpider.middlewares.txs.PushDownloadMiddleware': 898,
             'BlockchainSpider.middlewares.txs.blockchaininfo.APIMemoryCacheMiddleware': 899,
+            **getattr(settings, 'DOWNLOADER_MIDDLEWARES', dict())
         },
         'ITEM_PIPELINES': {
             'BlockchainSpider.pipelines.UTXOTransfer2csvPipeline': 298,

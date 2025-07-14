@@ -28,6 +28,7 @@ class BlockscanTxsSpider(scrapy.Spider):
         'DOWNLOADER_MIDDLEWARES': {
             'BlockchainSpider.middlewares.txs.PushDownloadMiddleware': 898,
             'BlockchainSpider.middlewares.txs.blockscan.APIMemoryCacheMiddleware': 899,
+            **getattr(settings, 'DOWNLOADER_MIDDLEWARES', dict())
         },
         'ITEM_PIPELINES': {
             'BlockchainSpider.pipelines.AccountTransfer2csvPipeline': 298,

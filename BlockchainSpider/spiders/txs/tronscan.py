@@ -25,6 +25,7 @@ class TronscanTxsSpider(BlockscanTxsSpider):
         'DOWNLOADER_MIDDLEWARES': {
             'BlockchainSpider.middlewares.txs.PushDownloadMiddleware': 898,
             'BlockchainSpider.middlewares.txs.tronscan.APIMemoryCacheMiddleware': 899,
+            **getattr(settings, 'DOWNLOADER_MIDDLEWARES', dict())
         },
         'ITEM_PIPELINES': {
             'BlockchainSpider.pipelines.AccountTransfer2csvPipeline': 298,
