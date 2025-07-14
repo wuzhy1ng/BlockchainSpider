@@ -51,9 +51,7 @@ class AccountTransfer2csvPipeline:
                 row_data.append(value)
                 continue
             kwargs = item.get_context_kwargs()
-            value = kwargs.get(field)
-            if value is None:
-                raise KeyError(f'Field `{field}` is not found.')
+            value = kwargs.get(field, '')
             row_data.append(value)
         self.writer.writerow(row_data)
 
