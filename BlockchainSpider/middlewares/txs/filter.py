@@ -1,4 +1,4 @@
-from BlockchainSpider.items import AccountTransferItem
+from BlockchainSpider.items import AccountTransferItem, SyncItem
 from BlockchainSpider.items.subgraph import PopItem, UTXOTransferItem
 from BlockchainSpider.middlewares.defs import LogMiddleware
 
@@ -27,20 +27,4 @@ class TokenFilterMiddleware(LogMiddleware):
                 if token_identity in self.allowed_tokens:
                     yield item
                 continue
-            yield item
-
-
-class DeduplicateFilterMiddleware(LogMiddleware):
-    def __init__(self):
-        self.vis = set()
-
-    async def process_spider_output(self, response, result, spider):
-        async for item in result:
-            if any([
-                isinstance(item, AccountTransferItem),
-                isinstance(item, UTXOTransferItem),
-            ]):
-                if item['id'] in self.vis:
-                    continue
-                self.vis.add(item['id'])
             yield item

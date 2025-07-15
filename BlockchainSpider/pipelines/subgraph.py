@@ -6,6 +6,27 @@ from BlockchainSpider.items.subgraph import RankItem, UTXOTransferItem
 from BlockchainSpider.pipelines.sync import unpacked_sync_item
 
 
+class TransferDeduplicatePipeline:
+    def __init__(self):
+        self.vis = set()
+
+    @unpacked_sync_item
+    def process_item(self, item, spider):
+        # deduplicate account transfers
+        if isinstance(item, AccountTransferItem):
+            if item['id'] in self.vis:
+                return None
+            self.vis.add(item['id'])
+
+        # deduplicate UTXO transfers
+        elif isinstance(item, UTXOTransferItem):
+            if item['id'] in self.vis:
+                return None
+            self.vis.add(item['id'])
+
+        return item
+
+
 class AccountTransfer2csvPipeline:
     def __init__(self):
         self.out_dir = './data'
@@ -54,6 +75,7 @@ class AccountTransfer2csvPipeline:
             value = kwargs.get(field, '')
             row_data.append(value)
         self.writer.writerow(row_data)
+        return item
 
     def close_spider(self, spider):
         self.file.close()
@@ -78,6 +100,7 @@ class Rank2csvPipeline:
         if not os.path.exists(self.out_dir):
             os.makedirs(self.out_dir)
 
+    @unpacked_sync_item
     def process_item(self, item, spider):
         if self.out_dir is None or not isinstance(item, RankItem):
             return item
@@ -93,3 +116,4 @@ class Rank2csvPipeline:
             w.writerow(['address', 'rank'])
             for addr, val in ranks:
                 w.writerow([addr, val])
+        return item

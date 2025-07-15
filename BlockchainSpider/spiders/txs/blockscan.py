@@ -20,9 +20,8 @@ class BlockscanTxsSpider(scrapy.Spider):
         'SPIDER_MIDDLEWARES': {
             'BlockchainSpider.middlewares.txs.blockscan.ExternalTransferMiddleware': 541,
             'BlockchainSpider.middlewares.txs.TokenFilterMiddleware': 537,
-            'BlockchainSpider.middlewares.txs.DeduplicateFilterMiddleware': 536,
-            'BlockchainSpider.middlewares.SyncMiddleware': 535,
-            'BlockchainSpider.middlewares.txs.PushAdapterMiddleware': 534,
+            'BlockchainSpider.middlewares.SyncMiddleware': 536,
+            'BlockchainSpider.middlewares.txs.PushAdapterMiddleware': 535,
             **getattr(settings, 'SPIDER_MIDDLEWARES', dict())
         },
         'DOWNLOADER_MIDDLEWARES': {
@@ -31,6 +30,7 @@ class BlockscanTxsSpider(scrapy.Spider):
             **getattr(settings, 'DOWNLOADER_MIDDLEWARES', dict())
         },
         'ITEM_PIPELINES': {
+            'BlockchainSpider.pipelines.TransferDeduplicatePipeline': 297,
             'BlockchainSpider.pipelines.AccountTransfer2csvPipeline': 298,
             'BlockchainSpider.pipelines.Rank2csvPipeline': 299,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0

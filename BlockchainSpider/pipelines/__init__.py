@@ -1,3 +1,3 @@
-from .subgraph import AccountTransfer2csvPipeline, UTXOTransfer2csvPipeline, Rank2csvPipeline
-from .trans import EVMTrans2csvPipeline, SolanaTrans2csvPipeline
+from .subgraph import TransferDeduplicatePipeline, AccountTransfer2csvPipeline, UTXOTransfer2csvPipeline, Rank2csvPipeline
+from .trans import EVMTrans2csvPipeline, SolanaTrans2csvPipeline, TronTrans2csvPipeline
 from .label import LabelReportPipeline
