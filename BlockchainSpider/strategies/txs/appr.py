@@ -13,11 +13,11 @@ class APPR(PushPopModel):
     ):
         super().__init__(source)
 
-        assert 0 <= alpha <= 1
         self.alpha = float(alpha)
+        assert 0 <= self.alpha <= 1
 
-        assert 0 < epsilon < 1
         self.epsilon = float(epsilon)
+        assert 0 < self.epsilon < 1
 
         self.r = {self.source: 1}
         self.p = dict()
