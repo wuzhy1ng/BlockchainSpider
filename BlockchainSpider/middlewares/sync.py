@@ -23,14 +23,14 @@ class SyncMiddleware(LogMiddleware):
         key = response.cb_kwargs.get(self.SYNC_KEYWORD)
         parent_fingerprint = fingerprint(response.request)
 
-        # access all items in blocking mode
-        # It ensures that there will be no premature unlocking cache
-        results = list()
-        async for item in result:
-            results.append(item)
+        # add acquiring for the key
+        # to ensure that the sync process will not be released in advance
+        sem = self.key2sem.get(key)
+        if sem is not None:
+            sem.release()
 
         # process all items
-        for item in results:
+        async for item in result:
             # add item to the sync cache
             if not isinstance(item, scrapy.Request):
                 if self.key2items.get(key) is None:
@@ -49,6 +49,8 @@ class SyncMiddleware(LogMiddleware):
                 parent_fingerprint=parent_fingerprint,
             )
             yield request
+        if sem is not None:
+            await sem.acquire()
 
         # release!
         await self._lock.acquire()
@@ -102,13 +104,14 @@ class SyncMiddleware(LogMiddleware):
             parent_key, parent_fingerprint,
     ) -> scrapy.Request:
         # handle error in the new request
-        # and append sync_key to the cb_kwargs
+        # and append sync key to the cb_kwargs
         sync_key = request.cb_kwargs.get(self.SYNC_KEYWORD)
         if sync_key is None:
             sync_key = parent_key
-        cb_kwargs = request.cb_kwargs.copy()
+        cb_kwargs = dict()
         if sync_key is not None:
             cb_kwargs[self.SYNC_KEYWORD] = sync_key
+        cb_kwargs.update(request.cb_kwargs)
         errback_request = request.replace(
             errback=self.make_errback(request.errback),
             cb_kwargs=cb_kwargs,
@@ -118,6 +121,7 @@ class SyncMiddleware(LogMiddleware):
         # note that we use the locked semaphore as the sync signal
         # so the semaphore is released when creating new task
         if request.cb_kwargs.get(self.SYNC_KEYWORD) is not None:
+            sync_key = request.cb_kwargs[self.SYNC_KEYWORD]
             req_fingerprint = fingerprint(request)
             await self._lock.acquire()
             sem = self.key2sem.get(sync_key)
@@ -131,13 +135,13 @@ class SyncMiddleware(LogMiddleware):
 
         # trace extra generated requests
         await self._lock.acquire()
-        parent_key = self.request2key.get(parent_fingerprint)
-        if parent_key is None:
+        sync_key = self.request2key.get(parent_fingerprint)
+        if sync_key is None:
             self._lock.release()
             return errback_request
         req_fingerprint = fingerprint(request)
-        self.request2key[req_fingerprint] = parent_key
-        self.key2sem[parent_key].release()
+        self.request2key[req_fingerprint] = sync_key
+        self.key2sem[sync_key].release()
         self._lock.release()
         return errback_request
 
