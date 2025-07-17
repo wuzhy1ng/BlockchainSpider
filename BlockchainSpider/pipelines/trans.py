@@ -9,6 +9,7 @@ from BlockchainSpider.items.evm import BlockItem, TransactionItem, EventLogItem,
     TokenPropertyItem, NFTMetadataItem, TransactionReceiptItem, DCFGBlockItem, DCFGEdgeItem
 from BlockchainSpider.items.solana import SolanaBlockItem, SolanaTransactionItem, SolanaInstructionItem, \
     SolanaLogItem, SolanaBalanceChangesItem, SPLTokenActionItem, ValidateVotingItem, SPLMemoItem
+from BlockchainSpider.items.tron import TronTransactionItem
 from BlockchainSpider.pipelines.sync import unpacked_sync_item
 
 
@@ -100,3 +101,9 @@ class SolanaTrans2csvPipeline(EVMTrans2csvPipeline):
                 SPLMemoItem, ValidateVotingItem,
             ]
         }
+
+
+class TronTrans2csvPipeline(EVMTrans2csvPipeline):
+    def __init__(self):
+        super().__init__()
+        self.accepted_item_cls[TronTransactionItem.__name__] = True

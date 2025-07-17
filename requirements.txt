@@ -4,6 +4,7 @@ aiohttp==3.8.1
 aiohttp_socks==0.7.1
 async_lru==2.0.4
 bitcoin==1.1.42
+tronpy==0.5.0
 networkx==2.6.2
 numpy==1.25.2
 scipy
