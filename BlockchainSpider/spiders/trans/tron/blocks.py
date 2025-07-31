@@ -80,7 +80,6 @@ class TronBlockTransactionSpider(EVMBlockTransactionSpider):
             self, block_number: int, priority: int, cb_kwargs: dict
     ) -> scrapy.Request:
         url = await self.provider_bucket.get()
-        url = url + '/wallet/getblockbyid'
         return scrapy.Request(
             url=url,
             method='POST',
