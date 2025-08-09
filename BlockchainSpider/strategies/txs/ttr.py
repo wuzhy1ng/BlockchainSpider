@@ -9,7 +9,7 @@ class TTR(PushPopModel):
             self,
             source, alpha=0.15,
             beta=0.8,
-            epsilon=1e-5,
+            epsilon=1e-3,
     ):
         super().__init__(source)
         self.alpha = float(alpha)
@@ -44,7 +44,7 @@ class TTRBase(TTR):
             source,
             alpha=0.15,
             beta=0.8,
-            epsilon=1e-5,
+            epsilon=1e-3,
             **kwargs,
     ):
         super().__init__(source, alpha, beta, epsilon)
@@ -106,7 +106,7 @@ class TTRWeight(TTR):
             self, source,
             alpha=0.15,
             beta=0.8,
-            epsilon=1e-5,
+            epsilon=1e-3,
             **kwargs,
     ):
         super().__init__(source, alpha, beta, epsilon)
@@ -168,7 +168,7 @@ class TTRTime(TTR):
             self, source,
             alpha=0.15,
             beta=0.8,
-            epsilon=1e-5,
+            epsilon=1e-3,
             **kwargs,
     ):
         super().__init__(source, alpha, beta, epsilon)
@@ -338,7 +338,7 @@ class TTRRedirect(TTR):
             self, source,
             alpha=0.15,
             beta=0.8,
-            epsilon=1e-5,
+            epsilon=1e-3,
             **kwargs,
     ):
         super().__init__(source, alpha, beta, epsilon)

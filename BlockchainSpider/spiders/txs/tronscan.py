@@ -34,6 +34,11 @@ class TronscanTxsSpider(BlockscanTxsSpider):
         else getattr(settings, 'ITEM_PIPELINES', dict())
     }
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.endpoint = kwargs.get('endpoint', 'https://apilist.tronscanapi.com')
+        self.source = kwargs.get('source', '')
+
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
         spider = super(BlockscanTxsSpider, cls).from_crawler(crawler, *args, **kwargs)
@@ -58,10 +63,6 @@ class TronscanTxsSpider(BlockscanTxsSpider):
             priority=spider.settings.attributes['SPIDER_MIDDLEWARES'].priority,
         )
         return spider
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.endpoint = 'https://apilist.tronscanapi.com'
 
     def start_requests(self) -> Iterable[Request]:
         query_params = {
