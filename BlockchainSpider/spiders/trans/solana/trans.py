@@ -8,13 +8,18 @@ from BlockchainSpider import settings
 from BlockchainSpider.items.solana import SPLMemoItem, ValidateVotingItem, SystemItem, SolanaInstructionItem, \
     SPLTokenActionItem, SolanaTransactionItem, SolanaBalanceChangesItem, SolanaLogItem
 from BlockchainSpider.middlewares import SyncMiddleware
+from BlockchainSpider.spiders.trans.solana import SolanaBlockTransactionSpider
 from BlockchainSpider.utils.bucket import AsyncItemBucket
 from BlockchainSpider.utils.decorator import log_debug_tracing
 
 
-class SolanaBlockTransactionSpider(scrapy.Spider):
+class SolanaTransactionSpider(scrapy.Spider):
     name = 'trans.solana'
     custom_settings = {
+        'SPIDER_MIDDLEWARES': {
+            'BlockchainSpider.middlewares.SyncMiddleware': 535,
+            **getattr(settings, 'SPIDER_MIDDLEWARES', dict())
+        },
         'ITEM_PIPELINES': {
             'BlockchainSpider.pipelines.SolanaTrans2csvPipeline': 299,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
