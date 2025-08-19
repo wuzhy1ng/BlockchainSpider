@@ -5,6 +5,7 @@ import scrapy
 
 from BlockchainSpider.items import AccountTransferItem
 from BlockchainSpider.middlewares.txs.tronscan import TRXTRC10TransferMiddleware
+from BlockchainSpider.utils.decorator import log_debug_tracing
 from BlockchainSpider.utils.url import QueryURLBuilder
 
 
@@ -36,6 +37,7 @@ class TRC20TRC721TransferMiddleware(TRXTRC10TransferMiddleware):
         url = QueryURLBuilder(url).get(query_params)
         return request.replace(url=url)
 
+    @log_debug_tracing
     async def parse_transfers(self, response: scrapy.http.Response, **kwargs):
         # check the response data and retry
         data = json.loads(response.text)

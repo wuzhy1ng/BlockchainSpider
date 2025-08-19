@@ -90,7 +90,9 @@ class TronscanTxsSpider(BlockscanTxsSpider):
             )
             time.sleep(1.0)
             item = PopItem(node=self.source)
-            item.set_context_kwargs(**self.__dict__)
+            if self.__dict__.get('allowed_tokens') is not None:
+                allow_tokens = self.__dict__.get('allowed_tokens').split(',')
+                item.set_context_kwargs(allow_tokens=allow_tokens)
             yield item
         except Exception as _:
             self.log(

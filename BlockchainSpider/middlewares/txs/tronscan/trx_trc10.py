@@ -66,10 +66,11 @@ class TRXTRC10TransferMiddleware(LogMiddleware):
         if kwargs.get('retry') is not None:
             query_params['retry'] = kwargs['retry']
         url = '%s/api/new/transfer' % self.endpoint
+        apikey = await self.apikey_bucket.get()
         return scrapy.Request(
             url=QueryURLBuilder(url).get(query_params),
             method='GET',
-            headers={'TRON-PRO-API-KEY': await self.apikey_bucket.get()},
+            headers={'TRON-PRO-API-KEY': apikey},
             dont_filter=True,
             cb_kwargs={
                 'address': address,
