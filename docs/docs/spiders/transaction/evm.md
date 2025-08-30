@@ -16,12 +16,20 @@ scrapy crawl trans.block.evm \
 -a enable=BlockchainSpider.middlewares.trans.TransactionReceiptMiddleware,BlockchainSpider.middlewares.trans.TokenTransferMiddleware
 ```
 
+Another example to listen the latest transactions in Ethereum:
+```shell
+scrapy crawl trans.block.evm \
+-a providers=https://eth.llamarpc.com \
+-a out=/path/to/your/data \
+-a enable=BlockchainSpider.middlewares.trans.TransactionReceiptMiddleware,BlockchainSpider.middlewares.trans.TokenTransferMiddleware
+```
+
 **Parameters**:
 
 - `providers`: The RPC providers URL for accessing the EVM-compatible blockchain. If you have multiple providers, join them with commas.
 It is recommended that you build your own blockchain nodes,
 or get providers from blockchain data services, e.g., [alchemy](https://www.alchemy.com/), [chainnodes](https://chainnodes.org/), etc.
-- `start_blk`: The starting block number for data collection.
+- `start_blk`: (**optional**) The starting block number for data collection. If not specified, it will start from the latest block.
 - `end_blk`: (**optional**) The ending block number for data collection, if not specified, it will continuously listen and parse the latest block data.
 - `out`: (**optional**) The output directory for storing the collected data. The default is `./data`.
 - `enable`: (**optional**) Specifies middlewares to activate during the spider run. 

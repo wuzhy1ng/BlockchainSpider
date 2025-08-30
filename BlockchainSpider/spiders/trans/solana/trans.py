@@ -31,7 +31,7 @@ class SolanaTransactionSpider(scrapy.Spider):
 
         # output dir and transaction hash
         self.out_dir = kwargs.get('out', './data')
-        self.txhashs = kwargs.get('hash', '').split(',')
+        self.signs = kwargs.get('signature', '').split(',')
 
         # provider settings
         assert kwargs.get('providers') is not None, "please input providers separated by commas!"
@@ -59,13 +59,13 @@ class SolanaTransactionSpider(scrapy.Spider):
         except:
             pass
 
-        for i, txhash in enumerate(self.txhashs):
-            yield await self.get_request_eth_transaction(
-                txhash=txhash,
-                priority=len(self.txhashs) - i,
+        for i, sign in enumerate(self.signs):
+            yield await self.get_request_transaction(
+                sign=sign,
+                priority=len(self.signs) - i,
                 cb_kwargs={
-                    'txhash': txhash,
-                    SyncMiddleware.SYNC_KEYWORD: txhash,
+                    'signature': sign,
+                    SyncMiddleware.SYNC_KEYWORD: sign,
                 },
             )
 
@@ -276,8 +276,8 @@ class SolanaTransactionSpider(scrapy.Spider):
             callback=self._start_requests,
         )
 
-    async def get_request_eth_transaction(
-            self, txhash: str, priority: int, cb_kwargs: dict = None
+    async def get_request_transaction(
+            self, sign: str, priority: int, cb_kwargs: dict = None
     ) -> scrapy.Request:
         return scrapy.Request(
             url=await self.provider_bucket.get(),
@@ -288,7 +288,7 @@ class SolanaTransactionSpider(scrapy.Spider):
                 "id": 1,
                 "method": "getTransaction",
                 "params": [
-                    txhash,
+                    sign,
                     {
                         "commitment": "confirmed",
                         "maxSupportedTransactionVersion": 0,

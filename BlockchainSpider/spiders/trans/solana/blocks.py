@@ -26,7 +26,7 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
     }
 
     def __init__(self, **kwargs):
-        kwargs['start_blk'] = kwargs.get('start_slot', '0')
+        kwargs['start_blk'] = kwargs.get('start_slot', '-1')
         kwargs['end_blk'] = kwargs.get('end_slot')
         super().__init__(**kwargs)
 
@@ -56,7 +56,15 @@ class SolanaBlockTransactionSpider(EVMBlockTransactionSpider):
 
         # generate more requests
         if result is not None:
-            end_block = result
+            block = result
+
+            # patch for querying the latest block
+            if self.start_block == -1 and self._block_cursor == -1:
+                self.start_block = block
+                self._block_cursor = block
+
+            # query more blocks
+            end_block = block + 1
             start_block, self._block_cursor = self._block_cursor, end_block
             if end_block - start_block > 0:
                 self.log(

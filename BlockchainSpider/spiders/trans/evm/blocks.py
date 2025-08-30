@@ -55,7 +55,7 @@ class EVMBlockTransactionSpider(scrapy.Spider):
 
         # output dir and block range
         self.out_dir = kwargs.get('out', './data')
-        self.start_block = int(kwargs.get('start_blk', '0'))
+        self.start_block = int(kwargs.get('start_blk', '-1'))
         self.end_block = int(kwargs['end_blk']) if kwargs.get('end_blk') else None
         self._block_cursor = self.start_block
         self.blocks = [
@@ -151,7 +151,15 @@ class EVMBlockTransactionSpider(scrapy.Spider):
 
         # generate more requests
         if result is not None:
-            end_block = int(result, 16) + 1
+            block = int(result, 16)
+
+            # patch for querying the latest block
+            if self.start_block == -1 and self._block_cursor == -1:
+                self.start_block = block
+                self._block_cursor = block
+
+            # query more blocks
+            end_block = block + 1
             start_block, self._block_cursor = self._block_cursor, end_block
             if end_block - start_block > 0:
                 self.log(

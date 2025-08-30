@@ -45,9 +45,14 @@ You can find the money transfer data on `./data/AccountTransferItem.csv`.
 
 In this section, we will demonstrate how to collect transaction data.
 
-The following command will continuously collect transactions in [Ethereum](https://ethereum.org/) from block number `19000000` to the latest block:
+The following command will continuously collect transactions in [Ethereum](https://ethereum.org/) from block number `19000000` to `19000100`:
 ```shell
-scrapy crawl trans.block.evm -a start_blk=19000000 -a providers=https://eth.llamarpc.com
+scrapy crawl trans.block.evm -a start_blk=19000000 -a end_blk=19000100 -a providers=https://eth.llamarpc.com
+```
+
+Another example to listen the latest transactions in Ethereum:
+```shell
+scrapy crawl trans.block.evm -a providers=https://eth.llamarpc.com
 ```
 
 You can find the label data on `./data`, in which:
@@ -58,9 +63,14 @@ You can find the label data on `./data`, in which:
 > Moreover, collecting block data from EVM-compatible chains (e.g., BNBChain, Polygon, etc.) is also available; 
 > see our [documentation](https://wuzhy1ng.github.io/blockchainspider/spiders/transaction/evm/).
 
-The following command will continuously collect transaction data in [Solana](https://solana.com) from block height `270000000` to the latest block:
+The following command will continuously collect transaction data in [Solana](https://solana.com) from block height `270000000` to `270001000`:
 ```shell
-scrapy crawl trans.block.solana -a start_slot=270000000 -a providers=https://solana-mainnet.g.alchemy.com/v2/UOD8HE4CVqEiDY5E_9XbKDFqYZzJE3XP
+scrapy crawl trans.block.solana -a start_slot=270000000 -a end_slot=270001000 -a providers=https://solana-mainnet.g.alchemy.com/v2/UOD8HE4CVqEiDY5E_9XbKDFqYZzJE3XP
+```
+
+Another example to listen the latest transactions in Solana:
+```shell
+scrapy crawl trans.block.solana -a providers=https://solana-mainnet.g.alchemy.com/v2/UOD8HE4CVqEiDY5E_9XbKDFqYZzJE3XP
 ```
 
 ### 💡Collect label data
