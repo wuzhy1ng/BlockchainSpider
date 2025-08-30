@@ -35,7 +35,7 @@ class TransactionReceiptMiddleware(LogMiddleware):
             tx_obj={
                 "jsonrpc": "2.0",
                 "method": block_receipt_method,
-                "params": ["0x0"],
+                "params": ["0xf4240"],
                 "id": 1,
             },
             provider=await self.provider_bucket.get(),
