@@ -1,4 +1,5 @@
 import json
+import logging
 import sys
 
 import scrapy
@@ -41,6 +42,7 @@ class TronBlockTransactionSpider(EVMBlockTransactionSpider):
                 "detail": True
             }),
             callback=self.parse_eth_get_block_by_number,
+            errback=self.errback_eth_get_block_by_number,
             priority=priority,
             cb_kwargs=cb_kwargs,
         )
@@ -75,6 +77,24 @@ class TronBlockTransactionSpider(EVMBlockTransactionSpider):
                 timestamp=timestamp,
                 raw_data=transaction.get('raw_data', {}),
             )
+
+    async def errback_eth_get_block_by_number(self, failure):
+        # reload context data and log out
+        parent_request = failure.request
+        block_number = parent_request.cb_kwargs.get(SyncMiddleware.SYNC_KEYWORD)
+        self.log(
+            message='Get error when fetching block {}, {}'.format(
+                block_number, failure.value,
+            ),
+            level=logging.WARNING,
+        )
+
+        # yield request for events
+        yield await self.get_request_eth_get_logs(
+            block_number=block_number,
+            priority=sys.maxsize - block_number,
+            cb_kwargs={'timestamp': -1}
+        )
 
     async def get_request_eth_get_logs(
             self, block_number: int, priority: int, cb_kwargs: dict

@@ -36,7 +36,7 @@ We demonstrate how to crawl a transaction subgraph of [KuCoin hacker](https://et
 Run on this command as follow:
 
 ```shell
-scrapy crawl txs.blockscan -a source=0xeb31973e0febf3e3d7058234a5ebbae1ab4b8c23 -a apikeys=7MM6JYY49WZBXSYFDPYQ3V7V3EMZWE4KJK
+scrapy crawl txs.blockscan -a source=0xeb31973e0febf3e3d7058234a5ebbae1ab4b8c23 -a apikeys=7MM6JYY49WZBXSYFDPYQ3V7V3EMZWE4KJK -a endpoint=https://api.etherscan.io/v2/api?chainid=1
 ```
 
 You can find the money transfer data on `./data/AccountTransferItem.csv`. 

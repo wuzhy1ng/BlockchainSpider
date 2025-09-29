@@ -7,7 +7,13 @@ class QueryURLBuilder:
 
     def get(self, args: dict) -> str:
         args = {str(k): str(v) for k, v in args.items()}
-        return '?'.join([
+        u = urllib.parse.urlparse(self.original_url)
+        if u.query == '':
+            return '?'.join([
+                self.original_url,
+                urllib.parse.urlencode(args)
+            ])
+        return '&'.join([
             self.original_url,
             urllib.parse.urlencode(args)
         ])
