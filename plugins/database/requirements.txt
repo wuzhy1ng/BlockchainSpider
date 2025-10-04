@@ -1,0 +1,8 @@
+# PostgreSQL 数据库驱动
+psycopg2-binary>=2.9.0
+
+# ORM 框架（已包含连接池功能）
+sqlalchemy>=2.0.0
+
+# 数据类型支持
+python-dateutil>=2.8.0 
