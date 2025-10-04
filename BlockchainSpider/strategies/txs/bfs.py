@@ -5,9 +5,9 @@ from BlockchainSpider.strategies.txs import PushPopModel
 
 
 class BFS(PushPopModel):
-    def __init__(self, source, max_depth=2, **kwargs):
+    def __init__(self, source, depth=2, **kwargs):
         super().__init__(source)
-        self.max_depth = int(max_depth)
+        self.max_depth = int(depth)
         self._vis = {self.source}
         self._queue = Queue()
 
