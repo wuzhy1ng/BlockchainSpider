@@ -32,7 +32,7 @@ class TronBlockTransactionSpider(EVMBlockTransactionSpider):
     ) -> scrapy.Request:
         url = await self.provider_bucket.get()
         url = url.replace('/jsonrpc', '')
-        url = url + '/wallet/getblock'
+        url = url + '/walletsolidity/getblock'
         return scrapy.Request(
             url=url,
             method='POST',
