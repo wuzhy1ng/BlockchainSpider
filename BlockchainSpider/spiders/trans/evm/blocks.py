@@ -15,14 +15,18 @@ from BlockchainSpider.utils.web3 import hex_to_dec
 class EVMBlockTransactionSpider(scrapy.Spider):
     name = 'trans.block.evm'
     custom_settings = {
-        'ITEM_PIPELINES': {
-            'BlockchainSpider.pipelines.EVMTrans2csvPipeline': 299,
-        } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
-        else getattr(settings, 'ITEM_PIPELINES', dict()),
         'SPIDER_MIDDLEWARES': {
             'BlockchainSpider.middlewares.SyncMiddleware': 535,
             **getattr(settings, 'SPIDER_MIDDLEWARES', dict())
         },
+        'DOWNLOADER_MIDDLEWARES': {
+            'BlockchainSpider.middlewares.UnterminatedJSONRetryMiddleware': 100,
+            **getattr(settings, 'DOWNLOADER_MIDDLEWARES', dict())
+        },
+        'ITEM_PIPELINES': {
+            'BlockchainSpider.pipelines.EVMTrans2csvPipeline': 299,
+        } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
+        else getattr(settings, 'ITEM_PIPELINES', dict()),
     }
 
     @classmethod

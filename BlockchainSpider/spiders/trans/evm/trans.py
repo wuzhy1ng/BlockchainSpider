@@ -20,6 +20,10 @@ class EVMTransactionSpider(scrapy.Spider):
             'BlockchainSpider.middlewares.SyncMiddleware': 535,
             **getattr(settings, 'SPIDER_MIDDLEWARES', dict())
         },
+        'DOWNLOADER_MIDDLEWARES': {
+            'BlockchainSpider.middlewares.UnterminatedJSONRetryMiddleware': 100,
+            **getattr(settings, 'DOWNLOADER_MIDDLEWARES', dict())
+        },
         'ITEM_PIPELINES': {
             'BlockchainSpider.pipelines.EVMTrans2csvPipeline': 299,
         } if len(getattr(settings, 'ITEM_PIPELINES', dict())) == 0
