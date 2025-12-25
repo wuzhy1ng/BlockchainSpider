@@ -21,7 +21,7 @@ class SeleniumMiddleware(object):
     async def process_request(self, request: scrapy.Request, spider):
         await self.lock.acquire()
         if self.driver is None:
-            spider_driver = getattr(spider, 'driver')
+            spider_driver = getattr(spider, 'driver', None)
             self.driver = spider_driver if spider_driver else webdriver.Chrome(
                 options=webdriver.ChromeOptions()
             )

@@ -1,5 +1,4 @@
 import scrapy
-import json
 from BlockchainSpider import settings
 from BlockchainSpider.items import LabelReportItem
 
@@ -10,7 +9,11 @@ class TronScanSpider(scrapy.Spider):
         'ITEM_PIPELINES': {  # May be need proxies here
             'BlockchainSpider.pipelines.LabelReportPipeline': 299,
             **getattr(settings, 'ITEM_PIPELINES', dict())
-        }
+        },
+        'DOWNLOADER_MIDDLEWARES': {
+            'BlockchainSpider.middlewares.SeleniumMiddleware': 900,
+            **getattr(settings, 'DOWNLOADER_MIDDLEWARES', dict())
+        },
     }
 
     def __init__(self, **kwargs):
@@ -21,7 +24,7 @@ class TronScanSpider(scrapy.Spider):
     def start_requests(self):
         # yield request of label
         for addr in self.addresses:
-            url = 'https://apilist.tronscanapi.com/api/accountv2?address='
+            url = 'https://tronscan.org/#/address/'
             yield scrapy.Request(
                 url=url + addr,
                 method='GET',
@@ -30,17 +33,16 @@ class TronScanSpider(scrapy.Spider):
             )
 
     def parse_label(self, response, **kwargs):
-        result = json.loads(response.text)
-        address = kwargs.get('address')
-        tag = result.get('publicTag')
-        if tag is None:
+        result = response.xpath('//*[@id="address-tag-id"]//div[contains(@class, "tag-item")]/text()')
+        result = result.getall()
+        if len(result) == 0:
             return
         yield LabelReportItem(
-            labels=[tag],
+            labels=[result[0]],
             urls=[response.url],
             addresses=[dict(
                 net='tron',
-                address=address,
+                address=kwargs['address'],
             )],
             transactions=None,
             reporter='tronscan.org',

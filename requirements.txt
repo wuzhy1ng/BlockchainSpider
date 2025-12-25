@@ -8,7 +8,7 @@ tronpy==0.5.0
 networkx==2.6.2
 numpy==1.25.2
 scipy
-selenium==3.141.0
+selenium==4.36.0
 summa==1.2.0
 web3==7.5.0
 pyevmasm==0.2.3
