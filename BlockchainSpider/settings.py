@@ -63,10 +63,11 @@ DOWNLOADER_MIDDLEWARES = {
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-# ITEM_PIPELINES = {
+ITEM_PIPELINES = {
+    'dynamic_ttr_pipeline.DynamicTTRPipeline': 299,
 #     'plugins.rabbit.pipelines.RabbitMQPipeline': 666,
 #     'plugins.mots.pipelines.MoTSPipeline': 667,
-# }
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
