@@ -15,7 +15,7 @@ class SeleniumMiddleware(object):
     def __init__(self):
         self.driver = None
         self.timeout = getattr(settings, 'DOWNLOAD_TIMEOUT', 60)
-        self.delay = getattr(settings, 'DOWNLOAD_DELAY', 2)
+        self.delay = getattr(settings, 'DOWNLOAD_DELAY', 1)
         self.lock = asyncio.Lock()
 
     async def process_request(self, request: scrapy.Request, spider):

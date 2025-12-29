@@ -30,6 +30,7 @@ class TronScanSpider(scrapy.Spider):
                 method='GET',
                 callback=self.parse_label,
                 cb_kwargs={'address': addr, 'url': url},
+                dont_filter=True,
             )
 
     def parse_label(self, response, **kwargs):
