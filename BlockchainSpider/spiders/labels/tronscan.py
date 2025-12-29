@@ -1,3 +1,6 @@
+import csv
+import os.path
+
 import scrapy
 from BlockchainSpider import settings
 from BlockchainSpider.items import LabelReportItem
@@ -19,6 +22,13 @@ class TronScanSpider(scrapy.Spider):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.addresses = kwargs.get('addresses', '').split(',')
+        self.fn = kwargs.get('address_fn', '')
+        if os.path.exists(self.fn):
+            with open(self.fn, 'r') as f:
+                reader = csv.reader(f)
+                next(reader)
+                for row in reader:
+                    self.addresses.append(row[0])
         self.out_dir = kwargs.get('out', './data')
 
     def start_requests(self):
