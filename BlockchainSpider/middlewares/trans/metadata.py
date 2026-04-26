@@ -69,7 +69,7 @@ class MetadataMiddleware(LogMiddleware):
                         token_id=item['token_ids'][i],
                         metadata_func_sign='0x0e89341c',
                         priority=response.request.priority,
-                        cb_kwargs={'token_transfer_item': item},
+                        cb_kwargs={'@nft_transfer': item},
                     )
                 continue
 
