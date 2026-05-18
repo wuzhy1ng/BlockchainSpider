@@ -68,7 +68,7 @@ class BlockscanTxsSpider(scrapy.Spider):
         assert self.source != '', "`source` argument is needed"
 
         # load apikey and api endpoint
-        self.endpoint = kwargs.get('endpoint', 'https://api.etherscan.io/api')
+        self.endpoint = kwargs.get('endpoint', 'https://api.etherscan.io/v2/api?chainid=1')
         self.apikey_bucket = AsyncItemBucket(
             items=kwargs['apikeys'].split(','),
             qps=getattr(settings, 'CONCURRENT_REQUESTS', 2),

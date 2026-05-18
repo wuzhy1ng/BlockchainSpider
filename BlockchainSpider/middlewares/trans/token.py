@@ -21,7 +21,7 @@ from BlockchainSpider.utils.web3 import split_to_words, word_to_address, hex_to_
 class TokenTransferMiddleware(LogMiddleware):
     def __init__(self):
         self.provider_bucket = None
-        self._cache_is_token721 = LRUCache(getattr(settings, 'MIDDLE_CACHE_SIZE', 2 ** 20))
+        self._cache_is_token721 = LRUCache(getattr(settings, 'MIDDLE_CACHE_SIZE', 2 ** 16))
 
     def _init_by_spider(self, spider):
         if self.provider_bucket is not None:
